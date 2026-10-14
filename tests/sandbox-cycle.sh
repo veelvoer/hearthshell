@@ -2,18 +2,21 @@
 # Installs hearthshell twice into a throw-away HOME (with a few pre-existing configs), uninstalls it,
 # and checks that every pre-existing file is byte-for-byte what it was before.
 # Safe to run: it never touches your real home directory or your running Hyprland.
-#   sh tests/sandbox-cycle.sh [install.sh options]
+#   sh tests/sandbox-cycle.sh [install.sh options]      e.g. --dotfiles to cover the dotfiles too
 set -eu
 HERE=$(cd "$(dirname "$0")/.." && pwd)
 W=$(mktemp -d)
 trap 'rm -rf "$W"' EXIT
 T="$W/home"
 mkdir -p "$T"
-mkdir -p "$T/.config/hypr" "$T/.config/kitty" "$T/.config/gtk-4.0" "$T/.config/rofi" "$T/.local/bin"
+mkdir -p "$T/.config/hypr" "$T/.config/kitty" "$T/.config/gtk-4.0" "$T/.config/rofi" "$T/.config/fish" "$T/.config/cava" "$T/.local/bin"
 printf 'hl.config({ general = { gaps_in = 5 } })\n' > "$T/.config/hypr/hyprland.lua"
 printf 'font_size 12\n' > "$T/.config/kitty/kitty.conf"
 printf "@import 'colors.css';\n" > "$T/.config/gtk-4.0/gtk.css"
 printf 'configuration { modi: "drun"; }\n' > "$T/.config/rofi/config.rasi"
+printf 'set -g fish_greeting "hi"\n' > "$T/.config/fish/config.fish"
+printf '# my lock\n' > "$T/.config/hypr/hyprlock.conf"
+printf '[general]\nbars = 20\n' > "$T/.config/cava/config"
 snap() { (cd "$T" && find . -type f ! -path './.cache/*' ! -path './.local/share/fish/*' ! -name fish_variables -exec md5sum {} + | sort); }
 snap > "$W/before.md5"
 run() { env -i HOME="$T" PATH="$PATH" TERM=dumb sh "$@"; }

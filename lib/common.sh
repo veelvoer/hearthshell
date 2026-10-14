@@ -46,6 +46,14 @@ ask() {
     esac
 }
 
+# ask_strict "question" : like ask, default NO, and --yes does not answer it
+ask_strict() {
+    [ -t 0 ] || return 1
+    printf '  ? %s [y/N] ' "$1"
+    read -r a || a=''
+    case "$a" in y|Y|yes|YES) return 0 ;; *) return 1 ;; esac
+}
+
 # run a command, or just print it in --dry-run mode
 run() {
     if dry; then info "${C_D}would run:${C_0} $*"; return 0; fi

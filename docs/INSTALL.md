@@ -69,6 +69,8 @@ curl -fsSL https://raw.githubusercontent.com/veelvoer/hearthshell/main/get.sh | 
 | `--autostart hyprland` | (default) start with Hyprland, via one line in its config |
 | `--autostart systemd` | start through a systemd user service that restarts on a crash |
 | `--autostart none` | do not start automatically; run `hearthshell` yourself |
+| `--dotfiles` | also install the author's own configs from `dotfiles/` (replaces yours, backed up; see [dotfiles/README.md](../dotfiles/README.md)) |
+| `--no-dotfiles` | never offer the dotfiles |
 | `--fish-prompt` | also install the hearthshell fish prompt (yours is backed up) |
 | `--start` | start the shell when finished |
 
@@ -94,6 +96,7 @@ Everything it does is recorded in `~/.local/state/hearthshell/manifest`. Nothing
 | `~/.config/fish/functions/fish_prompt.fish` | the hearthshell prompt (original backed up) | only with `--fish-prompt` |
 | `~/.config/systemd/user/hearthshell.service` | autostart service | only with `--autostart systemd` |
 | `~/.local/share/fonts/hearthshell/` | JetBrainsMono Nerd Font | only if you have no icon font and say yes |
+| `hypr/hyprland.lua`, `hyprlock.conf`, `kitty/kitty.conf`, `rofi/config.rasi`, `fish/config.fish`, `cava/`, shell `settings.json` | the author's dotfiles. **Replaces your files, each backed up first and restored on uninstall** | only with `--dotfiles` (never answered by `--yes`) |
 | packages | whatever your package manager installs for missing tools | only if you say yes |
 
 "Marked block" means the lines are wrapped like this, and uninstalling removes exactly that and nothing else:

@@ -1,0 +1,16 @@
+/* hearthshell dotfiles: rofi. The look comes from the hearthshell theme. */
+configuration {
+    modi: "drun";
+    show-icons: true;
+    icon-theme: "Tela-circle-black-dark";
+    terminal: "kitty";
+    case-sensitive: false;
+    matching: "normal";
+    sort: true;                 /* Sorteert je apps automatisch op basis van gebruik */
+    disable-history: false;     /* Activeert de cache om je meest gebruikte apps te onthouden */
+    cycle: true;
+    click-to-exit: true;
+    fixed-num-lines: false;
+}
+
+@theme "hearthshell"

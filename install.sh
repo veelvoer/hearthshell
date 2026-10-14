@@ -33,6 +33,9 @@ usage: ./install.sh [options]
                          hyprland  (default) a line in your Hyprland config
                          systemd   a systemd user service (restarts if it crashes)
                          none      start it yourself with `hearthshell`
+      --dotfiles       also install the author's own configs (hyprland, kitty, rofi, fish, cava,
+                       hyprlock and the shell settings). REPLACES yours; every file is backed up first
+      --no-dotfiles    never offer the dotfiles
       --fish-prompt    also install the hearthshell fish prompt (replaces your fish_prompt, backed up)
       --start          start the shell when finished (default: ask)
   -h, --help           this text
@@ -43,7 +46,7 @@ EOT
 }
 
 DO_DEPS=1; DO_FONTS=1; DO_WALLS=1; DO_INTEGRATE=1; DO_BINDS=1
-DO_KITTY=1; DO_ROFI=1; DO_GTK=1; DO_FISH_PROMPT=0; AUTOSTART=hyprland; START=ask
+DO_KITTY=1; DO_ROFI=1; DO_GTK=1; DO_DOTFILES=ask; DO_FISH_PROMPT=0; AUTOSTART=hyprland; START=ask
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -58,6 +61,8 @@ while [ $# -gt 0 ]; do
         --no-rofi) DO_ROFI=0 ;;
         --no-gtk) DO_GTK=0 ;;
         --autostart) shift; AUTOSTART=${1:-}; case "$AUTOSTART" in hyprland|systemd|none) ;; *) die "--autostart needs hyprland, systemd or none" ;; esac ;;
+        --dotfiles) DO_DOTFILES=yes ;;
+        --no-dotfiles) DO_DOTFILES=no ;;
         --fish-prompt) DO_FISH_PROMPT=1 ;;
         --start) START=yes ;;
         -h|--help) usage; exit 0 ;;
@@ -271,6 +276,38 @@ if [ "$DO_WALLS" = 1 ]; then
     fi
 fi
 
+# ===================================================================== 4b. the author's dotfiles (opt-in)
+if [ -d "$HERE/dotfiles" ] && [ "$DO_DOTFILES" != no ]; then
+    DOTS=$(cd "$HERE/dotfiles" && find . -type f ! -path './quickshell/*' ! -name README.md | sed 's|^\./||' | sort)
+    if [ "$DO_DOTFILES" = ask ]; then
+        # never answered by --yes: replacing someone's configs has to be a deliberate choice
+        if [ "$ASSUME_YES" = 1 ] || [ ! -t 0 ]; then DO_DOTFILES=no; fi
+    fi
+    if [ "$DO_DOTFILES" = ask ]; then
+        step "The author's dotfiles (optional)"
+        info "The repository also holds the author's own configs: Hyprland, hyprlock, kitty, rofi, fish, cava,"
+        info "and the shell settings (theme, bar layout, modules). They are made for one laptop (monitor,"
+        info "Belgian keyboard) so most people only want to look at them or copy parts (see dotfiles/README.md)."
+        info "Installing them REPLACES these files; each existing file is backed up and restored on uninstall:"
+        for rel in $DOTS; do
+            if [ -e "$CONF_HOME/$rel" ]; then info "  replace  $CONF_HOME/$rel"; else info "  create   $CONF_HOME/$rel"; fi
+        done
+        if ask_strict "Install the author's dotfiles?"; then DO_DOTFILES=yes; else DO_DOTFILES=no; fi
+    fi
+    if [ "$DO_DOTFILES" = yes ]; then
+        step "Installing the author's dotfiles"
+        for rel in $DOTS; do
+            install_file "$HERE/dotfiles/$rel" "$CONF_HOME/$rel" 644
+            info "$rel"
+        done
+        if [ -f "$HERE/dotfiles/quickshell/settings.json" ]; then
+            install_file "$HERE/dotfiles/quickshell/settings.json" "$INSTALL_DIR/settings.json" 644
+            info "shell settings (theme, bar layout, modules)"
+        fi
+        info "hearthshell's own hooks are still added below, so key binds and autostart are not duplicated."
+    fi
+fi
+
 # ===================================================================== 5. integration
 HMODE=$(hypr_mode)
 HYPR="$CONF_HOME/hypr"
@@ -289,7 +326,7 @@ if [ "$DO_INTEGRATE" = 1 ]; then
             echo 'hl.layer_rule({ match = { namespace = "^quickshell-wallpaper$" }, no_anim = true })'
             echo 'hl.layer_rule({ match = { namespace = "^quickshell-bar$" }, no_anim = true })'
             if [ "$DO_BINDS" = 1 ]; then
-                if grep -Eqi 'comma' "$HYPR/hyprland.lua" 2>/dev/null; then
+                if grep -Eqi '[+,] *comma([^a-z]|$)' "$HYPR/hyprland.lua" 2>/dev/null; then
                     echo '-- Super + , was not added because your config already mentions "comma". Bind it yourself:'
                     echo "-- hl.bind(\"SUPER + comma\", hl.dsp.exec_cmd(\"$HS settings\"))"
                 else
@@ -317,7 +354,7 @@ if [ "$DO_INTEGRATE" = 1 ]; then
             echo "layerrule = blur, quickshell-popup"
             echo "layerrule = ignorealpha 0.1, quickshell-popup"
             if [ "$DO_BINDS" = 1 ]; then
-                if grep -Eqi 'comma' "$HYPR/hyprland.conf" 2>/dev/null; then
+                if grep -Eqi '[+,] *comma([^a-z]|$)' "$HYPR/hyprland.conf" 2>/dev/null; then
                     echo "# Super + , was not added because your config already mentions comma. Bind it yourself:"
                     echo "# bind = SUPER, comma, exec, $HS settings"
                 else

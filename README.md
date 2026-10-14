@@ -29,6 +29,12 @@ Prefer one line? `curl -fsSL https://raw.githubusercontent.com/veelvoer/hearthsh
 Then press **Super + ,**. The step-by-step guide, the list of what changes on your system, a fully
 manual install and troubleshooting are in **[docs/INSTALL.md](docs/INSTALL.md)**.
 
+## The author's own configs
+
+`dotfiles/` holds the configs this was built with (Hyprland, hyprlock, kitty, rofi, fish, cava and the
+shell settings). `./install.sh --dotfiles` installs them (replacing yours, with backups that
+`hearthshell uninstall` restores). They are made for one laptop, see [dotfiles/README.md](dotfiles/README.md).
+
 ## Uninstall
 
 ```sh
