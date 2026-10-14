@@ -1,0 +1,108 @@
+/* hearthshell launcher theme: pill search field, rounded card, colours from hearthshell-colors.rasi.
+ * Use it with:  rofi -show drun -theme hearthshell
+ * The colours (and width / rows / icons) are written by hearthshell, change them in Settings. */
+@import "@CONF@/rofi/hearthshell-colors.rasi"
+
+window {
+    width: var(qs-width);
+    location: center;
+    anchor: center;
+    x-offset: 0px;
+    y-offset: 0px;
+    background-color: var(card);
+    border-radius: 16px;
+    border-color: var(border);
+    border: 1px;
+    padding: 10px;
+    font: "JetBrainsMono Nerd Font 11";
+}
+
+mainbox {
+    border: 0px;
+    padding: 0px;
+    background-color: transparent;
+    border-radius: 16px;
+    children: [ "inputbar", "listview" ];
+}
+
+inputbar {
+    background-color: var(input-bg);
+    border-radius: 999px;
+    border: 1px;
+    border-color: var(border);
+    padding: 8px 14px;
+    spacing: 8px;
+    children: [ "entry" ];
+}
+
+entry {
+    background-color: transparent;
+    text-color: var(fg);
+    placeholder-color: var(muted);
+    placeholder: "Search apps...";
+    cursor: text;
+}
+
+listview {
+    spacing: 6px;
+    padding: 10px 0px 0px 0px;
+    border: 0px;
+    scrollbar: false;
+    dynamic: true;
+    columns: 1;
+    lines: var(qs-lines);
+    background-color: transparent;
+}
+
+element {
+    border-radius: 999px;
+    padding: 8px 14px;
+    spacing: 10px;
+    border: 0px;
+    background-color: transparent;
+    /* Explicitly layout icons and text side-by-side */
+    children: [ "element-icon", "element-text" ];
+}
+
+element normal.normal {
+    background-color: transparent;
+    text-color: var(fg);
+}
+
+element alternate.normal {
+    background-color: transparent;
+    text-color: var(fg);
+}
+
+element selected.normal {
+    background-color: var(sel);
+    text-color: var(fg);
+    border: 1px;
+    border-color: var(selborder);
+}
+
+element selected.alternate {
+    background-color: var(sel);
+    text-color: var(fg);
+    border: 1px;
+    border-color: var(selborder);
+}
+
+element-icon {
+    enabled: var(qs-icons);
+    size: 1.3em;
+    background-color: transparent;
+    text-color: inherit;
+    vertical-align: 0.5;
+}
+
+element-text {
+    background-color: transparent;
+    text-color: inherit;
+    vertical-align: 0.5;
+    highlight: inherit;
+}
+
+prompt, textbox-prompt-colon, overlay, num-filtered-rows, textbox-num-sep, num-rows, case-indicator {
+    enabled: false;
+}

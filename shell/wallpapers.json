@@ -1,0 +1,295 @@
+{
+  "_comment": "Wallpaper sources. Nothing here is bundled in the repo: scripts/fetch-wallpapers.py downloads each image and recolours it into the theme palette on your machine. Photo sources: https://github.com/dharmx/walls (see that repo for licences). The first Everforest image is from https://github.com/saneaspect/dotfiles.",
+  "bases": {
+    "dharmx": "https://raw.githubusercontent.com/dharmx/walls/main/",
+    "saneaspect": "https://raw.githubusercontent.com/saneaspect/dotfiles/main/"
+  },
+  "themes": {
+    "everforest": [
+      {
+        "source": "saneaspect",
+        "path": "gruvbox_bg_17.jpg",
+        "mode": "asis"
+      },
+      {
+        "source": "dharmx",
+        "path": "fogsmoke/a_foggy_forest_with_trees_04.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "nature/a_log_in_a_body_of_water_surrounded_by_trees.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "nature/a_building_in_the_woods.jpg",
+        "mode": "posterize"
+      }
+    ],
+    "pink": [
+      {
+        "source": "dharmx",
+        "path": "cold/a_mountain_with_snow_and_clouds.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "cherry/a_close_up_of_a_tree_branch_with_pink_flowers.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "cherry/a_branch_with_white_flowers.png",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "nature/a_forest_of_trees_with_fog.jpg",
+        "mode": "posterize"
+      }
+    ],
+    "yellow": [
+      {
+        "source": "dharmx",
+        "path": "mountain/a_large_canyon_with_a_sunset_with_Badlands_National_Park_in_the_background.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "mountain/a_mountain_range_with_dark_clouds.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "gruvbox/a_close_up_of_a_plant.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "gruvbox/a_body_of_water_with_buildings_in_the_background.jpg",
+        "mode": "posterize"
+      }
+    ],
+    "green": [
+      {
+        "source": "dharmx",
+        "path": "nature/a_close_up_of_a_fern.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "nature/a_foggy_landscape_with_trees_and_grass.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "fogsmoke/a_foggy_forest_with_trees_03.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "fogsmoke/a_foggy_forest_with_trees.jpg",
+        "mode": "posterize"
+      }
+    ],
+    "blue": [
+      {
+        "source": "dharmx",
+        "path": "mountain/a_iceberg_in_the_water_with_mountains_in_the_background.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "nature/a_fog_over_water_with_a_black_background.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "mountain/a_mountain_range_with_snow_on_top_01.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "cold/a_mountain_with_clouds_in_the_sky.jpg",
+        "mode": "posterize"
+      }
+    ],
+    "teal": [
+      {
+        "source": "dharmx",
+        "path": "nature/a_body_of_water_with_a_lit_up_tower_in_the_middle.png",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "aerial/a_close_up_of_water_01.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "aerial/a_beach_with_waves_crashing_on_the_shore.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "calm/a_beach_with_trees_on_the_side.jpg",
+        "mode": "posterize"
+      }
+    ],
+    "gruvbox": [
+      {
+        "source": "dharmx",
+        "path": "gruvbox/a_bookshelf_with_lights_from_the_ceiling.jpeg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "gruvbox/a_city_skyline_at_night.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "gruvbox/a_body_of_water_with_buildings_in_the_background.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "calm/a_house_on_stilts_on_a_lake.jpg",
+        "mode": "posterize"
+      }
+    ],
+    "nord": [
+      {
+        "source": "dharmx",
+        "path": "nature/a_lake_with_snow_covered_mountains_in_the_background.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "mountain/a_mountain_range_with_snow_on_top.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "cold/a_river_running_through_a_valley.png",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "calm/a_road_leading_to_mountains.jpg",
+        "mode": "posterize"
+      }
+    ],
+    "catppuccin": [
+      {
+        "source": "dharmx",
+        "path": "flowers/a_close_up_of_purple_flowers.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "flowers/a_close_up_of_a_flower_11.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "cold/clouds_above_a_mountain.png",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "architecture/a_street_with_buildings_in_the_background.png",
+        "mode": "posterize"
+      }
+    ],
+    "tokyo": [
+      {
+        "source": "dharmx",
+        "path": "architecture/a_city_skyline_at_night_01.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "architecture/a_city_at_night_with_lights.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "architecture/a_person_walking_on_a_street_between_two_tall_buildings.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "cold/a_music_stand_with_a_book_on_it.jpg",
+        "mode": "posterize"
+      }
+    ],
+    "rosepine": [
+      {
+        "source": "dharmx",
+        "path": "flowers/a_close_up_of_pink_flowers.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "flowers/a_bouquet_of_flowers_and_leaves.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "flowers/a_close_up_of_a_plant_04.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "flowers/a_group_of_pink_flowers.jpeg",
+        "mode": "posterize"
+      }
+    ],
+    "dracula": [
+      {
+        "source": "dharmx",
+        "path": "flowers/a_group_of_flowers_in_a_vase.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "decay/a_car_on_fire_at_night.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "architecture/a_factory_with_smoke_coming_out_of_the_chimney.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "architecture/people_walking_on_a_platform.jpg",
+        "mode": "posterize"
+      }
+    ],
+    "kanagawa": [
+      {
+        "source": "dharmx",
+        "path": "aerial/waves_crashing_waves_on_the_ocean.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "aerial/waves_crashing_on_rocks.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "aerial/a_rocky_shore_with_waves_crashing.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "cold/a_snowy_mountain_with_clouds_above.jpg",
+        "mode": "posterize"
+      }
+    ]
+  }
+}

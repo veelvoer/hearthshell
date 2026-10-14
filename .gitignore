@@ -1,0 +1,7 @@
+# per-user state that lives next to the code once installed
+shell/settings.json
+shell/custom-themes.json
+shell/pam-service
+shell/wallpapers/*/
+__pycache__/
+*.pyc
