@@ -47,6 +47,7 @@ step "What will be undone"
 info "files we created:        $(grep -c '^FILE ' "$MANIFEST")"
 info "config blocks we added:  $(grep -c '^BLOCK ' "$MANIFEST")  (only our marked lines are removed)"
 info "files we replaced:       $(grep -c '^OVERWRITE ' "$MANIFEST")  (restored from backup)"
+grep -q '^BUILD ' "$MANIFEST" && info "Quickshell:              built by the installer, will be removed from ~/.local"
 info "install directory:       $INSTALL_DIR"
 [ "$KEEP_DATA" = 1 ] && info "your settings and wallpapers will be kept in ~/hearthshell-kept-*/"
 ask "Continue?" y || { say "Nothing was changed."; exit 0; }
@@ -103,6 +104,13 @@ printf '%s\n' "$REV" | while IFS= read -r line; do
             fi ;;
         OVERWRITE) restore_backup "$2" ;;
         FILE) [ -e "$2" ] && { run rm -f "$2"; info "removed $2"; } ;;
+        BUILD)  # Quickshell compiled by the installer: remove exactly the files cmake installed
+            if [ -f "$2" ]; then
+                while IFS= read -r bf; do [ -n "$bf" ] && [ -e "$bf" ] && { dry || rm -f "$bf"; }; done < "$2"
+                # the `qs` shortcut is a symlink cmake does not list in its manifest
+                if [ -L "$HOME/.local/bin/qs" ] && [ "$(readlink "$HOME/.local/bin/qs")" = quickshell ]; then dry || rm -f "$HOME/.local/bin/qs"; fi
+                info "removed the Quickshell build installed to ~/.local"
+            fi ;;
         DIR) ;;     # directories are handled after the files are gone
         SERVICE) have systemctl && run systemctl --user disable "$2" >/dev/null 2>&1 ;;
     esac
@@ -160,7 +168,7 @@ if have hyprctl && ! dry; then hyprctl reload >/dev/null 2>&1 && info "Hyprland 
 
 # ------------------------------------------------------------ the uninstaller's own files
 step "Cleaning up"
-run rm -rf "$BACKUP_DIR"
+run rm -rf "$BACKUP_DIR" "$STATE_DIR/build" "$STATE_DIR/quickshell-files" "$STATE_DIR/wayland-protocols-files" "$STATE_DIR/cli11-files"
 run rm -f "$STATE_DIR/fish-vars.json"
 run rm -f "$MANIFEST"
 run rmdir "$STATE_DIR" 2>/dev/null

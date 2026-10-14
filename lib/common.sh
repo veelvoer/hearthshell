@@ -37,7 +37,7 @@ ask() {
     if [ "$ASSUME_YES" = 1 ]; then return 0; fi
     if [ ! -t 0 ]; then [ "$def" = y ]; return; fi
     if [ "$def" = y ]; then hint='[Y/n]'; else hint='[y/N]'; fi
-    printf '  ? %s %s ' "$q" "$hint"
+    printf '  ? %s %s ' "$q" "$hint" >&2
     read -r a || a=''
     case "$a" in
         y|Y|yes|YES) return 0 ;;
@@ -49,7 +49,7 @@ ask() {
 # ask_strict "question" : like ask, default NO, and --yes does not answer it
 ask_strict() {
     [ -t 0 ] || return 1
-    printf '  ? %s [y/N] ' "$1"
+    printf '  ? %s [y/N] ' "$1" >&2
     read -r a || a=''
     case "$a" in y|Y|yes|YES) return 0 ;; *) return 1 ;; esac
 }

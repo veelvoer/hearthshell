@@ -20,6 +20,8 @@ CONF_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
 DIR="$CONF_HOME/quickshell/$NAME"
 
+# a Quickshell the installer built lives in ~/.local/bin
+PATH="$HOME/.local/bin:$PATH"; export PATH
 QS=$(command -v qs || command -v quickshell || true)
 
 # Hyprland puts its instance signature in a socket directory, not in the environment of

@@ -1,28 +1,35 @@
 #!/bin/sh
-# hearthshell installer.
+# hearthshell: installation wizard.
 #
-#   ./install.sh              interactive install, asks before anything that needs a choice
-#   ./install.sh --dry-run    show everything it would do, change nothing
-#   ./install.sh --help       all options
+#   ./install.sh               the wizard: detects your system, asks a few questions, then installs
+#                              and downloads everything it needs (packages, Quickshell if your distro
+#                              has no package for it, icon font, wallpapers, config hooks)
+#   ./install.sh --yes         no questions: the recommended setup
+#   ./install.sh --dry-run     show the whole plan and every command, change nothing
+#   ./install.sh --help        all options
 #
 # Everything it does is written to ~/.local/state/hearthshell/manifest, and
-# ~/.local/share/hearthshell/uninstall.sh (or `hearthshell uninstall`) undoes exactly that.
-# Plain POSIX sh: no bash needed.
+# `hearthshell uninstall` undoes exactly that. Plain POSIX sh, no bash needed.
 set -u
 
 HERE=$(cd "$(dirname "$0")" && pwd)
 # shellcheck source=lib/common.sh
 . "$HERE/lib/common.sh"
+# shellcheck source=lib/distro.sh
+. "$HERE/lib/distro.sh"
 
 usage() {
     cat <<'EOT'
-hearthshell installer
+hearthshell installation wizard
 
 usage: ./install.sh [options]
 
-  -y, --yes            answer yes to every question (for scripts)
-  -n, --dry-run        print what would be done, change nothing
-      --no-deps        do not install any packages
+  -y, --yes            no questions: use the recommended setup ("Everything")
+  -n, --dry-run        print the plan and every command, change nothing
+      --profile P      skip the menu: everything | custom | minimal
+      --no-deps        do not install packages
+      --no-build       do not build Quickshell from source when your distro has no package
+      --qs-version T   Quickshell release to build (default v0.3.2)
       --no-fonts       do not download the Nerd Font used for icons
       --no-wallpapers  do not download and recolour the wallpapers
       --no-integrate   only install the shell; leave hyprland, kitty, rofi and GTK configs alone
@@ -40,281 +47,344 @@ usage: ./install.sh [options]
       --start          start the shell when finished (default: ask)
   -h, --help           this text
 
-Nothing is changed outside what is listed in docs/INSTALL.md. Undo it all with:
-  hearthshell uninstall      (or ~/.local/share/hearthshell/uninstall.sh)
+Profiles
+  everything   packages, Quickshell build if needed, icon font, wallpapers, themes for every app,
+               autostart (the default with --yes)
+  custom       the wizard asks about each part
+  minimal      only the shell and what it needs to run: no changes to your other configs
+
+Undo it all with:  hearthshell uninstall      (or ~/.local/share/hearthshell/uninstall.sh)
 EOT
 }
 
-DO_DEPS=1; DO_FONTS=1; DO_WALLS=1; DO_INTEGRATE=1; DO_BINDS=1
-DO_KITTY=1; DO_ROFI=1; DO_GTK=1; DO_DOTFILES=ask; DO_FISH_PROMPT=0; AUTOSTART=hyprland; START=ask
+# ---------------------------------------------------------------- options
+PROFILE=''
+W_DEPS=''; W_BUILD=''; W_FONTS=''; W_WALLS=''; W_INTEGRATE=''; W_BINDS=''
+W_KITTY=''; W_ROFI=''; W_GTK=''; W_DOTS=''; W_FISHP=''; AUTOSTART=''; START=ask
 
 while [ $# -gt 0 ]; do
     case "$1" in
         -y|--yes) ASSUME_YES=1 ;;
         -n|--dry-run) DRY_RUN=1 ;;
-        --no-deps) DO_DEPS=0 ;;
-        --no-fonts) DO_FONTS=0 ;;
-        --no-wallpapers) DO_WALLS=0 ;;
-        --no-integrate) DO_INTEGRATE=0 ;;
-        --no-binds) DO_BINDS=0 ;;
-        --no-kitty) DO_KITTY=0 ;;
-        --no-rofi) DO_ROFI=0 ;;
-        --no-gtk) DO_GTK=0 ;;
+        --profile) shift; PROFILE=${1:-}; case "$PROFILE" in everything|custom|minimal) ;; *) die "--profile needs everything, custom or minimal" ;; esac ;;
+        --no-deps) W_DEPS=0 ;;
+        --no-build) W_BUILD=0 ;;
+        --qs-version) shift; QS_TAG=${1:-}; [ -n "$QS_TAG" ] || die "--qs-version needs a tag such as v0.3.2" ;;
+        --no-fonts) W_FONTS=0 ;;
+        --no-wallpapers) W_WALLS=0 ;;
+        --no-integrate) W_INTEGRATE=0 ;;
+        --no-binds) W_BINDS=0 ;;
+        --no-kitty) W_KITTY=0 ;;
+        --no-rofi) W_ROFI=0 ;;
+        --no-gtk) W_GTK=0 ;;
         --autostart) shift; AUTOSTART=${1:-}; case "$AUTOSTART" in hyprland|systemd|none) ;; *) die "--autostart needs hyprland, systemd or none" ;; esac ;;
-        --dotfiles) DO_DOTFILES=yes ;;
-        --no-dotfiles) DO_DOTFILES=no ;;
-        --fish-prompt) DO_FISH_PROMPT=1 ;;
+        --dotfiles) W_DOTS=1 ;;
+        --no-dotfiles) W_DOTS=0 ;;
+        --fish-prompt) W_FISHP=1 ;;
         --start) START=yes ;;
         -h|--help) usage; exit 0 ;;
         *) usage >&2; die "unknown option: $1" ;;
     esac
     shift
 done
-
-[ "$(id -u)" != 0 ] || die "do not run this as root: it installs into your home directory (it asks for sudo only to install packages)"
+[ "${HEARTHSHELL_ALLOW_ROOT:-0}" = 1 ] || [ "$(id -u)" != 0 ] || die "do not run this as root: it installs into your home directory (it asks for your password only to install packages)"
 [ -f "$HERE/shell/shell.qml" ] || die "shell/shell.qml not found next to install.sh. Run it from a full clone of the repository."
 [ -n "${HOME:-}" ] && [ -d "$HOME" ] || die "HOME is not set"
 
-dry && say "${C_Y}Dry run: nothing will be changed.${C_0}"
+INTERACTIVE=0
+if [ -t 0 ] && [ "$ASSUME_YES" != 1 ]; then INTERACTIVE=1; fi
 
-# ===================================================================== 1. packages
+# ---------------------------------------------------------------- banner and detection
+banner() {
+    printf '\n%s' "$C_B"
+    cat <<'EOT'
+   _                      _   _          _          _ _
+  | |__   ___  __ _ _ __| |_| |__  ___ | |__   ___| | |
+  | '_ \ / _ \/ _` | '__| __| '_ \/ __|| '_ \ / _ \ | |
+  | | | |  __/ (_| | |  | |_| | | \__ \| | | |  __/ | |
+  |_| |_|\___|\__,_|_|   \__|_| |_|___/|_| |_|\___|_|_|
+EOT
+    printf '%s  a warm, animated Hyprland desktop shell. This wizard sets everything up.\n\n' "$C_0"
+}
+
 PM=$(detect_pm)
-SUDO=''
-if [ "$(id -u)" != 0 ]; then
-    if have sudo; then SUDO=sudo; elif have doas; then SUDO=doas; fi
-fi
+DISTRO=$(os_pretty)
+HMODE=$(hypr_mode)
+HYPR="$CONF_HOME/hypr"
+HS="$BIN_DIR/hearthshell"
 
-# role -> package name for a package manager (empty = no known package)
-pkg_for() {
-    pm=$1; role=$2
-    case "$pm:$role" in
-        pacman:quickshell) echo quickshell ;;           pacman:python3) echo python ;;
-        pacman:imagemagick) echo imagemagick ;;         pacman:grim) echo grim ;;
-        pacman:brightnessctl) echo brightnessctl ;;     pacman:networkmanager) echo networkmanager ;;
-        pacman:bluez) echo "bluez bluez-utils" ;;       pacman:chooser) echo zenity ;;
-        apt-get:python3) echo python3 ;;                apt-get:imagemagick) echo imagemagick ;;
-        apt-get:grim) echo grim ;;                      apt-get:brightnessctl) echo brightnessctl ;;
-        apt-get:networkmanager) echo network-manager ;; apt-get:bluez) echo bluez ;;
-        apt-get:chooser) echo zenity ;;
-        dnf:quickshell) echo quickshell ;;              dnf:python3) echo python3 ;;
-        dnf:imagemagick) echo ImageMagick ;;            dnf:grim) echo grim ;;
-        dnf:brightnessctl) echo brightnessctl ;;        dnf:networkmanager) echo NetworkManager ;;
-        dnf:bluez) echo bluez ;;                        dnf:chooser) echo zenity ;;
-        zypper:quickshell) echo quickshell ;;           zypper:python3) echo python3 ;;
-        zypper:imagemagick) echo ImageMagick ;;         zypper:grim) echo grim ;;
-        zypper:brightnessctl) echo brightnessctl ;;     zypper:networkmanager) echo NetworkManager ;;
-        zypper:bluez) echo bluez ;;                     zypper:chooser) echo zenity ;;
-        apk:quickshell) echo quickshell ;;              apk:python3) echo python3 ;;
-        apk:imagemagick) echo imagemagick ;;            apk:grim) echo grim ;;
-        apk:brightnessctl) echo brightnessctl ;;        apk:networkmanager) echo networkmanager ;;
-        apk:bluez) echo bluez ;;                        apk:chooser) echo zenity ;;
-        xbps-install:quickshell) echo quickshell ;;     xbps-install:python3) echo python3 ;;
-        xbps-install:imagemagick) echo ImageMagick ;;   xbps-install:grim) echo grim ;;
-        xbps-install:brightnessctl) echo brightnessctl ;; xbps-install:networkmanager) echo NetworkManager ;;
-        xbps-install:bluez) echo bluez ;;               xbps-install:chooser) echo zenity ;;
-        emerge:quickshell) echo gui-apps/quickshell ;;  emerge:python3) echo dev-lang/python ;;
-        emerge:imagemagick) echo media-gfx/imagemagick ;; emerge:grim) echo gui-apps/grim ;;
-        emerge:brightnessctl) echo app-misc/brightnessctl ;; emerge:networkmanager) echo net-misc/networkmanager ;;
-        emerge:bluez) echo net-wireless/bluez ;;        emerge:chooser) echo gnome-extra/zenity ;;
-        eopkg:python3) echo python3 ;;                  eopkg:imagemagick) echo imagemagick ;;
-        eopkg:grim) echo grim ;;                        eopkg:brightnessctl) echo brightnessctl ;;
-        eopkg:networkmanager) echo network-manager ;;   eopkg:bluez) echo bluez ;;
-        eopkg:chooser) echo zenity ;;
-        *) echo '' ;;
-    esac
+SESSION="not inside a Hyprland session"
+if [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then SESSION="Hyprland (running)"
+elif [ -n "${XDG_CURRENT_DESKTOP:-}" ]; then SESSION="${XDG_CURRENT_DESKTOP}"; fi
+
+banner
+dry && say "${C_Y}Dry run: nothing will be changed.${C_0}"
+step "Your system"
+info "distribution:      $DISTRO"
+info "package manager:   $(pm_label "$PM")"
+info "session:           $SESSION"
+case "$HMODE" in
+    lua)  info "Hyprland config:   Lua  ($HYPR/hyprland.lua)" ;;
+    conf) info "Hyprland config:   hyprlang  ($HYPR/hyprland.conf)" ;;
+    none) info "Hyprland config:   none found" ;;
+esac
+role_present quickshell && info "Quickshell:        found" || info "Quickshell:        ${C_Y}not installed${C_0}"
+role_present hyprland   && info "Hyprland:          found" || info "Hyprland:          ${C_Y}not installed${C_0}"
+if [ -f "$MANIFEST" ]; then info "hearthshell:       already installed, this run updates it (your settings are kept)"; fi
+
+# ---------------------------------------------------------------- the questions
+set_default() {  # set_default VAR value : only when the user did not already decide through a flag
+    eval "v=\${$1}"
+    [ -n "$v" ] || eval "$1=\$2"
 }
 
-role_present() {
-    case "$1" in
-        quickshell) have qs || have quickshell ;;
-        python3) have python3 ;;
-        imagemagick) have magick || have convert ;;
-        grim) have grim ;;
-        brightnessctl) have brightnessctl ;;
-        networkmanager) have nmcli ;;
-        bluez) have bluetoothctl ;;
-        chooser) have kdialog || have zenity || have yad ;;
-    esac
-}
-
-pm_install() {  # pm_install <manager> <package...>   (one package at a time, failures are not fatal)
-    pm=$1; shift
-    for p in "$@"; do
-        case "$pm" in
-            pacman) cmd="$SUDO pacman -S --needed $p" ;;
-            apt-get) cmd="$SUDO apt-get install -y $p" ;;
-            dnf) cmd="$SUDO dnf install -y $p" ;;
-            zypper) cmd="$SUDO zypper install -y $p" ;;
-            apk) cmd="$SUDO apk add $p" ;;
-            xbps-install) cmd="$SUDO xbps-install -y $p" ;;
-            emerge) cmd="$SUDO emerge --noreplace $p" ;;
-            eopkg) cmd="$SUDO eopkg install -y $p" ;;
-            *) return 1 ;;
-        esac
-        if dry; then info "${C_D}would run:${C_0} $cmd"; continue; fi
-        # shellcheck disable=SC2086
-        if $cmd; then record "PKG $pm $p"; else warn "could not install '$p' with $pm"; fi
-    done
-}
-
-step "Checking dependencies"
-info "distribution package manager: $PM"
-REQUIRED='quickshell python3 imagemagick grim'
-OPTIONAL='brightnessctl networkmanager bluez chooser'
-MISSING_REQ=''; MISSING_OPT=''
-for r in $REQUIRED; do role_present "$r" || MISSING_REQ="$MISSING_REQ $r"; done
-for r in $OPTIONAL; do role_present "$r" || MISSING_OPT="$MISSING_OPT $r"; done
-
-if have hyprctl; then info "Hyprland: found"; else
-    warn "Hyprland (hyprctl) not found. This shell is built for Hyprland; install it first (https://wiki.hypr.land/Getting-Started/Installation/)."
-    ask "Continue anyway?" n || die "aborted"
-fi
-[ -z "$MISSING_REQ" ] && info "required tools: all present"
-[ -n "$MISSING_REQ" ] && info "missing (required):$MISSING_REQ"
-[ -n "$MISSING_OPT" ] && info "missing (optional):$MISSING_OPT  (brightness, network menu, Bluetooth menu, file picker)"
-
-if [ "$DO_DEPS" = 1 ] && [ -n "$MISSING_REQ$MISSING_OPT" ]; then
-    if [ "$PM" = nix ]; then
-        warn "NixOS: add the missing packages to your configuration (see docs/INSTALL.md, section NixOS) and run this again with --no-deps."
-    elif [ "$PM" = unknown ]; then
-        warn "No supported package manager found. Install the missing tools yourself (docs/INSTALL.md lists them), then run with --no-deps."
+if [ -z "$PROFILE" ]; then
+    if [ "$INTERACTIVE" = 1 ]; then
+        printf '\n  How do you want to install?\n'
+        printf '    %s1)%s Everything %s(recommended)%s  packages, icon font, wallpapers, themes for every app, autostart\n' "$C_B" "$C_0" "$C_G" "$C_0"
+        printf '    %s2)%s Let me choose each part\n' "$C_B" "$C_0"
+        printf '    %s3)%s Only the shell                 no changes to your other configs\n' "$C_B" "$C_0"
+        printf '  Choice [1]: '
+        read -r c || c=''
+        case "$c" in 2) PROFILE=custom ;; 3) PROFILE=minimal ;; *) PROFILE=everything ;; esac
     else
-        want=''
-        for r in $MISSING_REQ $MISSING_OPT; do
-            p=$(pkg_for "$PM" "$r")
-            if [ -n "$p" ]; then want="$want $p"; else
-                if [ "$r" = quickshell ]; then
-                    warn "$PM has no known Quickshell package. Build it from source: https://quickshell.org/docs/guide/install-setup/"
-                else info "no known $PM package for '$r', skipping"; fi
+        PROFILE=everything
+    fi
+fi
+info "setup: $PROFILE"
+
+case "$PROFILE" in
+    everything)
+        set_default W_DEPS 1; set_default W_BUILD 1; set_default W_FONTS 1; set_default W_WALLS 1
+        set_default W_INTEGRATE 1; set_default W_BINDS 1; set_default W_KITTY 1; set_default W_ROFI 1
+        set_default W_GTK 1; set_default AUTOSTART hyprland ;;
+    minimal)
+        set_default W_DEPS 1; set_default W_BUILD 1; set_default W_FONTS 1; set_default W_WALLS 1
+        set_default W_INTEGRATE 0; set_default W_BINDS 0; set_default W_KITTY 0; set_default W_ROFI 0
+        set_default W_GTK 0; set_default AUTOSTART none ;;
+    custom)
+        printf '\n'
+        set_default W_DEPS "$(ask "Install missing packages with your package manager?" y && echo 1 || echo 0)"
+        role_present quickshell || set_default W_BUILD "$(ask "Build Quickshell from source if your distribution has no package for it?" y && echo 1 || echo 0)"
+        fc-list ':charset=f0581' family 2>/dev/null | grep -q . || set_default W_FONTS "$(ask "Download an icon font (JetBrainsMono Nerd Font, ~25 MB)?" y && echo 1 || echo 0)"
+        set_default W_WALLS "$(ask "Download and recolour the wallpapers (13 themes x 4 images)?" y && echo 1 || echo 0)"
+        set_default W_INTEGRATE "$(ask "Connect to Hyprland (layer rules and theme hook)?" y && echo 1 || echo 0)"
+        if [ "$W_INTEGRATE" = 1 ]; then
+            set_default W_BINDS "$(ask "Add the key binds Super+, (settings) and Super+N (lock)?" y && echo 1 || echo 0)"
+            if [ -z "$AUTOSTART" ]; then
+                printf '  Start the shell with your session through:  1) a Hyprland autostart line  2) a systemd service  3) nothing\n  Choice [1]: '
+                read -r a || a=''
+                case "$a" in 2) AUTOSTART=systemd ;; 3) AUTOSTART=none ;; *) AUTOSTART=hyprland ;; esac
             fi
-        done
-        if [ -n "$want" ]; then
-            info "packages to install with $PM:$want"
-            [ -n "$SUDO" ] || warn "no sudo or doas found; package installation will likely fail"
-            if ask "Install these packages now?" y; then
-                # shellcheck disable=SC2086
-                pm_install "$PM" $want
-            else
-                info "skipped. Install them yourself if something is missing later."
-            fi
+        fi
+        { have kitty || [ -d "$CONF_HOME/kitty" ]; } && set_default W_KITTY "$(ask "Theme kitty too?" y && echo 1 || echo 0)"
+        { have rofi || [ -d "$CONF_HOME/rofi" ]; } && set_default W_ROFI "$(ask "Install the rofi theme?" y && echo 1 || echo 0)"
+        set_default W_GTK "$(ask "Let hearthshell colour GTK apps (accent and window colours)?" y && echo 1 || echo 0)"
+        have fish && set_default W_FISHP "$(ask_strict "Replace your fish prompt with the hearthshell one (backed up)?" && echo 1 || echo 0)" ;;
+esac
+set_default W_DEPS 1; set_default W_BUILD 1; set_default W_FONTS 1; set_default W_WALLS 1; set_default W_INTEGRATE 1
+set_default W_BINDS 1; set_default W_KITTY 1; set_default W_ROFI 1; set_default W_GTK 1
+set_default W_FISHP 0; set_default AUTOSTART hyprland
+
+# the author's dotfiles: never implied by --yes, because they replace configs
+DOTS_AVAILABLE=0; [ -d "$HERE/dotfiles" ] && DOTS_AVAILABLE=1
+if [ -z "$W_DOTS" ]; then
+    W_DOTS=0
+    if [ "$DOTS_AVAILABLE" = 1 ] && [ "$INTERACTIVE" = 1 ] && [ "$PROFILE" != minimal ]; then
+        DOTS=$(cd "$HERE/dotfiles" && find . -type f ! -path './quickshell/*' ! -name README.md | sed 's|^\./||' | sort)
+        printf '\n'
+        if [ "$HMODE" = none ]; then
+            info "You have no Hyprland config yet. The repository includes the author's complete setup"
+            info "(Hyprland, hyprlock, kitty, rofi, fish, cava and the shell settings): a working desktop in one go."
+            def=y
+        else
+            info "The repository also holds the author's own configs. They are made for one laptop (monitor, Belgian"
+            info "keyboard), so most people skip them. Installing them REPLACES these files (backed up, restored on uninstall):"
+            for rel in $DOTS; do
+                if [ -e "$CONF_HOME/$rel" ]; then info "  replace  $CONF_HOME/$rel"; else info "  create   $CONF_HOME/$rel"; fi
+            done
+            def=n
+        fi
+        if [ "$def" = y ]; then
+            printf '  ? Install the author configs? [Y/n] '; read -r a || a=''
+            case "$a" in n|N|no|NO) W_DOTS=0 ;; *) W_DOTS=1 ;; esac
+        else
+            ask_strict "Install the author's dotfiles?" && W_DOTS=1
         fi
     fi
 fi
+[ "$DOTS_AVAILABLE" = 1 ] || W_DOTS=0
+[ "$W_DOTS" = 1 ] && HMODE_AFTER=lua || HMODE_AFTER=$HMODE
 
-# re-check what is still missing
-STILL=''
-for r in $REQUIRED; do role_present "$r" || STILL="$STILL $r"; done
-if [ -n "$STILL" ] && ! dry; then
-    warn "still missing:$STILL"
-    if [ "$DO_DEPS" = 1 ]; then ask "Continue installing the files anyway?" n || die "install the missing tools and run ./install.sh again"; fi
+# ---------------------------------------------------------------- what is missing
+REQUIRED='quickshell python3 imagemagick grim'
+OPTIONAL='brightnessctl networkmanager bluez chooser'
+DESKTOP='kitty rofi fish hyprlock slurp wl-clipboard playerctl cava'
+MISSING=''; PKGS=''; NEED_BUILD=0; NOPKG=''
+add_pkgs() { for p in $1; do case " $PKGS " in *" $p "*) ;; *) PKGS="$PKGS $p" ;; esac; done; }
+
+if [ "$W_DEPS" = 1 ]; then
+    roles="$REQUIRED $OPTIONAL"
+    [ "$W_DOTS" = 1 ] && roles="$roles $DESKTOP"
+    role_present hyprland || roles="$roles hyprland"
+    # the icon font download needs curl or wget
+    if [ "$W_FONTS" = 1 ] && ! role_present curl; then roles="$roles curl"; fi
+    for r in $roles; do
+        role_present "$r" && continue
+        MISSING="$MISSING $r"
+        p=$(pkg_for "$PM" "$r")
+        if [ -n "$p" ]; then add_pkgs "$p"; else
+            if [ "$r" = quickshell ]; then
+                if [ "$W_BUILD" = 1 ] && qs_buildable "$PM"; then NEED_BUILD=1; else NOPKG="$NOPKG $r"; fi
+            else NOPKG="$NOPKG $r"; fi
+        fi
+    done
+else
+    for r in $REQUIRED; do role_present "$r" || MISSING="$MISSING $r"; done
 fi
 
-# ===================================================================== 2. the shell itself
-step "Installing the shell to $INSTALL_DIR"
-if [ -d "$INSTALL_DIR" ] && [ -f "$INSTALL_DIR/shell.qml" ]; then info "updating an existing install (your settings, themes and wallpapers are kept)"; fi
+NEED_FONT=0
+if [ "$W_FONTS" = 1 ] && have fc-list && ! fc-list ':charset=f0581' family 2>/dev/null | grep -q .; then NEED_FONT=1; fi
+NWALL=$(awk 'BEGIN{n=0} /"path"/{n++} END{print n}' "$HERE/shell/wallpapers.json" 2>/dev/null || echo 52)
+
+# ---------------------------------------------------------------- the plan
+step "The plan"
+PLAN_N=0
+plan() { PLAN_N=$((PLAN_N + 1)); info "$PLAN_N. $*"; }
+ROOT_TOOL=$(root_tool)
+if [ -n "$PKGS" ]; then
+    case "$ROOT_TOOL" in
+        root) plan "install packages:$PKGS" ;;
+        none) plan "install packages (needs root; no sudo found, the wizard will show you the command):$PKGS" ;;
+        *) plan "install packages with $ROOT_TOOL (asks for your password):$PKGS" ;;
+    esac
+fi
+[ "$NEED_BUILD" = 1 ] && plan "build Quickshell ${QS_TAG:-$QS_TAG_DEFAULT} from source into ~/.local (your distribution has no package; takes about 5-15 minutes)"
+[ "$NEED_FONT" = 1 ] && plan "download JetBrainsMono Nerd Font (~25 MB) for the bar icons"
+plan "copy the shell to $INSTALL_DIR and the launcher to $HS"
+[ "$W_WALLS" = 1 ] && plan "download and recolour the wallpapers ($NWALL images, a few minutes)"
+[ "$W_DOTS" = 1 ] && plan "install the author's dotfiles (replaces matching configs, each backed up)"
+if [ "$W_INTEGRATE" = 1 ]; then
+    plan "connect Hyprland: layer rules, theme hook$( [ "$W_BINDS" = 1 ] && printf ', Super+, and Super+N' )$( [ "$AUTOSTART" != none ] && printf ', autostart (%s)' "$AUTOSTART" )"
+    others=''
+    { [ "$W_KITTY" = 1 ] && { have kitty || [ -d "$CONF_HOME/kitty" ]; }; } && others="$others kitty"
+    { [ "$W_ROFI" = 1 ] && { have rofi || [ -d "$CONF_HOME/rofi" ]; }; } && others="$others rofi"
+    [ "$W_GTK" = 1 ] && others="$others GTK"
+    [ -n "$others" ] && info "   also themed:$others (one marked line or file each)"
+else
+    info "   no changes to your other configs"
+fi
+plan "write the first theme"
+[ -n "$NOPKG" ] && warn "no package for:$NOPKG on this system; install them yourself (docs/INSTALL.md) if you want those features"
+if ! role_present hyprland && [ -z "$(pkg_for "$PM" hyprland)" ]; then
+    warn "Hyprland is not installed and $(pm_label "$PM") has no package for it: install it first (https://wiki.hypr.land/Getting-Started/Installation/)"
+fi
+if [ "$HMODE_AFTER" = none ] && [ "$W_INTEGRATE" = 1 ]; then
+    warn "No Hyprland config exists yet: start Hyprland once (it writes a default config), then run ./install.sh again to hook in."
+fi
+printf '\n'
+if [ "$INTERACTIVE" = 1 ] && ! dry; then
+    ask "Start the installation?" y || { say "Nothing was changed."; exit 0; }
+fi
+
+# ================================================================= execution
+STEP_I=0
+run_step() { STEP_I=$((STEP_I + 1)); step "[$STEP_I/$PLAN_N] $*"; }
+
+# ---------------------------------------------------------------- packages
+if [ -n "$PKGS" ]; then
+    run_step "Installing packages"
+    if [ "$PM" = nix ]; then
+        warn "NixOS: add these to your configuration instead, then run this wizard again:$PKGS"
+    else
+        pm_refresh "$PM" || true
+        # shellcheck disable=SC2086
+        pm_install_pkgs "$PM" $PKGS || warn "some packages were not installed"
+    fi
+fi
+
+# ---------------------------------------------------------------- Quickshell
+if [ "$NEED_BUILD" = 1 ]; then
+    run_step "Building Quickshell"
+    if ! build_quickshell "$PM"; then
+        warn "Quickshell could not be built here. Build it by hand (https://quickshell.org/docs/guide/install-setup/)"
+        warn "and run this wizard again with --no-deps."
+    fi
+fi
+if ! role_present quickshell && [ -d "$HOME/.local/bin" ]; then PATH="$HOME/.local/bin:$PATH"; export PATH; fi
+
+# ---------------------------------------------------------------- font
+if [ "$NEED_FONT" = 1 ]; then
+    run_step "Icon font"
+    FD="$DATA_HOME/fonts/$NAME"
+    if dry; then info "${C_D}would download${C_0} JetBrainsMono.tar.xz -> $FD"; else
+        make_dir "$FD"
+        URL=https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.tar.xz
+        TMP=$(mktemp -d)
+        if { have curl && curl -fsSL "$URL" -o "$TMP/f.tar.xz"; } || { have wget && wget -q "$URL" -O "$TMP/f.tar.xz"; }; then
+            tar -xJf "$TMP/f.tar.xz" -C "$FD" --wildcards '*.ttf' 2>/dev/null || tar -xJf "$TMP/f.tar.xz" -C "$FD" 2>/dev/null
+            fc-cache -f "$FD" >/dev/null 2>&1
+            info "installed to $FD"
+        else
+            warn "download failed (needs curl or wget, and network). Install a Nerd Font by hand: docs/INSTALL.md"
+        fi
+        rm -rf "$TMP"
+    fi
+fi
+
+# ---------------------------------------------------------------- the shell
+run_step "Installing the shell"
+if [ -f "$INSTALL_DIR/shell.qml" ]; then info "updating an existing install (settings, themes and wallpapers are kept)"; fi
 make_dir "$INSTALL_DIR"
 if dry; then info "${C_D}would copy${C_0} $HERE/shell/ -> $INSTALL_DIR/"; else
     cp -R "$HERE/shell/." "$INSTALL_DIR/" || die "copying the shell failed"
     chmod +x "$INSTALL_DIR"/scripts/*.py "$INSTALL_DIR"/scripts/*.sh "$INSTALL_DIR"/bin/hearthshell 2>/dev/null
     [ -f "$INSTALL_DIR/custom-themes.json" ] || printf '{}\n' > "$INSTALL_DIR/custom-themes.json"
 fi
-
-# PAM service the lock screen checks the password against
 PAM=login
 if [ -f /etc/pam.d/hyprlock ]; then PAM=hyprlock
 elif [ -f /etc/pam.d/login ]; then PAM=login
 elif [ -f /etc/pam.d/system-auth ]; then PAM=system-auth; fi
 if dry; then info "${C_D}would set lock PAM service to${C_0} $PAM"; else printf '%s\n' "$PAM" > "$INSTALL_DIR/pam-service"; fi
 info "lock screen password check uses PAM service: $PAM"
-
-step "Installing the launcher and uninstaller"
 make_dir "$BIN_DIR"
 install_file "$HERE/shell/bin/hearthshell" "$BIN_DIR/hearthshell" 755
 make_dir "$SHARE_DIR/lib"
 install_file "$HERE/uninstall.sh" "$SHARE_DIR/uninstall.sh" 755
 install_file "$HERE/lib/common.sh" "$SHARE_DIR/lib/common.sh" 644
-case ":$PATH:" in *":$BIN_DIR:"*) ;; *) warn "$BIN_DIR is not in your PATH. Add it, or call $BIN_DIR/hearthshell directly." ;; esac
-HS="$BIN_DIR/hearthshell"
+case ":$PATH:" in *":$BIN_DIR:"*) ;; *) warn "$BIN_DIR is not in your PATH. Add it, or call $BIN_DIR/hearthshell directly. (Hyprland binds use the full path.)" ;; esac
 
-# ===================================================================== 3. font
-if [ "$DO_FONTS" = 1 ] && have fc-list; then
-    if fc-list ':charset=f0581' family 2>/dev/null | grep -q .; then
-        info "a font with the bar icons is installed"
-    else
-        step "Icon font"
-        info "The bar icons come from a Nerd Font and none is installed."
-        if ask "Download JetBrainsMono Nerd Font (about 25 MB) into your user fonts?" y; then
-            FD="$DATA_HOME/fonts/$NAME"
-            if dry; then info "${C_D}would download${C_0} JetBrainsMono.tar.xz -> $FD"; else
-                make_dir "$FD"
-                URL=https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.tar.xz
-                TMP=$(mktemp -d)
-                if { have curl && curl -fsSL "$URL" -o "$TMP/f.tar.xz"; } || { have wget && wget -q "$URL" -O "$TMP/f.tar.xz"; }; then
-                    tar -xJf "$TMP/f.tar.xz" -C "$FD" --wildcards '*.ttf' 2>/dev/null || tar -xJf "$TMP/f.tar.xz" -C "$FD" 2>/dev/null
-                    fc-cache -f "$FD" >/dev/null 2>&1
-                    info "installed to $FD"
-                else
-                    warn "download failed (needs curl or wget and network). Install a Nerd Font by hand, see docs/INSTALL.md."
-                fi
-                rm -rf "$TMP"
-            fi
-        fi
-    fi
-fi
-
-# ===================================================================== 4. wallpapers
-if [ "$DO_WALLS" = 1 ]; then
-    step "Wallpapers"
-    info "No images ship with the repository. They are downloaded from their original"
-    info "sources and recoloured to each theme on your machine (13 themes x 4 images, a few minutes)."
-    if have python3 && ask "Download and prepare the wallpapers now?" y; then
+# ---------------------------------------------------------------- wallpapers
+if [ "$W_WALLS" = 1 ]; then
+    run_step "Wallpapers"
+    info "Downloaded from their original sources and recoloured to each theme on this machine."
+    if have python3; then
         if dry; then info "${C_D}would run:${C_0} python3 $INSTALL_DIR/scripts/fetch-wallpapers.py"; else
             python3 "$INSTALL_DIR/scripts/fetch-wallpapers.py" || warn "some wallpapers could not be prepared; themes fall back to a plain gradient"
         fi
     else
-        info "skipped. Later:  python3 $INSTALL_DIR/scripts/fetch-wallpapers.py [theme]"
+        warn "Python 3 is missing, so wallpapers were skipped. Later: python3 $INSTALL_DIR/scripts/fetch-wallpapers.py"
     fi
 fi
 
-# ===================================================================== 4b. the author's dotfiles (opt-in)
-if [ -d "$HERE/dotfiles" ] && [ "$DO_DOTFILES" != no ]; then
+# ---------------------------------------------------------------- dotfiles
+if [ "$W_DOTS" = 1 ]; then
+    run_step "The author's dotfiles"
     DOTS=$(cd "$HERE/dotfiles" && find . -type f ! -path './quickshell/*' ! -name README.md | sed 's|^\./||' | sort)
-    if [ "$DO_DOTFILES" = ask ]; then
-        # never answered by --yes: replacing someone's configs has to be a deliberate choice
-        if [ "$ASSUME_YES" = 1 ] || [ ! -t 0 ]; then DO_DOTFILES=no; fi
+    for rel in $DOTS; do
+        install_file "$HERE/dotfiles/$rel" "$CONF_HOME/$rel" 644
+        info "$rel"
+    done
+    if [ -f "$HERE/dotfiles/quickshell/settings.json" ]; then
+        install_file "$HERE/dotfiles/quickshell/settings.json" "$INSTALL_DIR/settings.json" 644
+        info "shell settings (theme, bar layout, modules)"
     fi
-    if [ "$DO_DOTFILES" = ask ]; then
-        step "The author's dotfiles (optional)"
-        info "The repository also holds the author's own configs: Hyprland, hyprlock, kitty, rofi, fish, cava,"
-        info "and the shell settings (theme, bar layout, modules). They are made for one laptop (monitor,"
-        info "Belgian keyboard) so most people only want to look at them or copy parts (see dotfiles/README.md)."
-        info "Installing them REPLACES these files; each existing file is backed up and restored on uninstall:"
-        for rel in $DOTS; do
-            if [ -e "$CONF_HOME/$rel" ]; then info "  replace  $CONF_HOME/$rel"; else info "  create   $CONF_HOME/$rel"; fi
-        done
-        if ask_strict "Install the author's dotfiles?"; then DO_DOTFILES=yes; else DO_DOTFILES=no; fi
-    fi
-    if [ "$DO_DOTFILES" = yes ]; then
-        step "Installing the author's dotfiles"
-        for rel in $DOTS; do
-            install_file "$HERE/dotfiles/$rel" "$CONF_HOME/$rel" 644
-            info "$rel"
-        done
-        if [ -f "$HERE/dotfiles/quickshell/settings.json" ]; then
-            install_file "$HERE/dotfiles/quickshell/settings.json" "$INSTALL_DIR/settings.json" 644
-            info "shell settings (theme, bar layout, modules)"
-        fi
-        info "hearthshell's own hooks are still added below, so key binds and autostart are not duplicated."
-    fi
+    HMODE=$(hypr_mode)
 fi
 
-# ===================================================================== 5. integration
-HMODE=$(hypr_mode)
-HYPR="$CONF_HOME/hypr"
-if [ "$DO_INTEGRATE" = 1 ]; then
-    step "Connecting to your desktop"
-
-    # ---------------- Hyprland
+# ---------------------------------------------------------------- integration
+if [ "$W_INTEGRATE" = 1 ]; then
+    run_step "Connecting to your desktop"
     case "$HMODE" in
     lua)
         info "Hyprland config: Lua ($HYPR/hyprland.lua)"
@@ -325,9 +395,9 @@ if [ "$DO_INTEGRATE" = 1 ]; then
             echo 'hl.layer_rule({ match = { namespace = "^quickshell-popup$" }, no_anim = true })'
             echo 'hl.layer_rule({ match = { namespace = "^quickshell-wallpaper$" }, no_anim = true })'
             echo 'hl.layer_rule({ match = { namespace = "^quickshell-bar$" }, no_anim = true })'
-            if [ "$DO_BINDS" = 1 ]; then
+            if [ "$W_BINDS" = 1 ]; then
                 if grep -Eqi '[+,] *comma([^a-z]|$)' "$HYPR/hyprland.lua" 2>/dev/null; then
-                    echo '-- Super + , was not added because your config already mentions "comma". Bind it yourself:'
+                    echo '-- Super + , was not added because your config already binds comma. Bind it yourself:'
                     echo "-- hl.bind(\"SUPER + comma\", hl.dsp.exec_cmd(\"$HS settings\"))"
                 else
                     echo "hl.bind(\"SUPER + comma\", hl.dsp.exec_cmd(\"$HS settings\"))"
@@ -353,9 +423,9 @@ if [ "$DO_INTEGRATE" = 1 ]; then
             echo "layerrule = ignorealpha 0.05, quickshell-bar"
             echo "layerrule = blur, quickshell-popup"
             echo "layerrule = ignorealpha 0.1, quickshell-popup"
-            if [ "$DO_BINDS" = 1 ]; then
+            if [ "$W_BINDS" = 1 ]; then
                 if grep -Eqi '[+,] *comma([^a-z]|$)' "$HYPR/hyprland.conf" 2>/dev/null; then
-                    echo "# Super + , was not added because your config already mentions comma. Bind it yourself:"
+                    echo "# Super + , was not added because your config already binds comma. Bind it yourself:"
                     echo "# bind = SUPER, comma, exec, $HS settings"
                 else
                     echo "bind = SUPER, comma, exec, $HS settings"
@@ -365,36 +435,23 @@ if [ "$DO_INTEGRATE" = 1 ]; then
             [ "$AUTOSTART" = hyprland ] && echo "exec-once = $HS"
             echo "source = $HYPR/hearthshell-theme.conf"
         } | write_file "$HYPR/hearthshell.conf"
-        # the sourced theme file must exist even before the first apply
         [ -e "$HYPR/hearthshell-theme.conf" ] || { echo "# written by hearthshell" | write_file "$HYPR/hearthshell-theme.conf"; }
         printf 'source = %s/hearthshell.conf\n' "$HYPR" | patch_block "$HYPR/hyprland.conf" hearthshell '#' ''
         ;;
     none)
-        warn "No Hyprland config found in $HYPR (hyprland.lua or hyprland.conf). Nothing was added."
-        warn "Add the key binds and autostart yourself, see docs/INSTALL.md (Manual install)."
+        warn "No Hyprland config found in $HYPR (hyprland.lua or hyprland.conf), so key binds and autostart were not added."
+        warn "Start Hyprland once so it writes its default config, then run this wizard again. Until then: hearthshell"
         ;;
     esac
 
-    # ---------------- systemd user service (optional autostart)
     if [ "$AUTOSTART" = systemd ]; then
         if have systemctl; then
             {
-                echo "[Unit]"
-                echo "Description=hearthshell (Quickshell desktop shell)"
-                echo "After=graphical-session.target"
-                echo "StartLimitIntervalSec=60"
-                echo "StartLimitBurst=10"
-                echo ""
-                echo "[Service]"
-                echo "Type=simple"
-                echo "ExecStart=$HS run"
-                echo "Restart=on-failure"
-                echo "RestartSec=2"
-                echo "KillMode=mixed"
-                echo "TimeoutStopSec=5"
-                echo ""
-                echo "[Install]"
-                echo "WantedBy=default.target"
+                echo "[Unit]"; echo "Description=hearthshell (Quickshell desktop shell)"; echo "After=graphical-session.target"
+                echo "StartLimitIntervalSec=60"; echo "StartLimitBurst=10"; echo ""
+                echo "[Service]"; echo "Type=simple"; echo "ExecStart=$HS run"; echo "Restart=on-failure"
+                echo "RestartSec=2"; echo "KillMode=mixed"; echo "TimeoutStopSec=5"; echo ""
+                echo "[Install]"; echo "WantedBy=default.target"
             } | write_file "$CONF_HOME/systemd/user/hearthshell.service"
             if ! dry; then
                 systemctl --user daemon-reload 2>/dev/null
@@ -402,18 +459,15 @@ if [ "$DO_INTEGRATE" = 1 ]; then
                 else warn "could not enable the systemd user service"; fi
             fi
         else
-            warn "systemctl not found; falling back to no autostart. Start the shell with: hearthshell"
+            warn "systemctl not found; no autostart was set up. Start the shell with: hearthshell"
         fi
     fi
 
-    # ---------------- kitty
-    if [ "$DO_KITTY" = 1 ] && { have kitty || [ -d "$CONF_HOME/kitty" ]; }; then
+    if [ "$W_KITTY" = 1 ] && { have kitty || [ -d "$CONF_HOME/kitty" ]; }; then
         info "kitty: adding an include of the generated theme"
         printf 'include hearthshell-theme.conf\n' | patch_block "$CONF_HOME/kitty/kitty.conf" hearthshell '#' ''
     fi
-
-    # ---------------- rofi
-    if [ "$DO_ROFI" = 1 ] && { have rofi || [ -d "$CONF_HOME/rofi" ]; }; then
+    if [ "$W_ROFI" = 1 ] && { have rofi || [ -d "$CONF_HOME/rofi" ]; }; then
         info "rofi: installing the hearthshell theme"
         make_dir "$CONF_HOME/rofi"
         sed "s|@CONF@|$CONF_HOME|g" "$HERE/integration/rofi-hearthshell.rasi" | write_file "$CONF_HOME/rofi/themes/hearthshell.rasi"
@@ -421,32 +475,29 @@ if [ "$DO_INTEGRATE" = 1 ]; then
             printf '@theme "hearthshell"\n' | patch_block "$CONF_HOME/rofi/config.rasi" hearthshell '/*' '*/'
             info "rofi: made it the default theme"
         else
-            info "rofi: you already have a config.rasi, so it was left alone. Use the theme with: rofi -show drun -theme hearthshell"
+            info "rofi: your config.rasi was left alone. Use the theme with: rofi -show drun -theme hearthshell"
         fi
     fi
-
-    # ---------------- GTK
-    if [ "$DO_GTK" = 1 ] && ask "Let hearthshell colour GTK apps (accent and window colours)? You can turn it off later in Settings." y; then
+    if [ "$W_GTK" = 1 ]; then
         for g in gtk-3.0 gtk-4.0; do
             make_dir "$CONF_HOME/$g"
             printf "@import 'hearthshell.css';\n" | patch_block "$CONF_HOME/$g/gtk.css" hearthshell '/*' '*/'
         done
+        info "GTK: apps pick up the colours when they start (switch it off in Settings -> System)"
     fi
-
-    # ---------------- hyprlock template (never replaces your own hyprlock.conf)
-    install_tmpl() { sed "s|@CONF@|$CONF_HOME|g" "$HERE/integration/hyprlock-hearthshell.conf" | write_file "$HYPR/hyprlock-hearthshell.conf"; }
-    if [ -d "$HYPR" ]; then install_tmpl; info "hyprlock: template installed as hyprlock-hearthshell.conf (your own hyprlock.conf is untouched)"; fi
-
-    # ---------------- fish prompt (opt-in)
-    if [ "$DO_FISH_PROMPT" = 1 ]; then
+    if [ -d "$HYPR" ]; then
+        sed "s|@CONF@|$CONF_HOME|g" "$HERE/integration/hyprlock-hearthshell.conf" | write_file "$HYPR/hyprlock-hearthshell.conf"
+        info "hyprlock: template installed as hyprlock-hearthshell.conf (your own hyprlock.conf is untouched)"
+    fi
+    if [ "$W_FISHP" = 1 ]; then
         install_file "$HERE/integration/fish_prompt.fish" "$CONF_HOME/fish/functions/fish_prompt.fish" 644
         info "fish: installed the hearthshell prompt"
     fi
 fi
 
-# ===================================================================== 6. first theme apply
-step "Applying the theme"
-if dry; then info "${C_D}would run:${C_0} python3 $INSTALL_DIR/scripts/apply-theme.py (current settings or Everforest)"; else
+# ---------------------------------------------------------------- first theme
+run_step "Applying the theme"
+if dry; then info "${C_D}would run:${C_0} python3 $INSTALL_DIR/scripts/apply-theme.py"; else
     if have python3; then
         s="$INSTALL_DIR/settings.json"; theme=everforest; opts='{}'
         if [ -f "$s" ]; then
@@ -454,34 +505,42 @@ if dry; then info "${C_D}would run:${C_0} python3 $INSTALL_DIR/scripts/apply-the
             opts=$(cat "$s")
         fi
         python3 "$INSTALL_DIR/scripts/apply-theme.py" "$theme" "$opts" || warn "applying the theme failed (is Hyprland running?). Run: hearthshell apply"
+        info "theme: $theme"
+    else
+        warn "Python 3 is missing, so no theme was applied."
     fi
 fi
 
-# ===================================================================== done
+# ================================================================= done
 step "Done"
+if ! dry && [ -x "$HS" ]; then
+    printf '\n'
+    "$HS" doctor 2>&1 | sed 's/^/  /'
+    printf '\n'
+fi
 cat <<EOT
   Installed to:   $INSTALL_DIR
-  Launcher:       $HS   (try: hearthshell help)
-  Settings:       press Super + ,   (or: hearthshell settings)
-  Lock screen:    Super + N         (or: hearthshell lock)
-  Check it:       hearthshell doctor
-  Uninstall:      hearthshell uninstall      (undoes everything this installer did)
+  Launcher:       $HS   (hearthshell help)
+  Settings:       Super + ,     (or: hearthshell settings)
+  Lock screen:    Super + N     (or: hearthshell lock)
+  Uninstall:      hearthshell uninstall      (undoes everything this wizard did)
   Guide:          docs/INSTALL.md in the repository (https://github.com/veelvoer/hearthshell)
 EOT
-if [ "$HMODE" = lua ] || [ "$HMODE" = conf ]; then
-    say "  Hyprland reads the new binds on its next reload (hyprctl reload) or restart."
-fi
 
 if ! dry; then
     if [ "$START" = ask ]; then
-        if [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ] || [ -n "${WAYLAND_DISPLAY:-}" ]; then
+        if [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ] && [ "$INTERACTIVE" = 1 ]; then
             ask "Start the shell now?" y && START=yes || START=no
         else START=no; fi
     fi
-    if [ "$START" = yes ]; then
+    if [ "$START" = yes ] && [ -x "$HS" ]; then
         if have hyprctl; then hyprctl reload >/dev/null 2>&1; fi
         nohup "$HS" run >/dev/null 2>&1 &
         info "started"
+    elif [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
+        say "  Reload Hyprland (hyprctl reload) to activate the key binds, then start the shell with: hearthshell"
+    else
+        say "  Log in to a Hyprland session; the shell starts with it."
     fi
 fi
 exit 0

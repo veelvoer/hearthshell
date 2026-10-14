@@ -19,15 +19,26 @@ change almost everything: themes, wallpapers, the bar, the windows, even your te
 ```sh
 git clone https://github.com/veelvoer/hearthshell
 cd hearthshell
-./install.sh --dry-run     # see everything it would do, change nothing
-./install.sh               # the real thing; asks before every choice
+./install.sh
 ```
 
-Prefer one line? `curl -fsSL https://raw.githubusercontent.com/veelvoer/hearthshell/main/get.sh | sh`
+That is all. The wizard looks at your system and does the rest:
+
+1. detects your distribution and package manager and shows what it found
+2. installs what is missing (packages through your package manager; it asks for your password only for that)
+3. **builds Quickshell from source** if your distribution has no package for it (into `~/.local`, no root needed for the build)
+4. downloads an icon font and the wallpapers, and recolours the wallpapers for each theme
+5. connects Hyprland (key binds, autostart), kitty, rofi and GTK with a few clearly marked lines
+6. starts the shell and runs a health check
+
+You pick one of three setups at the start: **Everything** (recommended), **Let me choose each part**, or **Only the shell**.
+`./install.sh --yes` skips every question, `./install.sh --dry-run` prints the full plan and every command without changing anything.
+
+One line instead of cloning: `curl -fsSL https://raw.githubusercontent.com/veelvoer/hearthshell/main/get.sh | sh`
 (read [get.sh](get.sh) first, it is short).
 
-Then press **Super + ,**. The step-by-step guide, the list of what changes on your system, a fully
-manual install and troubleshooting are in **[docs/INSTALL.md](docs/INSTALL.md)**.
+Then press **Super + ,**. Details, every option, a fully manual install and troubleshooting are in
+**[docs/INSTALL.md](docs/INSTALL.md)**.
 
 ## The author's own configs
 
@@ -60,16 +71,19 @@ More in [docs/CUSTOMIZE.md](docs/CUSTOMIZE.md).
 
 ## Does it work on my distro?
 
-It targets **Hyprland**, so it needs a Hyprland session and Quickshell (0.3 or newer). Beyond that the
-installer is plain POSIX `sh` and knows the package managers of Arch, Debian/Ubuntu, Fedora, openSUSE,
-Alpine, Void, Gentoo and Solus; on NixOS it tells you what to add to your configuration; anywhere else
-the [manual install](docs/INSTALL.md#manual-install-step-by-step) lists every step.
+It targets **Hyprland**, so you need a Hyprland session. The wizard handles the rest: it knows the package
+managers of Arch, Debian/Ubuntu, Fedora, openSUSE, Alpine, Void, Gentoo and Solus, and when your distribution
+has no Quickshell package it compiles Quickshell for you.
 
-Honest status: it was **developed and tested on Fedora** with a Hyprland build that uses the Lua
-config (`hyprland.lua`) and Quickshell 0.3.1. Older Hyprland with `hyprland.conf` is supported on a
-best-effort basis, and the other package managers are untested. Some distros do not package
-Quickshell; the guide links the build instructions. If something does not work for you, `hearthshell doctor`
-and [docs/INSTALL.md#troubleshooting](docs/INSTALL.md#troubleshooting) come first, then open an issue.
+I ran the whole wizard (packages, Quickshell build, install, uninstall) in clean containers on **Arch, Fedora,
+Ubuntu 26.04, Debian 13, openSUSE Tumbleweed and Alpine edge**, and it worked on all six; the exact results and
+the few caveats (Hyprland itself is not packaged on Debian and Fedora) are in
+[docs/INSTALL.md](docs/INSTALL.md#distro-notes). Not run: Void, Gentoo, Solus, NixOS. Containers have no
+display, so I only used the finished shell day to day on **Fedora** with a Hyprland that uses the Lua config
+(`hyprland.lua`); older `hyprland.conf` setups are supported on a best-effort basis.
+
+If something does not work for you, `hearthshell doctor` and
+[docs/INSTALL.md#troubleshooting](docs/INSTALL.md#troubleshooting) come first, then open an issue.
 
 ## Credits
 

@@ -39,14 +39,27 @@ Check what you already have at any time with `hearthshell doctor`.
 ```sh
 git clone https://github.com/veelvoer/hearthshell
 cd hearthshell
-./install.sh --dry-run      # prints every step, changes nothing
-./install.sh                # asks before each choice
+./install.sh
 ```
 
-The installer is plain POSIX `sh` (no bash needed) and refuses to run as root. It uses `sudo` or
-`doas` only to install packages, and only after you say yes.
+`./install.sh` is an installation **wizard**. It never needs you to prepare anything first:
 
-One-liner (downloads the repository to a temporary folder and runs the same installer; read
+1. **Detects your system**: distribution, package manager, whether you are in a Hyprland session, which
+   Hyprland config you have, and what is already installed.
+2. **Asks how to install**: *Everything* (recommended), *Let me choose each part*, or *Only the shell*
+   (no changes to your other configs). With `--yes` it uses *Everything* without asking.
+3. **Offers the author's dotfiles** only when that makes sense (always explained, never implied by `--yes`).
+4. **Shows the plan**, numbered, with the exact packages, and waits for a yes.
+5. **Does it**: installs missing packages (asks for your password only for this), **builds Quickshell from
+   source** into `~/.local` if your distribution has no package, downloads the icon font and the wallpapers,
+   copies the shell, hooks into Hyprland / kitty / rofi / GTK, writes the first theme.
+6. **Checks the result** (`hearthshell doctor`) and offers to start the shell.
+
+It is plain POSIX `sh` (no bash needed), refuses to run as root, and uses `sudo`, `doas` or `pkexec` only to
+install packages. If none of them exists it prints the exact command for you to run as root and waits.
+`./install.sh --dry-run` prints the whole plan and every command without changing anything.
+
+One-liner (downloads the repository to a temporary folder and runs the same wizard; read
 [get.sh](../get.sh) before you pipe anything to a shell):
 
 ```sh
@@ -58,7 +71,10 @@ curl -fsSL https://raw.githubusercontent.com/veelvoer/hearthshell/main/get.sh | 
 
 | Option | Effect |
 |---|---|
-| `-n`, `--dry-run` | print what would be done, change nothing |
+| `-n`, `--dry-run` | print the plan and every command, change nothing |
+| `--profile P` | skip the menu: `everything`, `custom` or `minimal` |
+| `--no-build` | do not build Quickshell from source when your distribution has no package |
+| `--qs-version TAG` | which Quickshell release to build (default `v0.3.2`) |
 | `-y`, `--yes` | answer yes to every question (for scripts) |
 | `--no-deps` | never install packages |
 | `--no-fonts` | do not download the Nerd Font |
@@ -98,6 +114,7 @@ Everything it does is recorded in `~/.local/state/hearthshell/manifest`. Nothing
 | `~/.local/share/fonts/hearthshell/` | JetBrainsMono Nerd Font | only if you have no icon font and say yes |
 | `hypr/hyprland.lua`, `hyprlock.conf`, `kitty/kitty.conf`, `rofi/config.rasi`, `fish/config.fish`, `cava/`, shell `settings.json` | the author's dotfiles. **Replaces your files, each backed up first and restored on uninstall** | only with `--dotfiles` (never answered by `--yes`) |
 | packages | whatever your package manager installs for missing tools | only if you say yes |
+| `~/.local/` (`bin/quickshell`, `bin/qs`, `lib`, `share`, `include`) | Quickshell and, where needed, wayland-protocols and CLI11 compiled by the wizard; every installed file is recorded and removed on uninstall | only when your distribution has no Quickshell package |
 
 "Marked block" means the lines are wrapped like this, and uninstalling removes exactly that and nothing else:
 
@@ -113,24 +130,36 @@ Nothing is downloaded except (a) the wallpaper images, from the sources listed i
 
 ## Distro notes
 
-The installer picks the package manager it finds and installs missing tools one package at a time, so
-one unknown package name never blocks the rest.
+The wizard picks the package manager it finds and installs missing tools one package at a time, so one
+unknown package name never blocks the rest. If your distribution has no Quickshell package it **builds
+Quickshell for you** (from the official source, into `~/.local`, no root needed for the build). If a build
+dependency is missing from your distribution (a recent `wayland-protocols`, or CLI11) it builds that too.
 
-| Distro family | Manager | Quickshell package | Notes |
+What was actually run, in a clean container per distribution (the whole wizard as a normal user: packages,
+Quickshell build where needed, shell install, doctor, uninstall):
+
+| Distribution | Quickshell | Hyprland | Result |
 |---|---|---|---|
-| Arch, Manjaro, EndeavourOS | pacman | `quickshell` | Hyprland and hyprlock are in the repos too |
-| Fedora | dnf | `quickshell` | tested here |
-| openSUSE | zypper | `quickshell` (Tumbleweed) | untested |
-| Debian, Ubuntu, Mint | apt | **none in the main archive** | build Quickshell from source, see below; the installer still installs everything else |
-| Alpine | apk | `quickshell` (edge) | untested |
-| Void | xbps | check `xbps-query -Rs quickshell` | untested |
-| Gentoo | emerge | `gui-apps/quickshell` (GURU overlay) | untested |
-| Solus | eopkg | none known | untested |
-| NixOS | nix | `quickshell` in nixpkgs | declarative: add the packages to your configuration, then `./install.sh --no-deps` |
+| Arch Linux | `pacman` | `pacman` | works, everything from the repositories |
+| Fedora 44 | `dnf` | not in Fedora's repositories (community COPRs exist, or build it yourself) | works; the author's machine runs it daily |
+| Ubuntu 26.04 | built from source (about 6 min) | `apt` | works |
+| Debian 13 | built from source, with a newer `wayland-protocols` built first | not packaged: install it yourself | works for everything except Hyprland itself |
+| openSUSE Tumbleweed | built from source | `zypper` | works |
+| Alpine edge (musl) | built from source, with CLI11 built first | `apk` | works |
 
-If your distribution has no Quickshell package, build it from source following the official guide
-(<https://quickshell.org/docs/guide/install-setup/>), make sure `qs` ends up in your `PATH`, then run
-`./install.sh --no-deps`.
+Not run: Void, Gentoo, Solus, NixOS and other distributions (the package names for the first three are
+best effort; on NixOS the wizard prints what to add to your configuration instead of installing).
+Containers have no Wayland session, so these runs prove the install, build and uninstall, not how the
+shell looks on each distribution; the author has only used it on Fedora with a Hyprland that uses the Lua config.
+
+When Hyprland is not packaged for your distribution the wizard says so and carries on; install Hyprland
+yourself (<https://wiki.hypr.land/Getting-Started/Installation/>) and run the wizard again.
+
+The wizard needs one of `sudo`, `doas` or `pkexec` to install packages. If you have none, it prints the
+command to run as root and waits for you.
+
+If you prefer to build Quickshell yourself, follow <https://quickshell.org/docs/guide/install-setup/>,
+make sure `qs` is in your `PATH`, and run `./install.sh --no-build`.
 
 NixOS example (adjust to your setup):
 
