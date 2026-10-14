@@ -23,7 +23,7 @@ else
 fi
 
 # `curl | sh` uses stdin for the script itself, so give the installer the terminal for its questions
-if [ -r /dev/tty ]; then
+if (: < /dev/tty) 2>/dev/null; then
     sh "$tmp/src/install.sh" "$@" < /dev/tty
 else
     sh "$tmp/src/install.sh" "$@"
