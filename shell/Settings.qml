@@ -31,18 +31,36 @@ PanelWindow {
     readonly property var ease: [0.2, 0.8, 0.2, 1, 1, 1]
 
     color: "transparent"
-    visible: wanted || scrim.opacity > 0.01
+    // The bar stays visible and usable while you edit it: the dimming starts below it (or above it when the
+    // bar is at the bottom), and clicks in the bar's strip go to the bar.
+    readonly property bool barBottom: shell.cfg.barPos === "bottom"
+    readonly property real barZone: shell.barTopMargin + shell.barHeight + 10
+    property real scrimK: wanted ? 0.5 : 0
+    Behavior on scrimK { NumberAnimation { duration: main.ms(280); easing.type: Easing.OutCubic } }
+    visible: wanted || scrimK > 0.005
+    mask: Region { item: inputArea }
     anchors { top: true; bottom: true; left: true; right: true }
     exclusionMode: ExclusionMode.Ignore
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.namespace: "quickshell-settings"
     WlrLayershell.keyboardFocus: wanted ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
+    Item {
+        id: inputArea
+        x: 0; width: parent.width
+        y: win.barBottom ? 0 : win.barZone
+        height: parent.height - win.barZone
+    }
     Rectangle {
         id: scrim
-        anchors.fill: parent; color: "black"
-        opacity: win.wanted ? 0.5 : 0
-        Behavior on opacity { NumberAnimation { duration: main.ms(280); easing.type: Easing.OutCubic } }
+        x: 0; width: parent.width; y: inputArea.y; height: inputArea.height
+        readonly property real fadeFrac: Math.min(0.5, 26 / Math.max(1, height))
+        gradient: Gradient {
+            GradientStop { position: 0; color: win.barBottom ? Qt.rgba(0, 0, 0, win.scrimK) : Qt.rgba(0, 0, 0, 0) }
+            GradientStop { position: win.barBottom ? 1 - scrim.fadeFrac : scrim.fadeFrac
+                color: Qt.rgba(0, 0, 0, win.scrimK) }
+            GradientStop { position: 1; color: win.barBottom ? Qt.rgba(0, 0, 0, 0) : Qt.rgba(0, 0, 0, win.scrimK) }
+        }
         MouseArea { anchors.fill: parent; onClicked: win.shell.closeSettings() }
     }
 
@@ -59,8 +77,10 @@ PanelWindow {
 
         Rectangle {
             id: panel
-            width: Math.min(1000, parent.width - 60); height: Math.min(780, parent.height - 60)
-            anchors.centerIn: parent
+            width: Math.min(1000, parent.width - 60)
+            height: Math.min(780, parent.height - win.barZone - 40)
+            x: (parent.width - width) / 2
+            y: (win.barBottom ? 0 : win.barZone) + (parent.height - win.barZone - height) / 2
             radius: 24; color: Qt.rgba(main.page.r, main.page.g, main.page.b, main.panelAlpha)
             Behavior on color { ColorAnimation { duration: main.ms(260) } }
             border.width: 1; border.color: main.line

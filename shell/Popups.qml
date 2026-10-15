@@ -65,17 +65,29 @@ PanelWindow {
             label = shell.popup.label;
             shell.popupHost = kind + "@" + myScreen;
             closeAnim.stop();
+            cOpOut.stop();
             openAnim.start();
+            cOpIn.restart();
         } else {
             openAnim.stop();
+            cOpIn.stop();
+            cOpOut.restart();
             closeAnim.start();
         }
     }
-    NumberAnimation { id: openAnim; target: win; property: "p"; to: 1; duration: main.ms(760)
-        easing.type: Easing.BezierSpline; easing.bezierCurve: [0.25, 0.8, 0.25, 1, 1, 1] }
-    NumberAnimation { id: closeAnim; target: win; property: "p"; to: 0; duration: main.ms(420)
-        easing.type: Easing.BezierSpline; easing.bezierCurve: [0.45, 0, 0.2, 1, 1, 1]
+    // Same motion as the lock screen clock gliding into the bar: one expo-out curve drives the geometry
+    // both ways, the content fades in late (after a short pause) and out first.
+    property real cOp: 0
+    NumberAnimation { id: openAnim; target: win; property: "p"; to: 1; duration: main.ms(700)
+        easing.type: Easing.BezierSpline; easing.bezierCurve: [0.22, 1, 0.36, 1, 1, 1] }
+    NumberAnimation { id: closeAnim; target: win; property: "p"; to: 0; duration: main.ms(750)
+        easing.type: Easing.BezierSpline; easing.bezierCurve: [0.22, 1, 0.36, 1, 1, 1]
         onFinished: if (shell.popupHost === win.kind + "@" + win.myScreen) shell.popupHost = "" }
+
+    SequentialAnimation { id: cOpIn
+        PauseAnimation { duration: main.ms(300) }
+        NumberAnimation { target: win; property: "cOp"; to: 1; duration: main.ms(300); easing.type: Easing.OutCubic } }
+    NumberAnimation { id: cOpOut; target: win; property: "cOp"; to: 0; duration: main.ms(160) }
 
     // The surface stays mapped but empty, so opening never pays for creating a window or
     // compiling the menus. It only takes input while a menu is up.
@@ -119,7 +131,7 @@ PanelWindow {
         MouseArea { anchors.fill: parent }   // swallow clicks inside the card
 
         // both menus are built once, up front; the open one is simply revealed
-        readonly property real reveal: win.clamp01((win.p - 0.35) / 0.55)
+        readonly property real reveal: win.warming ? 1 : win.cOp
         Loader {
             id: netLoader
             width: win.tw; height: parent.height
