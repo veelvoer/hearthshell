@@ -29,6 +29,12 @@ Rectangle {
     Behavior on scale { NumberAnimation { duration: main.ms(180); easing.type: Easing.OutBack } }
 
     readonly property bool hovered: hoverTrack.hovered
+    // "hover intent": the text slides out after a short rest on the button and folds away a moment after leaving,
+    // so sweeping the pointer across the bar doesn't make everything jump around
+    property bool intent: false
+    onHoveredChanged: { if (hovered) { intentOff.stop(); intentOn.restart(); } else { intentOn.stop(); intentOff.restart(); } }
+    Timer { id: intentOn; interval: 170; onTriggered: root.intent = true }
+    Timer { id: intentOff; interval: 320; onTriggered: root.intent = false }
     HoverHandler { id: hoverTrack }
 
     RowLayout {

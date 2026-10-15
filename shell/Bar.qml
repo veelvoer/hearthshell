@@ -43,19 +43,20 @@ PanelWindow {
     // the island needs room to grow into menus; its input region is only the pill itself
     implicitHeight: island ? 640 : shell.cfg.barHeight
     implicitWidth: island ? Math.max(pillW, 400) + 80 : (pill ? pillW : 0)
-    exclusionMode: island ? ExclusionMode.Normal : ExclusionMode.Auto
-    exclusiveZone: island ? shell.cfg.barHeight - 2 : 0
+    // every style reserves its own strip, so windows tile below the bar instead of sliding under it
+    exclusionMode: ExclusionMode.Normal
+    exclusiveZone: island ? islandGap + shell.cfg.barHeight - 2 : shell.cfg.barHeight
     WlrLayershell.namespace: "quickshell-bar"
     // on demand (not exclusive): a click grants keyboard focus for Esc, while the click-away catcher still receives the pointer
     WlrLayershell.keyboardFocus: island && islandRef && (islandMenu !== "" || islandRef.hoverHold) ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
     // Input: the whole window, except on the dynamic island where only the pill itself takes input
     readonly property bool maskIsland: island && islandSurface !== null
-    mask: Region {
-        x: win.maskIsland ? win.islandSurface.x : 0
-        y: win.maskIsland ? win.islandSurface.y : 0
-        width: win.maskIsland ? win.islandSurface.width : win.width
-        height: win.maskIsland ? win.islandSurface.height : win.height
-    }
+    // The island's input region is its pill plus a little slack, running out to the screen edge so a flick to the edge finds it
+    readonly property real maskX: maskIsland ? Math.max(0, islandSurface.x - 12) : 0
+    readonly property real maskW: maskIsland ? Math.min(width - maskX, islandSurface.width + 24) : width
+    readonly property real maskY: maskIsland && atBottom ? islandSurface.y : 0
+    readonly property real maskH: !maskIsland ? height : atBottom ? height - islandSurface.y : islandSurface.y + islandSurface.height
+    mask: Region { x: win.maskX; y: win.maskY; width: win.maskW; height: win.maskH }
 
     anchors {
         top: !win.atBottom
@@ -64,8 +65,8 @@ PanelWindow {
         right: !win.pill
     }
     margins {
-        top: win.atBottom ? -2 : (win.island ? win.islandGap : (win.style === "flat" ? 0 : shell.cfg.barGap))
-        bottom: win.atBottom ? (win.island ? win.islandGap : (win.style === "flat" ? 0 : shell.cfg.barGap)) : -2
+        top: win.atBottom ? -2 : (win.island ? 0 : (win.style === "flat" ? 0 : shell.cfg.barGap))
+        bottom: win.atBottom ? (win.island ? 0 : (win.style === "flat" ? 0 : shell.cfg.barGap)) : -2
         left: win.style === "flat" ? 0 : shell.cfg.barSide
         right: win.style === "flat" ? 0 : shell.cfg.barSide
     }

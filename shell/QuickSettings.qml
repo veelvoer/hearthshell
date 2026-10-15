@@ -5,7 +5,7 @@ import QtQuick
 BarButton {
     id: root
     toneName: "cyan"
-    readonly property string icon: String.fromCodePoint(0xF066A)
+    readonly property string icon: String.fromCodePoint(0xF0570)
 
     morphing: !!bar && bar.hostIs("quick")
     onClicked: if (bar) bar.openPopup("quick", root, icon, "")

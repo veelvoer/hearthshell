@@ -29,6 +29,8 @@ Item {
     // ---------------------------------------------------------------- state
     property string menu: ""                        // network | bluetooth | quick | ""
     property string menuGlyph: ""
+    property string menuFrom: ""                    // "quick" when Wi-Fi / Bluetooth was opened from the quick settings menu
+    readonly property string quickGlyph: String.fromCodePoint(0xF0570)
     property string activity: ""                   // volume | brightness | workspace | battery | media | ""
     property bool hoverHold: false
     property bool armed: false
@@ -49,15 +51,18 @@ Item {
                                        : leftW + rightW + ((leftW > 0 && rightW > 0) ? bar.gap * 2 : 0) + pad * 2
     readonly property real collapsedW: Math.max(centerW + 28, 64)
 
-    function openMenu(kind, glyph) {
+    function openMenu(kind, glyph, from) {
         if (menu === kind) { closeMenu(); return; }
+        menuFrom = from || "";
         menuGlyph = glyph;
         menu = kind;
         menuSettled = false;
         settleTimer.restart();
         activity = "";
     }
-    function closeMenu() { menu = ""; menuSettled = false; }
+    function closeMenu() {  menu = ""; menuFrom = ""; menuSettled = false; }
+    // from Wi-Fi / Bluetooth back to the quick settings menu it was opened from
+    function goBack() { if (menuFrom === "quick") openMenu("quick", quickGlyph, ""); else closeMenu(); }
     function peek(kind) {
         if (!armed || menu !== "") return;
         activity = kind;
@@ -68,7 +73,7 @@ Item {
     Timer { id: settleTimer; interval: 650; onTriggered: isl.menuSettled = true }
     Timer { id: holdTimer; interval: 420; onTriggered: isl.hoverHold = false }
     Timer { id: clockTimer; interval: 700; onTriggered: isl.bar.updateClock() }
-    onModeChanged: clockTimer.restart()
+    onModeChanged: { clockTimer.restart(); }
 
     Component.onCompleted: { bar.islandRef = isl; bar.islandSurface = surface; }
     Component.onDestruction: { if (bar.islandRef === isl) { bar.islandRef = null; bar.islandSurface = null; bar.islandMenu = ""; } }
@@ -136,7 +141,7 @@ Item {
         Behavior on width { NumberAnimation { duration: main.ms(560); easing.type: Easing.BezierSpline; easing.bezierCurve: isl.spring } }
         Behavior on height { NumberAnimation { duration: main.ms(560); easing.type: Easing.BezierSpline; easing.bezierCurve: isl.spring } }
         x: (parent.width - width) / 2
-        y: isl.atBottom ? parent.height - height : 0
+        y: isl.atBottom ? parent.height - height - bar.islandGap : bar.islandGap
         radius: Math.min(height / 2, 30)
         color: main.bg
         border.color: main.border
@@ -299,13 +304,15 @@ Item {
                 onVisibleChanged: if (visible && isl.mode === "menu") forceActiveFocus()
                 Keys.onEscapePressed: {
                     const it = isl.menu === "network" ? netLoader.item : isl.menu === "bluetooth" ? btLoader.item : quickLoader.item;
-                    if (it && it.typing) keys.forceActiveFocus(); else isl.closeMenu();
+                    if (it && it.typing) keys.forceActiveFocus(); else isl.goBack();
                 }
             }
             Text {
                 x: 18; y: 14; text: isl.menuGlyph; color: main.accent
+                visible: isl.menuFrom === ""
                 font { family: "JetBrainsMono Nerd Font Propo"; pixelSize: 22 }
             }
+            BackButton { x: 10; y: 9; visible: isl.menuFrom !== ""; onClicked: isl.goBack() }
             Loader {
                 id: netLoader; width: 360; height: parent.height; asynchronous: true
                 visible: isl.menu === "network"
@@ -321,7 +328,7 @@ Item {
                 visible: isl.menu === "quick"
                 sourceComponent: QuickPopup {
                     active: isl.menu === "quick"; settled: active && isl.menuSettled; shell: isl.shell
-                    onRequestMenu: kind => isl.openMenu(kind, kind === "network" ? String.fromCodePoint(0xF05A9) : String.fromCodePoint(0xF00AF))
+                    onRequestMenu: kind => isl.openMenu(kind, kind === "network" ? String.fromCodePoint(0xF05A9) : String.fromCodePoint(0xF00AF), "quick")
                     onRequestClose: isl.closeMenu()
                 }
             }
@@ -342,10 +349,10 @@ Item {
             x: 0; y: 0; width: catcher.width; height: catcher.height
             Region {
                 intersection: Intersection.Subtract
-                x: isl.bar.margins.left + surface.x
-                y: (isl.atBottom ? catcher.height - isl.bar.margins.bottom - isl.bar.height : isl.bar.margins.top) + surface.y
-                width: surface.width
-                height: surface.height
+                x: (isl.bar.pill ? (catcher.width - isl.bar.width) / 2 : isl.bar.margins.left) + isl.bar.maskX
+                y: (isl.atBottom ? catcher.height - isl.bar.margins.bottom - isl.bar.height : isl.bar.margins.top) + isl.bar.maskY
+                width: isl.bar.maskW
+                height: isl.bar.maskH
             }
         }
         MouseArea { anchors.fill: parent; onClicked: isl.closeMenu() }

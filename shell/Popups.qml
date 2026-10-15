@@ -31,8 +31,14 @@ PanelWindow {
     readonly property real fontPx: 13
 
     // from the quick settings menu to the Wi-Fi or Bluetooth menu, in the same card
+    property string from: ""                 // "quick" while Wi-Fi / Bluetooth is open from the quick settings menu
+    property string quickGlyph: String.fromCodePoint(0xF0570)
+    function goBack() {
+        if (from === "quick") switchKind("quick"); else shell.closePopup();
+    }
     function switchKind(k) {
-        const g = k === "network" ? String.fromCodePoint(0xF05A9) : String.fromCodePoint(0xF00AF);
+        const g = k === "network" ? String.fromCodePoint(0xF05A9) : k === "bluetooth" ? String.fromCodePoint(0xF00AF) : quickGlyph;
+        from = k === "quick" ? "" : "quick";
         kind = k; glyph = g; label = "";
         shell.popupHost = k + "@" + myScreen;
         shell.popup = Object.assign({}, shell.popup, { "kind": k, "glyph": g, "label": "" });
@@ -66,6 +72,7 @@ PanelWindow {
         if (wanted) {
             warmAnim.stop();
             warming = false;
+            from = "";
             kind = shell.popup.kind;
             rect = shell.popup.rect;
             glyph = shell.popup.glyph;
@@ -117,7 +124,7 @@ PanelWindow {
         focus: win.wanted
         Keys.onEscapePressed: {
             if (win.openItem && win.openItem.typing) scope.forceActiveFocus();
-            else win.shell.closePopup();
+            else win.goBack();
         }
     }
 
@@ -173,6 +180,13 @@ PanelWindow {
         Component { id: btComp; BluetoothPopup { active: win.wanted && win.kind === "bluetooth"; settled: active && win.p > 0.85 } }
     }
 
+    BackButton {
+        x: win.tx + 10; y: win.ty + 9
+        visible: win.from !== "" && win.p > 0.9
+        opacity: win.cOp
+        onClicked: win.goBack()
+    }
+
     // the button's own icon and label ride along and settle into the header
     Row {
         id: morph
@@ -183,6 +197,7 @@ PanelWindow {
         y: win.lerp(y0, win.ty + 14, win.p)
         visible: win.p > 0.002
         Text {
+            visible: win.from === ""
             text: win.glyph
             color: win.p > 0.6 ? main.accent : main.icon
             Behavior on color { ColorAnimation { duration: main.ms(200) } }

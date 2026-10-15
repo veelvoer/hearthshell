@@ -13,7 +13,7 @@ Item {
     property alias elide: label.elide
     property real maxWidth: 10000
 
-    readonly property bool open: shown && (!cfg.labelsOnHover || (!!host && host.hovered))
+    readonly property bool open: shown && (!cfg.labelsOnHover || (!!host && (host.intent || host.morphing)))
     property real openness: open ? 1 : 0
     Behavior on openness { NumberAnimation { duration: main.ms(260); easing.type: Easing.BezierSpline; easing.bezierCurve: [0.22, 1, 0.36, 1, 1, 1] } }
 
