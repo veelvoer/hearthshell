@@ -7,6 +7,7 @@ Item {
     property real to: 1
     property real value: 0
     signal moved(real value)
+    readonly property bool pressed: drag.pressed
     implicitWidth: 200; implicitHeight: 26
     readonly property real frac: Math.max(0, Math.min(1, (value - from) / (to - from)))
 

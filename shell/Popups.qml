@@ -20,7 +20,7 @@ PanelWindow {
 
     readonly property real tw: 360
     readonly property real maxH: Math.max(200, Math.min(580, height - 140))
-    readonly property var openItem: kind === "network" ? netLoader.item : (kind === "bluetooth" ? btLoader.item : null)
+    readonly property var openItem: kind === "network" ? netLoader.item : (kind === "bluetooth" ? btLoader.item : (kind === "quick" ? quickLoader.item : null))
     readonly property real wantedH: openItem ? Math.min(maxH, openItem.wantedHeight) : 120
     property real th: wantedH
     Behavior on th { NumberAnimation { duration: main.ms(280); easing.type: Easing.BezierSpline; easing.bezierCurve: [0.2, 0.8, 0.2, 1, 1, 1] } }
@@ -30,6 +30,13 @@ PanelWindow {
     readonly property real ty: below ? rect.y + rect.h + 10 : rect.y - 10 - th
     readonly property real fontPx: 13
 
+    // from the quick settings menu to the Wi-Fi or Bluetooth menu, in the same card
+    function switchKind(k) {
+        const g = k === "network" ? String.fromCodePoint(0xF05A9) : String.fromCodePoint(0xF00AF);
+        kind = k; glyph = g; label = "";
+        shell.popupHost = k + "@" + myScreen;
+        shell.popup = Object.assign({}, shell.popup, { "kind": k, "glyph": g, "label": "" });
+    }
     function lerp(a, b, t) { return a + (b - a) * t; }
     function clamp01(v) { return Math.max(0, Math.min(1, v)); }
 
@@ -148,6 +155,20 @@ PanelWindow {
             opacity: card.reveal
             transform: Translate { y: (1 - card.reveal) * 8 }
         }
+        Loader {
+            id: quickLoader
+            width: win.tw; height: parent.height
+            asynchronous: true; sourceComponent: quickComp
+            visible: win.kind === "quick" && card.reveal > 0.01
+            opacity: card.reveal
+            transform: Translate { y: (1 - card.reveal) * 8 }
+        }
+        Component { id: quickComp
+            QuickPopup {
+                active: win.wanted && win.kind === "quick"; settled: active && win.p > 0.85; shell: win.shell
+                onRequestMenu: k => win.switchKind(k)
+                onRequestClose: win.shell.closePopup()
+            } }
         Component { id: netComp; NetworkPopup { active: win.wanted && win.kind === "network"; settled: active && win.p > 0.85 } }
         Component { id: btComp; BluetoothPopup { active: win.wanted && win.kind === "bluetooth"; settled: active && win.p > 0.85 } }
     }

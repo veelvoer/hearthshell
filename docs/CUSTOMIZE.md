@@ -9,8 +9,8 @@ the command line, the files, and how to add things.
 |---|---|
 | Appearance | themes, quick looks, **My presets** (save and restore your whole setup under a name), accent colour, UI font, animation speed, wallpapers (add your own, shuffle, dim, blur, fit, auto-change) |
 | Creator | make your own theme from five colours (or extract them from a wallpaper) |
-| Bar | bar style (classic, pill, islands, flat, minimal, notch, dynamic island), top or bottom, opacity, roundness, clock, and under "More bar options": height, gaps, text size, spacing, icon colours, workspace style and count |
-| Modules | choose which modules appear and where (left / middle / right, order), and whether each shows text |
+| Bar | bar style (classic, pill, islands, flat, minimal, dynamic island), top or bottom, opacity, roundness, clock, and under "More bar options": height, gaps, text size, spacing, icon colours, workspace style and count |
+| Modules | choose which modules appear and where (left / middle / right, order), whether each shows text, and "Text on hover only" (labels slide out when you point at a module); includes the Quick settings module |
 | Windows | gaps, border width, corner radius, focus dimming; "Shadows and borders" for shadow and gradient borders |
 | Input | focus follows mouse, natural scrolling, tap to click, pointer speed, key repeat |
 | Glass | frosted glass for the bar, the settings panel, the launcher and the terminal, glass amount, blur strength |
@@ -55,7 +55,7 @@ All inside `~/.config/quickshell/hearthshell/`:
 | `pam-service` | PAM service name the lock screen uses |
 
 `settings.json` keys and their defaults are listed in `shell.qml` (the `defaults` block). A few
-examples: `barStyle` (`classic|pill|islands|flat|minimal|notch|island`), `barPos` (`top|bottom`), `modules`
+examples: `barStyle` (`classic|pill|islands|flat|minimal|island`), `barPos` (`top|bottom`), `modules`
 (`{"left": [...], "center": [...], "right": [...]}`), `motion` (`off|relaxed|normal|snappy`),
 `accent` (`""` or `"#rrggbb"`), `font`, `gapsIn`, `gapsOut`, `rounding`, `blurSize`, `glassAmount`.
 

@@ -27,12 +27,15 @@ BarButton {
         color: root.iconColor
         font { family: "JetBrainsMono Nerd Font Propo"; pixelSize: main.barPx }
     }
-    Text {
-        visible: root.label !== "" && cfg.labelBluetooth
+    HoverLabel {
+        host: root
+        shown: root.label !== "" && cfg.labelBluetooth
         text: root.label
         color: main.text
+        maxWidth: 110
         elide: Text.ElideRight
-        Layout.maximumWidth: 110
-        font { family: main.font; pixelSize: main.barPx; weight: 500 }
+        font.family: main.font
+        font.pixelSize: main.barPx
+        font.weight: 500
     }
 }

@@ -34,14 +34,13 @@ BarButton {
         }
     }
 
-    Text {
-        visible: cfg.labelBattery
+    HoverLabel {
+        host: root
+        shown: cfg.labelBattery
         text: root.level + "%"
         color: main.text
-        font {
-            family: main.font
-            pixelSize: main.barPx
-            weight: 500
-        }
+        font.family: main.font
+        font.pixelSize: main.barPx
+        font.weight: 500
     }
 }

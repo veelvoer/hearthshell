@@ -28,6 +28,9 @@ Rectangle {
     scale: interactive && mouse.pressed ? 0.94 : 1
     Behavior on scale { NumberAnimation { duration: main.ms(180); easing.type: Easing.OutBack } }
 
+    readonly property bool hovered: hoverTrack.hovered
+    HoverHandler { id: hoverTrack }
+
     RowLayout {
         id: row
         anchors.centerIn: parent

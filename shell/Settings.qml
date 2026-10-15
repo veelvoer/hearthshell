@@ -497,7 +497,7 @@ PanelWindow {
                                 width: parent.width; spacing: 8
                                 Repeater {
                                     model: [["classic", "Classic"], ["pill", "Pill"], ["islands", "Islands"], ["flat", "Flat"],
-                                            ["minimal", "Minimal"], ["notch", "Notch"], ["island", "Dynamic island"]]
+                                            ["minimal", "Minimal"], ["island", "Dynamic island"]]
                                     StyleCard {
                                         required property var modelData
                                         styleId: modelData[0]; label: modelData[1]
@@ -514,8 +514,7 @@ PanelWindow {
                                          "islands": "Workspaces, clock and status each in their own pill.",
                                          "flat": "Edge to edge, rounded only on the free side.",
                                          "minimal": "No surface at all, just the content.",
-                                         "notch": "Compact pill attached to the screen edge.",
-                                         "island": "A small clock pill that opens on hover, and for a moment when you switch workspace or change the volume." })[win.cfg.barStyle]
+                                         "island": "A small clock pill that morphs into whatever is happening: the full bar on hover, volume, brightness, workspaces, charging, now playing, and the Wi-Fi, Bluetooth and quick settings menus." })[win.cfg.barStyle]
                                 font { family: main.font; pixelSize: 12 }
                             }
                             HRow {
@@ -620,6 +619,10 @@ PanelWindow {
                         active: win.page === 3 && win.wanted; order: 1; title: "Text next to icons"
                         Column {
                             width: parent.width; spacing: 2
+                            HRow { label: "Show text"; desc: "Always, or only while the pointer is over a module"
+                                HSegment { options: ["Always", "On hover"]; segWidth: 76
+                                    current: win.cfg.labelsOnHover ? 1 : 0
+                                    onPicked: i => win.put("labelsOnHover", i === 1) } }
                             HRow { label: "Volume"; desc: "Show the percentage"
                                 HToggle { checked: win.cfg.labelVolume; onToggled: v => win.put("labelVolume", v) } }
                             HRow { label: "Brightness"; desc: "Show the percentage"

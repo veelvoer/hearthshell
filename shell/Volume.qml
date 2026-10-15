@@ -34,19 +34,18 @@ BarButton {
         }
     }
 
-    Text {
-        visible: cfg.labelVolume
+    HoverLabel {
+        host: root
+        shown: cfg.labelVolume
         text: {
             if (!root.ready) return "-"
             if (root.muted) return "Muted"
             return root.vol + "%"
         }
         color: main.text
-        font {
-            family: main.font
-            pixelSize: main.barPx
-            weight: 500
-        }
+        font.family: main.font
+        font.pixelSize: main.barPx
+        font.weight: 500
     }
 
     PwObjectTracker {

@@ -12,7 +12,7 @@ ShellRoot {
     readonly property string activeTheme: cfg.theme
     
     // ---- Lock + clock morph ------------------------------------
-    readonly property real barTopMargin: (cfg.barStyle === "flat" || cfg.barStyle === "notch") ? 0 : cfg.barGap
+    readonly property real barTopMargin: cfg.barStyle === "flat" ? 0 : (cfg.barStyle === "island" ? Math.max(8, cfg.barGap) : cfg.barGap)
     readonly property real barHeight: cfg.barHeight
     readonly property real barCenterY: barTopMargin + barHeight / 2
 
@@ -154,7 +154,7 @@ ShellRoot {
         "font": "Inter", "motion": "normal", "accent": "", "wallFit": "fill",
         "barHeight": 30, "barGap": 4, "barSide": 10, "barFont": 13, "modSpacing": 0, "iconMode": "accent",
         "wsStyle": "pills", "wsCount": 9, "wsOccupiedOnly": false, "clockDate": false,
-        "labelVolume": true, "labelNetwork": true, "labelBluetooth": true, "labelBrightness": true, "labelBattery": true,
+        "labelVolume": true, "labelNetwork": true, "labelBluetooth": true, "labelBrightness": true, "labelBattery": true, "labelsOnHover": false,
         "shadow": true, "shadowSize": 12, "gradientBorder": true,
         "followMouse": true, "naturalScroll": true, "tapToClick": true, "pointerSpeed": 0, "repeatRate": 25, "repeatDelay": 600,
         "lockClockSize": 96, "lockBlur": 1, "lockDate": true,
@@ -182,9 +182,10 @@ ShellRoot {
         "brightness": { "label": "Brightness", "desc": "Scroll to change, hidden without a backlight", "file": "Brightness.qml" },
         "network": { "label": "Network", "desc": "Wi-Fi or ethernet, click for the network menu", "file": "Network.qml" },
         "bluetooth": { "label": "Bluetooth", "desc": "Click for the device menu, hidden without an adapter", "file": "Bluetooth.qml" },
+        "quick": { "label": "Quick settings", "desc": "Wi-Fi, Bluetooth, sound, brightness and power in one menu", "file": "QuickSettings.qml" },
         "battery": { "label": "Battery", "desc": "Hidden when there is no battery", "file": "Battery.qml" }
     })
-    readonly property var moduleOrder: ["workspaces", "clock", "volume", "brightness", "network", "bluetooth", "battery"]
+    readonly property var moduleOrder: ["workspaces", "clock", "volume", "brightness", "network", "bluetooth", "quick", "battery"]
     function moduleFile(id) { return moduleInfo[id] ? moduleInfo[id].file : "Workspaces.qml"; }
     property real barClockX: -1             // centre of the bar clock on screen, -1 = none
 
@@ -238,6 +239,11 @@ ShellRoot {
         cfg = c;
         saveTimer.restart();
         if (systemKeys.indexOf(key) >= 0) applyTimer.restart();
+    }
+    // styles that were removed map to the closest remaining one
+    function normalizeStyle(s) {
+        if (s === "notch") return "pill";
+        return ["classic", "pill", "islands", "flat", "minimal", "island"].indexOf(s) >= 0 ? s : "classic";
     }
     function setTheme(t) { if (themesData.data[t]) set("theme", t); }
     function setWallpaper(i) {
@@ -411,6 +417,7 @@ ShellRoot {
             if (k in defaults && typeof p.data[k] === typeof defaults[k] && presetSkip.indexOf(k) < 0) c[k] = p.data[k];
         }
         if (!themesData.data[c.theme]) c.theme = cfg.theme;
+        c.barStyle = normalizeStyle(c.barStyle);
         c.modules = sanitizeModules(c.modules);
         cfg = c;
         saveTimer.restart();
@@ -450,6 +457,7 @@ ShellRoot {
                 const c = Object.assign({}, shellRoot.defaults);
                 for (const k in c) if (d[k] !== undefined && typeof d[k] === typeof c[k]) c[k] = d[k];
                 if (!themesData.data[c.theme]) c.theme = "everforest";
+                c.barStyle = shellRoot.normalizeStyle(c.barStyle);
                 c.modules = shellRoot.sanitizeModules(d.modules !== undefined ? d.modules : c.modules);
                 shellRoot.cfg = c;
             } catch (e) { console.warn("settings.json unreadable:", e); }

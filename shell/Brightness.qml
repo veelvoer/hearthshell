@@ -39,10 +39,13 @@ BarButton {
         color: root.iconColor
         font { family: "JetBrainsMono Nerd Font Propo"; pixelSize: main.barPx }
     }
-    Text {
-        visible: cfg.labelBrightness
+    HoverLabel {
+        host: root
+        shown: cfg.labelBrightness
         text: root.percent + "%"
         color: main.text
-        font { family: main.font; pixelSize: main.barPx; weight: 500 }
+        font.family: main.font
+        font.pixelSize: main.barPx
+        font.weight: 500
     }
 }

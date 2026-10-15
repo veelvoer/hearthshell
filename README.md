@@ -6,8 +6,8 @@ change almost everything: themes, wallpapers, the bar, the windows, even your te
 
 - **13 themes** (Everforest, Catppuccin, Tokyo Night, Rosé Pine, Dracula, Kanagawa, Gruvbox, Nord and more),
   a **theme maker** for your own, your own wallpapers, accent colour, fonts
-- **Bar styles** (classic, pill, islands, flat, minimal, notch and a **dynamic island** that opens on hover), top or bottom, and a **module picker**:
-  workspaces, clock, volume, brightness, network, Bluetooth, battery
+- **Bar styles** (classic, pill, islands, flat, minimal and an Apple-style **dynamic island**: a small clock pill that morphs into the bar on hover, into Wi-Fi/Bluetooth/quick-settings menus on click, and into volume, brightness, workspace, charging and now-playing moments), top or bottom, and a **module picker** (with an option to show module text only on hover):
+  workspaces, clock, volume, brightness, network, Bluetooth, quick settings, battery
 - **Wi-Fi and Bluetooth menus** that grow out of the bar button: networks, passwords, devices
 - **Frosted glass**, quick looks (one-click bundles), **your own saved presets**, animation speed
 - **One theme for the whole desktop**: kitty, rofi, fish, GTK apps, hyprlock and Hyprland's own borders follow it

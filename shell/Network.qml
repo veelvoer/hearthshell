@@ -45,14 +45,13 @@ BarButton {
         }
     }
 
-    Text {
-        visible: root.label !== "" && cfg.labelNetwork
+    HoverLabel {
+        host: root
+        shown: root.label !== "" && cfg.labelNetwork
         text: root.label
         color: main.text
-        font {
-            family: main.font
-            pixelSize: main.barPx
-            weight: 500
-        }
+        font.family: main.font
+        font.pixelSize: main.barPx
+        font.weight: 500
     }
 }
