@@ -7,9 +7,9 @@ the command line, the files, and how to add things.
 
 | Page | What is in it |
 |---|---|
-| Appearance | themes, quick looks, accent colour, UI font, animation speed, wallpapers (add your own, shuffle, dim, blur, fit, auto-change) |
+| Appearance | themes, quick looks, **My presets** (save and restore your whole setup under a name), accent colour, UI font, animation speed, wallpapers (add your own, shuffle, dim, blur, fit, auto-change) |
 | Creator | make your own theme from five colours (or extract them from a wallpaper) |
-| Bar | layout presets (classic, pill, islands, flat, minimal), top or bottom, opacity, roundness, clock, and under "More bar options": height, gaps, text size, spacing, icon colours, workspace style and count |
+| Bar | bar style (classic, pill, islands, flat, minimal, notch, dynamic island), top or bottom, opacity, roundness, clock, and under "More bar options": height, gaps, text size, spacing, icon colours, workspace style and count |
 | Modules | choose which modules appear and where (left / middle / right, order), and whether each shows text |
 | Windows | gaps, border width, corner radius, focus dimming; "Shadows and borders" for shadow and gradient borders |
 | Input | focus follows mouse, natural scrolling, tap to click, pointer speed, key repeat |
@@ -24,7 +24,10 @@ the Modules and About pages restores defaults.
 ```sh
 hearthshell settings              # open or close the panel
 hearthshell theme tokyo           # any theme id (see below)
-hearthshell look glass            # classic, cozy, glass, compact, islands, minimal, vivid
+hearthshell look glass            # classic, cozy, glass, compact, islands, minimal, dynamic, vivid
+hearthshell preset save "My setup" # keep everything you have set up under a name
+hearthshell preset apply "My setup"
+hearthshell preset delete "My setup"
 hearthshell set barStyle '"pill"' # change one setting; the value is JSON
 hearthshell set gapsIn 4
 hearthshell apply                 # rewrite the themed config files (kitty, rofi, hyprland ...)
@@ -44,6 +47,7 @@ All inside `~/.config/quickshell/hearthshell/`:
 |---|---|
 | `settings.json` | every setting, written by the panel. Safe to edit while the shell is stopped |
 | `custom-themes.json` | themes made with the Creator |
+| `presets.json` | your saved presets (settings except wallpaper choices) |
 | `themes.json` | the built-in themes: colours, border gradient, terminal palette |
 | `wallpapers/<theme>/<n>.jpg` | the images of each theme |
 | `wallpapers.json` | where the built-in wallpapers come from |
@@ -51,7 +55,7 @@ All inside `~/.config/quickshell/hearthshell/`:
 | `pam-service` | PAM service name the lock screen uses |
 
 `settings.json` keys and their defaults are listed in `shell.qml` (the `defaults` block). A few
-examples: `barStyle` (`classic|pill|islands|flat|minimal`), `barPos` (`top|bottom`), `modules`
+examples: `barStyle` (`classic|pill|islands|flat|minimal|notch|island`), `barPos` (`top|bottom`), `modules`
 (`{"left": [...], "center": [...], "right": [...]}`), `motion` (`off|relaxed|normal|snappy`),
 `accent` (`""` or `"#rrggbb"`), `font`, `gapsIn`, `gapsOut`, `rounding`, `blurSize`, `glassAmount`.
 

@@ -16,6 +16,8 @@ PanelWindow {
     readonly property var pages: ["Appearance", "Creator", "Bar", "Modules", "Windows", "Input", "Glass", "System", "About"]
     property bool typing: false
     property bool accentPicker: false
+    property string presetName: ""
+    property string confirmDelete: ""
     readonly property var customIds: shell.themeList.order.filter(id => shell.themeList.data[id].custom)
 
     // ---- theme creator draft ----
@@ -208,7 +210,55 @@ PanelWindow {
                         }
                     }
                     HCard {
-                        active: win.page === 0 && win.wanted; order: 2; title: "Accent and text"
+                        active: win.page === 0 && win.wanted; order: 2; title: "My presets"
+                        Column {
+                            width: parent.width; spacing: 12
+                            Text {
+                                width: parent.width; wrapMode: Text.WordWrap; color: main.muted
+                                text: "Save everything you have set up (theme, bar, modules, windows, glass, fonts) under a name and switch back to it any time."
+                                font { family: main.font; pixelSize: 12 }
+                            }
+                            Row {
+                                spacing: 10; width: parent.width
+                                HInput {
+                                    id: presetInput; width: parent.width - 10 - 130; placeholder: "Preset name"
+                                    text: win.presetName
+                                    onEdited: v => win.presetName = v
+                                    onSubmitted: v => { if (win.shell.savePreset(v)) win.presetName = ""; }
+                                    onTypingChanged: win.typing = typing
+                                }
+                                HButton { label: "Save current"; primary: true; onClicked: { if (win.shell.savePreset(win.presetName)) win.presetName = ""; } }
+                            }
+                            Text {
+                                visible: win.shell.presetList.length === 0; color: main.muted
+                                text: "No presets yet."; font { family: main.font; pixelSize: 13 }
+                            }
+                            Repeater {
+                                model: win.shell.presetList
+                                HRow {
+                                    id: prow
+                                    required property var modelData
+                                    readonly property var tinfo: win.shell.themeList.data[modelData.data.theme]
+                                    label: modelData.name
+                                    desc: (tinfo ? tinfo.name : "Theme") + "  ·  " + (modelData.data.barStyle || "classic") + " bar"
+                                    Row {
+                                        spacing: 8
+                                        HButton { label: "Apply"; primary: true; onClicked: win.shell.applyPreset(prow.modelData.name) }
+                                        HButton { label: "Update"; onClicked: win.shell.savePreset(prow.modelData.name) }
+                                        HButton {
+                                            label: win.confirmDelete === prow.modelData.name ? "Sure?" : "Delete"
+                                            onClicked: {
+                                                if (win.confirmDelete === prow.modelData.name) { win.confirmDelete = ""; win.shell.deletePreset(prow.modelData.name); }
+                                                else { win.confirmDelete = prow.modelData.name; confirmTimer.restart(); }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    HCard {
+                        active: win.page === 0 && win.wanted; order: 3; title: "Accent and text"
                         Column {
                             width: parent.width; spacing: 14
                             Text { text: "Accent colour"; color: main.text; font { family: main.font; pixelSize: 14; weight: 600 } }
@@ -242,7 +292,7 @@ PanelWindow {
                         }
                     }
                     HCard {
-                        active: win.page === 0 && win.wanted; order: 3; title: "Wallpaper"
+                        active: win.page === 0 && win.wanted; order: 4; title: "Wallpaper"
                         Column {
                             width: parent.width; spacing: 12
                             Flow {
@@ -443,15 +493,16 @@ PanelWindow {
                         active: win.page === 2 && win.wanted; order: 0; title: "Layout"
                         Column {
                             width: parent.width; spacing: 14
-                            Row {
-                                spacing: 8
+                            Flow {
+                                width: parent.width; spacing: 8
                                 Repeater {
-                                    model: [["classic", "Classic"], ["pill", "Pill"], ["islands", "Islands"], ["flat", "Flat"], ["minimal", "Minimal"]]
+                                    model: [["classic", "Classic"], ["pill", "Pill"], ["islands", "Islands"], ["flat", "Flat"],
+                                            ["minimal", "Minimal"], ["notch", "Notch"], ["island", "Dynamic island"]]
                                     StyleCard {
                                         required property var modelData
                                         styleId: modelData[0]; label: modelData[1]
                                         selected: win.cfg.barStyle === modelData[0]
-                                        width: (parent.parent.width - 32) / 5
+                                        width: (parent.width - 24) / 4
                                         onPicked: win.put("barStyle", modelData[0])
                                     }
                                 }
@@ -462,7 +513,9 @@ PanelWindow {
                                          "pill": "Everything in a single compact pill, centred.",
                                          "islands": "Workspaces, clock and status each in their own pill.",
                                          "flat": "Edge to edge, rounded only on the free side.",
-                                         "minimal": "No surface at all, just the content." })[win.cfg.barStyle]
+                                         "minimal": "No surface at all, just the content.",
+                                         "notch": "Compact pill attached to the screen edge.",
+                                         "island": "A small clock pill that opens on hover, and for a moment when you switch workspace or change the volume." })[win.cfg.barStyle]
                                 font { family: main.font; pixelSize: 12 }
                             }
                             HRow {
@@ -811,5 +864,6 @@ PanelWindow {
         }
     }
 
+    Timer { id: confirmTimer; interval: 3000; onTriggered: win.confirmDelete = "" }
     Timer { id: lockDelay; interval: 380; onTriggered: win.shell.lockNow() }
 }

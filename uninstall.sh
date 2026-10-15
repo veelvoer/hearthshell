@@ -129,7 +129,7 @@ if [ -d "$INSTALL_DIR" ]; then
         KEEP="$HOME/hearthshell-kept-$(date +%Y%m%d-%H%M%S)"
         if dry; then info "${C_D}would keep your data in${C_0} $KEEP"; else
             mkdir -p "$KEEP"
-            for f in settings.json custom-themes.json wallpapers; do [ -e "$INSTALL_DIR/$f" ] && mv "$INSTALL_DIR/$f" "$KEEP/"; done
+            for f in settings.json custom-themes.json presets.json wallpapers; do [ -e "$INSTALL_DIR/$f" ] && mv "$INSTALL_DIR/$f" "$KEEP/"; done
             info "your settings, custom themes and wallpapers are in $KEEP"
         fi
     fi

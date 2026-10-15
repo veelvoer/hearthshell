@@ -161,6 +161,8 @@ GLASS_RULE = (
     'match = { namespace = "^quickshell-bar$" }, blur = true, ignore_alpha = 0.05 })\n'
     'QS_GLASS_POPUP = QS_GLASS_POPUP or hl.layer_rule({ name = "qs-glass-popup", '
     'match = { namespace = "^quickshell-popup$" }, blur = true, ignore_alpha = 0.1 })\n'
+    'QS_GLASS_SETTINGS = QS_GLASS_SETTINGS or hl.layer_rule({ name = "qs-glass-settings", '
+    'match = { namespace = "^quickshell-settings$" }, blur = true, ignore_alpha = 0.1 })\n'
 )
 
 
@@ -189,7 +191,8 @@ def lua_config(t: Theme, c: dict[str, str], opt: Opt) -> str:
         "})\n"
     )
     toggle = (f"if QS_GLASS_BAR then QS_GLASS_BAR:set_enabled({tf('glassBar')}) end "
-              f"if QS_GLASS_POPUP then QS_GLASS_POPUP:set_enabled({tf('glassPanel')}) end\n")
+              f"if QS_GLASS_POPUP then QS_GLASS_POPUP:set_enabled({tf('glassPanel')}) end "
+              f"if QS_GLASS_SETTINGS then QS_GLASS_SETTINGS:set_enabled({tf('glassPanel')}) end\n")
     return config + toggle
 
 

@@ -53,6 +53,13 @@ Item {
                 Rectangle { visible: card.styleId === "flat"; x: 0; y: -6; width: parent.width; height: 18; radius: 7; color: main.bg
                     border.width: 1; border.color: main.line
                     Dots { x: 6; y: 9 } Dots { n: 2; anchors.right: parent.right; anchors.rightMargin: 6; y: 9 } }
+                // notch: attached to the edge, rounded below
+                Pill { visible: card.styleId === "notch"; width: 62; y: -6; height: 16; anchors.horizontalCenter: parent.horizontalCenter
+                    radius: 6; Dots { n: 6; x: 0; y: 9; anchors.horizontalCenter: parent.horizontalCenter } }
+                // dynamic island: a small pill, with its opened size hinted behind it
+                Pill { visible: card.styleId === "island"; width: 66; y: 5; opacity: 0.35; anchors.horizontalCenter: parent.horizontalCenter }
+                Pill { visible: card.styleId === "island"; width: 22; y: 5; anchors.horizontalCenter: parent.horizontalCenter
+                    Dots { n: 2; anchors.centerIn: parent } }
                 // minimal: no surface at all
                 Item { visible: card.styleId === "minimal"; x: 7; y: 6; width: parent.width - 14; height: 6
                     Dots { n: 4 } Dots { n: 2; anchors.right: parent.right } }

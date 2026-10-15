@@ -7,6 +7,7 @@
 #   hearthshell theme NAME   switch theme          (e.g. nord, tokyo, everforest)
 #   hearthshell look NAME    apply a quick look    (e.g. cozy, glass, compact)
 #   hearthshell set KEY JSON change one setting    (e.g. hearthshell set barStyle '"pill"')
+#   hearthshell preset save|apply|delete NAME   your saved presets
 #   hearthshell apply        re-write the themed config files (kitty, rofi, hyprland ...)
 #   hearthshell restart      stop and start the shell again
 #   hearthshell doctor       check dependencies and integration
@@ -124,6 +125,9 @@ case "${1:-run}" in
     theme)     [ $# -ge 2 ] || { echo "usage: hearthshell theme NAME" >&2; exit 2; }; cmd_ipc call shell setTheme "$2" ;;
     look)      [ $# -ge 2 ] || { echo "usage: hearthshell look NAME" >&2; exit 2; }; cmd_ipc call shell applyLook "$2" ;;
     set)       [ $# -ge 3 ] || { echo 'usage: hearthshell set KEY JSON-VALUE   e.g. hearthshell set gapsIn 4' >&2; exit 2; }; cmd_ipc call shell set "$2" "$3" ;;
+    preset)    [ $# -ge 3 ] || { echo 'usage: hearthshell preset save|apply|delete NAME' >&2; exit 2; }
+               case "$2" in save) f=savePreset ;; apply) f=applyPreset ;; delete) f=deletePreset ;; *) echo 'usage: hearthshell preset save|apply|delete NAME' >&2; exit 2 ;; esac
+               cmd_ipc call shell "$f" "$3" ;;
     apply)     cmd_apply ;;
     restart)   need_qs; setup_env; "$QS" kill -c "$NAME" >/dev/null 2>&1 || true; sleep 1
                nohup "$0" run >/dev/null 2>&1 & ;;

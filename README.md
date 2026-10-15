@@ -6,10 +6,10 @@ change almost everything: themes, wallpapers, the bar, the windows, even your te
 
 - **13 themes** (Everforest, Catppuccin, Tokyo Night, Rosé Pine, Dracula, Kanagawa, Gruvbox, Nord and more),
   a **theme maker** for your own, your own wallpapers, accent colour, fonts
-- **Bar presets** (classic, pill, islands, flat, minimal), top or bottom, and a **module picker**:
+- **Bar styles** (classic, pill, islands, flat, minimal, notch and a **dynamic island** that opens on hover), top or bottom, and a **module picker**:
   workspaces, clock, volume, brightness, network, Bluetooth, battery
 - **Wi-Fi and Bluetooth menus** that grow out of the bar button: networks, passwords, devices
-- **Frosted glass**, quick looks (one-click bundles), animation speed
+- **Frosted glass**, quick looks (one-click bundles), **your own saved presets**, animation speed
 - **One theme for the whole desktop**: kitty, rofi, fish, GTK apps, hyprlock and Hyprland's own borders follow it
 - A **lock screen** with the clock that morphs into the bar clock
 - An **installer that asks first and an uninstaller that undoes exactly what it did**

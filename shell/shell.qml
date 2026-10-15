@@ -12,7 +12,7 @@ ShellRoot {
     readonly property string activeTheme: cfg.theme
     
     // ---- Lock + clock morph ------------------------------------
-    readonly property real barTopMargin: cfg.barStyle === "flat" ? 0 : cfg.barGap
+    readonly property real barTopMargin: (cfg.barStyle === "flat" || cfg.barStyle === "notch") ? 0 : cfg.barGap
     readonly property real barHeight: cfg.barHeight
     readonly property real barCenterY: barTopMargin + barHeight / 2
 
@@ -366,6 +366,8 @@ ShellRoot {
         { "id": "minimal", "name": "Minimal", "desc": "No bar surface",
           "set": { "barStyle": "minimal", "rounding": 12, "gapsIn": 4, "gapsOut": 8, "borderSize": 1, "shadow": false,
                    "wsStyle": "dots", "iconMode": "text" } },
+        { "id": "dynamic", "name": "Dynamic", "desc": "Opens on hover",
+          "set": { "barStyle": "island", "barHeight": 32, "barGap": 8, "rounding": 16, "gapsIn": 6, "gapsOut": 12, "shadowSize": 18, "wsStyle": "dots" } },
         { "id": "vivid", "name": "Vivid", "desc": "Bold and colourful",
           "set": { "iconMode": "colour", "rounding": 14, "borderSize": 3, "gapsOut": 12, "shadowSize": 16 } }
     ]
@@ -380,6 +382,42 @@ ShellRoot {
         applyTimer.restart();
         notify(look.name + " look applied");
     }
+
+    // ---- saved presets: the whole look and layout under a name (presets.json) ----------------
+    property var presetList: []
+    readonly property var presetSkip: ["userWalls", "wallIdx"]    // tied to files on this machine
+    FileView {
+        id: presetStore
+        path: Quickshell.shellPath("presets.json")
+        printErrors: false
+        onLoaded: { try { const l = JSON.parse(text()); if (Array.isArray(l)) shellRoot.presetList = l; } catch (e) { console.warn("presets.json unreadable:", e); } }
+    }
+    function writePresets(list) { presetList = list; presetStore.setText(JSON.stringify(list, null, 2)); }
+    function savePreset(name) {
+        name = (name || "").trim();
+        if (name === "") { notify("Give the preset a name first"); return false; }
+        const data = JSON.parse(JSON.stringify(cfg));
+        for (const k of presetSkip) delete data[k];
+        const exists = presetList.some(p => p.name === name);
+        writePresets(presetList.filter(p => p.name !== name).concat([{ "name": name, "data": data }]));
+        notify(exists ? "Preset updated" : "Preset saved");
+        return true;
+    }
+    function applyPreset(name) {
+        const p = presetList.find(x => x.name === name);
+        if (!p) return;
+        const c = Object.assign({}, cfg);
+        for (const k in p.data) {
+            if (k in defaults && typeof p.data[k] === typeof defaults[k] && presetSkip.indexOf(k) < 0) c[k] = p.data[k];
+        }
+        if (!themesData.data[c.theme]) c.theme = cfg.theme;
+        c.modules = sanitizeModules(c.modules);
+        cfg = c;
+        saveTimer.restart();
+        applyTimer.restart();
+        notify("Preset \"" + name + "\" applied");
+    }
+    function deletePreset(name) { writePresets(presetList.filter(p => p.name !== name)); notify("Preset deleted"); }
 
     function reapply() { applyTimer.restart(); }
     function openSettings() { settingsOpen = true; }
@@ -405,6 +443,7 @@ ShellRoot {
     FileView {
         id: store
         path: Quickshell.shellPath("settings.json")
+        printErrors: false
         onLoaded: {
             try {
                 const d = JSON.parse(text());
@@ -440,6 +479,9 @@ ShellRoot {
         function addWallpaper(path: string, themed: bool) { shellRoot.addWallpaper(path, themed); }
         function saveTheme(spec: string) { shellRoot.saveCustomTheme(JSON.parse(spec)); }
         function applyLook(id: string) { shellRoot.applyLook(id); }
+        function savePreset(name: string) { shellRoot.savePreset(name); }
+        function applyPreset(name: string) { shellRoot.applyPreset(name); }
+        function deletePreset(name: string) { shellRoot.deletePreset(name); }
         function toggleSettings() { shellRoot.settingsOpen = !shellRoot.settingsOpen; }
         function openSettings() { shellRoot.openSettings(); }
         function closeSettings() { shellRoot.closeSettings(); }

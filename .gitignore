@@ -5,3 +5,4 @@ shell/pam-service
 shell/wallpapers/*/
 __pycache__/
 *.pyc
+shell/presets.json

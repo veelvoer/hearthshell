@@ -216,7 +216,7 @@ Skip it and every theme uses a plain gradient; you can add your own images in Se
 *Lua config (`hyprland.lua`).* Create `$CONF/hypr/hearthshell.lua`:
 
 ```lua
-hl.layer_rule({ match = { namespace = "^quickshell-settings$" }, blur = true, ignore_alpha = 0.1, no_anim = true })
+hl.layer_rule({ match = { namespace = "^quickshell-settings$" }, no_anim = true })
 hl.layer_rule({ match = { namespace = "^quickshell-popup$" }, no_anim = true })
 hl.layer_rule({ match = { namespace = "^quickshell-wallpaper$" }, no_anim = true })
 hl.layer_rule({ match = { namespace = "^quickshell-bar$" }, no_anim = true })
@@ -242,8 +242,6 @@ layerrule = noanim, quickshell-settings
 layerrule = noanim, quickshell-popup
 layerrule = noanim, quickshell-wallpaper
 layerrule = noanim, quickshell-bar
-layerrule = blur, quickshell-settings
-layerrule = ignorealpha 0.1, quickshell-settings
 layerrule = blur, quickshell-bar
 layerrule = ignorealpha 0.05, quickshell-bar
 layerrule = blur, quickshell-popup
