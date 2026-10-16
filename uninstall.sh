@@ -66,6 +66,12 @@ if [ -f "$INSTALL_DIR/scripts/fishvars.py" ] && have python3 && have fish; then
     run python3 "$INSTALL_DIR/scripts/fishvars.py" restore
 fi
 
+# ------------------------------------------------------------ Firefox, Yazi, KDE apps, micro and cava
+if [ -f "$INSTALL_DIR/scripts/appthemes.py" ] && have python3; then
+    step "Removing the other app themes"
+    run env XDG_CONFIG_HOME="$CONF_HOME" python3 "$INSTALL_DIR/scripts/appthemes.py" --remove
+fi
+
 # ------------------------------------------------------------ files generated while the shell ran
 step "Removing generated theme files"
 for f in \
