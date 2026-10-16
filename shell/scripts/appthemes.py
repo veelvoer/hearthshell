@@ -177,8 +177,8 @@ unset_alt = {s(fg=mag, bg=surf2)}
 
 [status]
 overall = {s(bg=surf)}
-sep_left = {{ open = "", close = "" }}
-sep_right = {{ open = "", close = "" }}
+sep_left = {{ open = "\\ue0b6", close = "\\ue0b4" }}
+sep_right = {{ open = "\\ue0b6", close = "\\ue0b4" }}
 perm_type = {s(fg=blue)}
 perm_read = {s(fg=yellow)}
 perm_write = {s(fg=red)}
