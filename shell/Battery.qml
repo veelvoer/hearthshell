@@ -35,6 +35,7 @@ BarButton {
     }
 
     HoverLabel {
+        reserve: "100%"
         host: root
         shown: cfg.labelBattery
         text: root.level + "%"

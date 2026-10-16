@@ -40,6 +40,7 @@ BarButton {
         font { family: "JetBrainsMono Nerd Font Propo"; pixelSize: main.barPx }
     }
     HoverLabel {
+        reserve: "100%"
         host: root
         shown: cfg.labelBrightness
         text: root.percent + "%"

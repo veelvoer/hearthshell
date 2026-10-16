@@ -35,6 +35,7 @@ BarButton {
     }
 
     HoverLabel {
+        reserve: "Muted"
         host: root
         shown: cfg.labelVolume
         text: {

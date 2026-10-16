@@ -73,7 +73,8 @@ Item {
     Timer { id: settleTimer; interval: 650; onTriggered: isl.menuSettled = true }
     Timer { id: holdTimer; interval: 420; onTriggered: isl.hoverHold = false }
     Timer { id: clockTimer; interval: 700; onTriggered: isl.bar.updateClock() }
-    onModeChanged: { clockTimer.restart(); }
+    onModeChanged: { clockTimer.restart(); shapeChanged(); }
+    onMenuChanged: shapeChanged()
 
     Component.onCompleted: { bar.islandRef = isl; bar.islandSurface = surface; }
     Component.onDestruction: { if (bar.islandRef === isl) { bar.islandRef = null; bar.islandSurface = null; bar.islandMenu = ""; } }
@@ -123,9 +124,10 @@ Item {
         function onIsPlayingChanged() { if (isl.player) isl.peek("media"); } }
 
     // ---------------------------------------------------------------- the shape
-    readonly property real menuH: menu === "network" ? Math.min(bar.maxMenuH, netLoader.item ? netLoader.item.wantedHeight : 160)
-                                : menu === "bluetooth" ? Math.min(bar.maxMenuH, btLoader.item ? btLoader.item.wantedHeight : 160)
-                                : menu === "quick" ? Math.min(bar.maxMenuH, quickLoader.item ? quickLoader.item.wantedHeight : 260) : 0
+    property var lastH: ({ "network": 380, "bluetooth": 300, "quick": 430 })
+    readonly property var menuItem: menu === "network" ? netLoader.item : menu === "bluetooth" ? btLoader.item : menu === "quick" ? quickLoader.item : null
+    readonly property real menuH: menu === "" ? 0 : Math.min(bar.maxMenuH, menuItem ? menuItem.wantedHeight : lastH[menu])
+    onMenuHChanged: if (menu !== "" && menuItem) lastH[menu] = menuH
     readonly property real transientW: activity === "volume" || activity === "brightness" ? 250
         : activity === "workspace" ? wsPane.implicitWidth + 40
         : activity === "battery" ? 200 : activity === "media" ? 330 : 0
@@ -133,20 +135,39 @@ Item {
     readonly property real targetH: mode === "menu" ? menuH : mode === "bar" ? base : mode === "activity" ? base + 14 : base - 6
 
     // a little overshoot on every size change, like a spring
-    readonly property var spring: [0.34, 1.32, 0.64, 1, 1, 1]
+    readonly property var spring: [0.34, 1.2, 0.64, 1, 1, 1]
+    // The spring is for changing shape (idle <-> bar <-> menu). Smaller size changes caused by the content itself
+    // (a label getting longer, a list loading, a slider row appearing) glide without bouncing, so nothing shakes.
+    property bool reshaping: false
+    function shapeChanged() { reshaping = true; reshapeTimer.restart(); }
+    Timer { id: reshapeTimer; interval: 620; onTriggered: isl.reshaping = false }
     Rectangle {
         id: surface
         width: isl.targetW
         height: isl.targetH
-        Behavior on width { NumberAnimation { duration: main.ms(560); easing.type: Easing.BezierSpline; easing.bezierCurve: isl.spring } }
-        Behavior on height { NumberAnimation { duration: main.ms(560); easing.type: Easing.BezierSpline; easing.bezierCurve: isl.spring } }
+        Behavior on width {
+            NumberAnimation {
+                duration: main.ms(isl.reshaping ? 560 : 280)
+                easing.type: isl.reshaping ? Easing.BezierSpline : Easing.OutCubic
+                easing.bezierCurve: isl.spring
+            }
+        }
+        Behavior on height {
+            NumberAnimation {
+                duration: main.ms(isl.reshaping ? 560 : 280)
+                easing.type: isl.reshaping ? Easing.BezierSpline : Easing.OutCubic
+                easing.bezierCurve: isl.spring
+            }
+        }
         x: (parent.width - width) / 2
         y: isl.atBottom ? parent.height - height - bar.islandGap : bar.islandGap
         radius: Math.min(height / 2, 30)
         color: main.bg
         border.color: main.border
         border.width: 1
-        opacity: bar.bgAlpha * bar.intro
+        // menus are nearly opaque so text behind them never makes them hard to read
+        opacity: Math.max(bar.bgAlpha, isl.mode === "menu" ? 0.97 : 0) * bar.intro
+        Behavior on opacity { NumberAnimation { duration: main.ms(260) } }
         transform: Translate { y: (1 - bar.intro) * (isl.atBottom ? 14 : -14) }
         layer.enabled: true
         layer.effect: MultiEffect {

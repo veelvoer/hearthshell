@@ -12,13 +12,15 @@ Item {
     property alias font: label.font
     property alias elide: label.elide
     property real maxWidth: 10000
+    property string reserve: ""        // widest text this label can show, so a changing value never resizes the bar
+    TextMetrics { id: reserveMetrics; text: root.reserve; font: label.font }
 
     readonly property bool open: shown && (!cfg.labelsOnHover || (!!host && (host.intent || host.morphing)))
     property real openness: open ? 1 : 0
     Behavior on openness { NumberAnimation { duration: main.ms(260); easing.type: Easing.BezierSpline; easing.bezierCurve: [0.22, 1, 0.36, 1, 1, 1] } }
 
     visible: shown && (openness > 0.01 || open)
-    implicitWidth: Math.min(maxWidth, label.implicitWidth) * openness
+    implicitWidth: Math.min(maxWidth, Math.max(label.implicitWidth, reserveMetrics.advanceWidth)) * openness
     implicitHeight: label.implicitHeight
     Layout.leftMargin: -4 * (1 - openness)      // cancels the row spacing while folded
     clip: true
