@@ -21,7 +21,8 @@ PanelWindow {
     readonly property real pad: 14
     readonly property real gap: 12
     readonly property var mods: shell.cfg.modules
-    readonly property real islandGap: Math.max(8, shell.cfg.barGap)
+    // the island floats the same distance from the screen edge as windows do from each other and from it
+    readonly property real islandGap: Math.max(4, shell.cfg.gapsOut)
     readonly property real maxMenuH: Math.max(200, Math.min(560, (screen ? screen.height : 900) - 140))
     property real intro: 0
 
@@ -45,7 +46,7 @@ PanelWindow {
     implicitWidth: island ? Math.max(pillW, 400) + 80 : (pill ? pillW : 0)
     // every style reserves its own strip, so windows tile below the bar instead of sliding under it
     exclusionMode: ExclusionMode.Normal
-    exclusiveZone: island ? islandGap + shell.cfg.barHeight - 2 : shell.cfg.barHeight
+    exclusiveZone: island ? islandGap + shell.cfg.barHeight : shell.cfg.barHeight
     WlrLayershell.namespace: "quickshell-bar"
     // on demand (not exclusive): a click grants keyboard focus for Esc, while the click-away catcher still receives the pointer
     WlrLayershell.keyboardFocus: island && islandRef && (islandMenu !== "" || islandRef.hoverHold) ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None

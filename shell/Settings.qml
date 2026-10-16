@@ -761,6 +761,8 @@ PanelWindow {
                                 HToggle { checked: win.cfg.syncRofi; onToggled: v => win.put("syncRofi", v) } }
                             HRow { label: "GTK apps"; desc: "Accent and surfaces, applied when an app starts"
                                 HToggle { checked: win.cfg.syncGtk; onToggled: v => win.put("syncGtk", v) } }
+                            HRow { label: "Other apps"; desc: "Firefox, Yazi, Lodica, Dolphin and other KDE apps, micro, cava. Restart the app to see it"
+                                HToggle { checked: win.cfg.syncApps; onToggled: v => win.put("syncApps", v) } }
                             HRow { label: "Hyprlock"; desc: "The Super + Shift + X lock screen"
                                 HToggle { checked: win.cfg.syncLock; onToggled: v => win.put("syncLock", v) } }
                         }

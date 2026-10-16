@@ -51,7 +51,7 @@ All inside `~/.config/quickshell/hearthshell/`:
 | `themes.json` | the built-in themes: colours, border gradient, terminal palette |
 | `wallpapers/<theme>/<n>.jpg` | the images of each theme |
 | `wallpapers.json` | where the built-in wallpapers come from |
-| `scripts/apply-theme.py` | writes the themed files for kitty, rofi, GTK, hyprlock, fish and Hyprland |
+| `scripts/apply-theme.py` | writes the themed files for kitty, rofi, GTK, hyprlock, fish and Hyprland; `appthemes.py` does Firefox, Yazi, Lodica, KDE apps, micro and cava |
 | `pam-service` | PAM service name the lock screen uses |
 
 `settings.json` keys and their defaults are listed in `shell.qml` (the `defaults` block). A few
@@ -88,7 +88,7 @@ Super + , and Super + N live in `~/.config/hypr/hearthshell.lua` (or `.conf`). E
 
 ## Change what gets themed
 
-Settings -> System switches kitty, fish, rofi, GTK and hyprlock on or off. Switching one off stops
+Settings -> System switches kitty, fish, rofi, GTK, hyprlock and "Other apps" (Firefox, Yazi, Lodica, Dolphin and other KDE apps, micro, cava) on or off. Restart those apps to see a new theme. Switching one off stops
 hearthshell writing to it; run `hearthshell uninstall` to remove the hooks entirely.
 
 ## Develop

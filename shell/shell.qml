@@ -12,7 +12,7 @@ ShellRoot {
     readonly property string activeTheme: cfg.theme
     
     // ---- Lock + clock morph ------------------------------------
-    readonly property real barTopMargin: cfg.barStyle === "flat" ? 0 : (cfg.barStyle === "island" ? Math.max(8, cfg.barGap) : cfg.barGap)
+    readonly property real barTopMargin: cfg.barStyle === "flat" ? 0 : (cfg.barStyle === "island" ? Math.max(4, cfg.gapsOut) : cfg.barGap)
     readonly property real barHeight: cfg.barHeight
     readonly property real barCenterY: barTopMargin + barHeight / 2
 
@@ -161,11 +161,11 @@ ShellRoot {
         "kittyFont": 11, "kittyPad": 12, "kittyCursor": "beam",
         "rofiWidth": 400, "rofiLines": 7, "rofiIcons": true,
         "modules": { "left": ["workspaces"], "center": ["clock"], "right": ["volume", "network", "battery"] },
-        "syncKitty": true, "syncRofi": true, "syncFish": true, "syncGtk": true, "syncLock": true
+        "syncKitty": true, "syncRofi": true, "syncFish": true, "syncGtk": true, "syncLock": true, "syncApps": true
     })
     // keys that need scripts/apply-theme.py to run when they change
     readonly property var systemKeys: ["theme", "gapsIn", "gapsOut", "rounding", "borderSize", "inactiveOpacity",
-        "blur", "blurSize", "termOpacity", "glassBar", "glassPanel", "glassLauncher", "glassTerminal", "glassAmount", "syncKitty", "syncRofi", "syncFish", "syncGtk", "syncLock",
+        "blur", "blurSize", "termOpacity", "glassBar", "glassPanel", "glassLauncher", "glassTerminal", "glassAmount", "syncKitty", "syncRofi", "syncFish", "syncGtk", "syncLock", "syncApps",
         "motion", "accent", "shadow", "shadowSize", "gradientBorder", "followMouse", "naturalScroll", "tapToClick",
         "pointerSpeed", "repeatRate", "repeatDelay", "kittyFont", "kittyPad", "kittyCursor", "rofiWidth", "rofiLines", "rofiIcons"]
     property var cfg: defaults

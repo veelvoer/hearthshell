@@ -3,7 +3,7 @@
 
 usage: apply-theme.py <theme-id> [json-options]
 
-Writes generated theme files for kitty, rofi, fish, GTK, hyprlock and Hyprland,
+Writes generated theme files for kitty, rofi, fish, GTK, hyprlock, Hyprland and (appthemes.py) Firefox, Yazi, Lodica, KDE apps, micro and cava,
 then reloads whatever can be reloaded live. Source of truth: ../themes.json.
 A target is only written when its app is present (its config directory exists).
 """
@@ -14,6 +14,7 @@ import subprocess
 import sys
 from typing import Any
 
+import appthemes
 import fishvars
 from themelib import Theme, bare, load_themes, mix, rgb
 
@@ -29,7 +30,7 @@ DEFAULTS = {
     "repeatRate": 25, "repeatDelay": 600,
     "kittyFont": 11, "kittyPad": 12, "kittyCursor": "beam",
     "rofiWidth": 400, "rofiLines": 7, "rofiIcons": True,
-    "syncKitty": True, "syncRofi": True, "syncFish": True, "syncGtk": True, "syncLock": True,
+    "syncKitty": True, "syncRofi": True, "syncFish": True, "syncGtk": True, "syncLock": True, "syncApps": True,
 }
 
 
@@ -308,6 +309,8 @@ def main() -> None:
     apply_hyprland(t, c, opt)
     if opt["syncFish"] and present("fish"):
         apply_fish(t, c)
+    if opt["syncApps"]:
+        appthemes.apply_all(t, c)
 
 
 if __name__ == "__main__":

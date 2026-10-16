@@ -161,7 +161,7 @@ Item {
         }
         x: (parent.width - width) / 2
         y: isl.atBottom ? parent.height - height - bar.islandGap : bar.islandGap
-        radius: Math.min(height / 2, 30)
+        radius: Math.min(height / 2, bar.radius + (isl.mode === "menu" || isl.mode === "activity" ? 7 : 0))
         color: main.bg
         border.color: main.border
         border.width: 1
