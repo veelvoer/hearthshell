@@ -102,6 +102,9 @@ cmd_doctor() {
     chk "brightnessctl" optional brightnessctl
     chk "NetworkManager (nmcli)" optional nmcli
     chk "Bluetooth (bluetoothctl)" optional bluetoothctl
+    chk "PipeWire (sound)" optional pipewire
+    chk "WirePlumber (wpctl)" optional wpctl
+    chk "UPower (battery)" optional upower
     chk "kitty" optional kitty
     chk "rofi" optional rofi
     chk "fish" optional fish

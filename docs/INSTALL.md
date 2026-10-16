@@ -28,11 +28,14 @@ compositor and it does not need a display manager change.
 | A Nerd Font | the icons in the bar (`JetBrainsMono Nerd Font` is what the installer offers) | recommended |
 | NetworkManager | the Wi-Fi / ethernet module and menu | optional |
 | BlueZ | the Bluetooth module and menu | optional |
+| PipeWire + WirePlumber | the volume module, volume pop-up and quick settings sliders | recommended |
+| UPower | the battery module and charging pop-up | optional |
+| Inter and Noto Serif fonts | the shell's text (the installer installs them from your distribution when it can) | recommended |
 | brightnessctl | the brightness module (it hides itself without it) | optional |
 | kdialog or zenity | the file picker for "Add your own wallpaper" | optional |
 | kitty, rofi, fish, hyprlock, GTK apps | themed along with the shell when present | optional |
 
-Check what you already have at any time with `hearthshell doctor`.
+The installer enables the Bluetooth and UPower services when it installs them (and NetworkManager when no other network manager is running). Check what you already have at any time with `hearthshell doctor`.
 
 ## Quick install
 
@@ -165,7 +168,8 @@ NixOS example (adjust to your setup):
 
 ```nix
 environment.systemPackages = with pkgs; [
-  quickshell python3 imagemagick grim brightnessctl zenity
+  quickshell python3 imagemagick grim brightnessctl zenity upower
+  inter noto-fonts
   nerd-fonts.jetbrains-mono
 ];
 ```

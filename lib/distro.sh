@@ -42,6 +42,8 @@ role_cmds() {
         wl-clipboard) echo wl-copy ;;         playerctl) echo playerctl ;;
         cava) echo cava ;;                    git) echo git ;;
         curl) echo "curl wget" ;;
+        pipewire) echo pipewire ;;            wireplumber) echo wpctl ;;
+        upower) echo upower ;;                fontconfig) echo fc-list ;;
         *) echo "$1" ;;
     esac
 }
@@ -58,6 +60,12 @@ role_label() {
 }
 
 role_present() {
+    # the text fonts are checked by name, not by a command
+    if [ "$1" = fonts ]; then
+        have fc-list || return 1
+        fc-list family 2>/dev/null | grep -qi '^inter' && fc-list family 2>/dev/null | grep -qi 'noto serif'
+        return
+    fi
     for c in $(role_cmds "$1"); do have "$c" && return 0; done
     return 1
 }
@@ -65,6 +73,7 @@ role_present() {
 # pkg_for <manager> <role>  -> package name(s), empty when the distribution has none
 pkg_for() {
     pm=$1; role=$2
+    case "$role" in pipewire|wireplumber|upower|fontconfig|fonts) pkg_for_system "$pm" "$role"; return ;; esac
     case "$pm" in
     pacman)
         case "$role" in
@@ -132,6 +141,30 @@ pkg_for() {
             brightnessctl) echo brightnessctl ;; networkmanager) echo network-manager ;; bluez) echo bluez ;;
             chooser) echo zenity ;; kitty) echo kitty ;; rofi) echo rofi ;; fish) echo fish ;; git) echo git ;; curl) echo curl ;;
         esac ;;
+    esac
+}
+
+# Sound, battery and font packages the shell reads from (volume pop-up, battery module, text fonts).
+pkg_for_system() {
+    pm=$1; role=$2
+    case "$pm:$role" in
+        pacman:pipewire) echo "pipewire pipewire-pulse" ;;  pacman:wireplumber) echo wireplumber ;;
+        pacman:upower) echo upower ;;                        pacman:fontconfig) echo fontconfig ;;
+        pacman:fonts) echo "inter-font noto-fonts ttf-jetbrains-mono-nerd" ;;
+        apt-get:pipewire) echo "pipewire pipewire-pulse" ;;  apt-get:wireplumber) echo wireplumber ;;
+        apt-get:upower) echo upower ;;                       apt-get:fontconfig) echo fontconfig ;;
+        apt-get:fonts) echo "fonts-inter fonts-noto-core" ;;
+        dnf:pipewire) echo "pipewire pipewire-pulseaudio" ;; dnf:wireplumber) echo wireplumber ;;
+        dnf:upower) echo upower ;;                           dnf:fontconfig) echo fontconfig ;;
+        dnf:fonts) echo "rsms-inter-fonts google-noto-serif-fonts" ;;
+        zypper:pipewire) echo "pipewire pipewire-pulseaudio" ;; zypper:wireplumber) echo wireplumber ;;
+        zypper:upower) echo upower ;;                        zypper:fontconfig) echo fontconfig ;;
+        apk:pipewire) echo "pipewire pipewire-pulse" ;;     apk:wireplumber) echo wireplumber ;;
+        apk:upower) echo upower ;;                           apk:fontconfig) echo fontconfig ;;
+        apk:fonts) echo "font-inter font-noto" ;;
+        xbps-install:pipewire) echo pipewire ;;              xbps-install:wireplumber) echo wireplumber ;;
+        xbps-install:upower) echo upower ;;                  xbps-install:fontconfig) echo fontconfig ;;
+        xbps-install:fonts) echo "font-inter-ttf noto-fonts-ttf" ;;
     esac
 }
 

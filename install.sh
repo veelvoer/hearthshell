@@ -218,7 +218,7 @@ fi
 
 # ---------------------------------------------------------------- what is missing
 REQUIRED='quickshell python3 imagemagick grim'
-OPTIONAL='brightnessctl networkmanager bluez chooser'
+OPTIONAL='brightnessctl networkmanager bluez chooser pipewire wireplumber upower fontconfig fonts'
 DESKTOP='kitty rofi fish hyprlock slurp wl-clipboard playerctl cava'
 MISSING=''; PKGS=''; NEED_BUILD=0; NOPKG=''
 add_pkgs() { for p in $1; do case " $PKGS " in *" $p "*) ;; *) PKGS="$PKGS $p" ;; esac; done; }
@@ -244,7 +244,8 @@ else
 fi
 
 NEED_FONT=0
-if [ "$W_FONTS" = 1 ] && have fc-list && ! fc-list ':charset=f0581' family 2>/dev/null | grep -q .; then NEED_FONT=1; fi
+# without fontconfig yet (it is installed above) we cannot look, so the icon font is fetched; it is skipped when a package already provided it
+if [ "$W_FONTS" = 1 ] && ! { have fc-list && fc-list ':charset=f0581' family 2>/dev/null | grep -q .; }; then NEED_FONT=1; fi
 NWALL=$(awk 'BEGIN{n=0} /"path"/{n++} END{print n}' "$HERE/shell/wallpapers.json" 2>/dev/null || echo 52)
 
 # ---------------------------------------------------------------- the plan
@@ -303,6 +304,24 @@ if [ -n "$PKGS" ]; then
     fi
 fi
 
+# services the shell talks to are not started by the packages on every distribution
+enable_unit() {  # enable_unit <unit> <why>
+    have systemctl && [ -d /run/systemd/system ] || return 0
+    systemctl is-enabled "$1" >/dev/null 2>&1 && return 0
+    if dry; then info "${C_D}would enable${C_0} $1 ($2)"; return 0; fi
+    if as_root systemctl enable --now "$1" >/dev/null 2>&1; then info "enabled $1 ($2)"; else warn "could not enable $1; run: sudo systemctl enable --now $1"; fi
+}
+if [ "$W_DEPS" = 1 ] && [ -n "$PKGS" ] && [ "$PM" != nix ]; then
+    case " $MISSING " in *" bluez "*) enable_unit bluetooth.service "Bluetooth menu" ;; esac
+    case " $MISSING " in *" upower "*) enable_unit upower.service "battery module" ;; esac
+    case " $MISSING " in *" networkmanager "*)
+        # only when nothing else manages the network, so a working connection is never replaced
+        other=0
+        for u in systemd-networkd iwd connman dhcpcd wicd; do systemctl is-active "$u" >/dev/null 2>&1 && other=1; done
+        [ "$other" = 0 ] && enable_unit NetworkManager.service "Wi-Fi menu" ;;
+    esac
+fi
+
 # ---------------------------------------------------------------- Quickshell
 if [ "$NEED_BUILD" = 1 ]; then
     run_step "Building Quickshell"
@@ -317,13 +336,14 @@ if ! role_present quickshell && [ -d "$HOME/.local/bin" ]; then PATH="$HOME/.loc
 if [ "$NEED_FONT" = 1 ]; then
     run_step "Icon font"
     FD="$DATA_HOME/fonts/$NAME"
-    if dry; then info "${C_D}would download${C_0} JetBrainsMono.tar.xz -> $FD"; else
+    if ! dry && have fc-list && fc-list ':charset=f0581' family 2>/dev/null | grep -q .; then info "an icon font is already installed (from a package), nothing to download"
+    elif dry; then info "${C_D}would download${C_0} JetBrainsMono.tar.xz -> $FD"; else
         make_dir "$FD"
         URL=https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.tar.xz
         TMP=$(mktemp -d)
         if { have curl && curl -fsSL "$URL" -o "$TMP/f.tar.xz"; } || { have wget && wget -q "$URL" -O "$TMP/f.tar.xz"; }; then
             tar -xJf "$TMP/f.tar.xz" -C "$FD" --wildcards '*.ttf' 2>/dev/null || tar -xJf "$TMP/f.tar.xz" -C "$FD" 2>/dev/null
-            fc-cache -f "$FD" >/dev/null 2>&1
+            have fc-cache && fc-cache -f "$FD" >/dev/null 2>&1
             info "installed to $FD"
         else
             warn "download failed (needs curl or wget, and network). Install a Nerd Font by hand: docs/INSTALL.md"
