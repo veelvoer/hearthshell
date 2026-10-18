@@ -43,7 +43,7 @@ PanelWindow {
     color: "transparent"
     // the island needs room to grow into menus; its input region is only the pill itself
     implicitHeight: island ? 640 : shell.cfg.barHeight
-    implicitWidth: island ? Math.max(pillW, 400) + 80 : (pill ? pillW : 0)
+    implicitWidth: island ? Math.max(pillW, 400) + 160 : (pill ? pillW : 0)
     // every style reserves its own strip, so windows tile below the bar instead of sliding under it
     exclusionMode: ExclusionMode.Normal
     exclusiveZone: island ? islandGap + shell.cfg.barHeight : shell.cfg.barHeight
@@ -51,10 +51,10 @@ PanelWindow {
     // on demand (not exclusive): a click grants keyboard focus for Esc, while the click-away catcher still receives the pointer
     WlrLayershell.keyboardFocus: island && islandRef && (islandMenu !== "" || islandRef.hoverHold) ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
     // Input: the whole window, except on the dynamic island where only the pill itself takes input
-    readonly property bool maskIsland: island && islandSurface !== null
+    readonly property bool maskIsland: island && islandSurface !== null && islandRef !== null
     // The island's input region is its pill plus a little slack, running out to the screen edge so a flick to the edge finds it
-    readonly property real maskX: maskIsland ? Math.max(0, islandSurface.x - 12) : 0
-    readonly property real maskW: maskIsland ? Math.min(width - maskX, islandSurface.width + 24) : width
+    readonly property real maskX: maskIsland ? Math.max(0, islandRef.extL - 12) : 0
+    readonly property real maskW: maskIsland ? Math.min(width - maskX, islandRef.extR - islandRef.extL + 24) : width
     readonly property real maskY: maskIsland && atBottom ? islandSurface.y : 0
     readonly property real maskH: !maskIsland ? height : atBottom ? height - islandSurface.y : islandSurface.y + islandSurface.height
     mask: Region { x: win.maskX; y: win.maskY; width: win.maskW; height: win.maskH }
@@ -87,6 +87,14 @@ PanelWindow {
         shell.togglePopup(kind, screen.name, { "x": wx + p.x, "y": wy + p.y, "w": item.width, "h": item.height }, glyph, label);
     }
 
+    // Opens a menu without a button to click (a key bind, `hearthshell menu quick`): from the middle of the bar.
+    function openMenuAt(kind) {
+        if (island) { if (islandRef) islandRef.openMenu(kind, islandRef.stackGlyph(kind), ""); return; }
+        const wx = pill ? (screen.width - width) / 2 : margins.left;
+        const wy = atBottom ? screen.height - height - margins.bottom : margins.top;
+        shell.togglePopup(kind, screen.name, { "x": wx + width / 2 - 20, "y": wy, "w": 40, "h": height }, shell.menuGlyph(kind), "");
+    }
+
     // ---- lock-screen morph target ------------------------------------------
     property Item clockItem: null
     function updateClock() {
@@ -105,7 +113,7 @@ PanelWindow {
     onRightWChanged: clockTimer.restart()
 
     // the bar glides in on start and on reload
-    Component.onCompleted: { introAnim.start(); clockTimer.restart(); }
+    Component.onCompleted: { introAnim.start(); clockTimer.restart(); shell.bars[screen.name] = win; }
     NumberAnimation { id: introAnim; target: win; property: "intro"; from: 0; to: 1; duration: main.ms(650)
         easing.type: Easing.BezierSpline; easing.bezierCurve: [0.2, 0.8, 0.2, 1, 1, 1] }
 

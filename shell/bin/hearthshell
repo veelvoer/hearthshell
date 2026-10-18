@@ -129,6 +129,7 @@ case "${1:-run}" in
     settings)  cmd_ipc call shell toggleSettings ;;
     lock)      cmd_ipc call shell lock ;;
     launcher)  cmd_ipc call shell toggleLauncher ;;
+    menu)      [ $# -ge 2 ] || { echo "usage: hearthshell menu quick|network|bluetooth|calendar|notifications|media|sound|display" >&2; exit 2; }; cmd_ipc call shell openMenu "$2" ;;
     power)     cmd_ipc call shell togglePower ;;
     dnd)       cmd_ipc call shell toggleDnd ;;
     theme)     [ $# -ge 2 ] || { echo "usage: hearthshell theme NAME" >&2; exit 2; }; cmd_ipc call shell setTheme "$2" ;;

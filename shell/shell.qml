@@ -151,7 +151,7 @@ ShellRoot {
         "termOpacity": 0.92, "blurSize": 6,
         "barStyle": "classic", "barPos": "top",
         "glassBar": false, "glassPanel": false, "glassLauncher": false, "glassTerminal": false, "glassAmount": 0.4,
-        "drawnIcons": false, "notifTimeout": 6, "weekMonday": true, "ccOrder": ["wifi", "bluetooth", "audio", "quiet", "night", "volume", "brightness", "media", "notifications"], "ccHidden": [], "motionBounce": 0.5, "notifications": true, "glassWindows": false, "glassBrowsers": true, "glassFiles": true, "glassEditors": true, "glassChat": true, "glassOther": true,
+        "drawnIcons": false, "islandSplit": false, "notifTimeout": 6, "weekMonday": true, "ccOrder": ["wifi", "bluetooth", "audio", "quiet", "night", "volume", "brightness", "media", "notifications"], "ccHidden": [], "motionBounce": 0.5, "notifications": true, "glassWindows": false, "glassBrowsers": true, "glassFiles": true, "glassEditors": true, "glassChat": true, "glassOther": true,
         "userWalls": {},
         "font": "Inter", "motion": "normal", "accent": "", "wallFit": "fill",
         "barHeight": 30, "barGap": 4, "barSide": 10, "barFont": 13, "modSpacing": 0, "iconMode": "accent",
@@ -273,6 +273,14 @@ ShellRoot {
         if (popup.kind === kind && popup.screen === screenName) { closePopup(); return; }
         popup = { "kind": kind, "screen": screenName, "rect": rect, "glyph": glyph, "label": label };
     }
+    property var bars: ({})                  // the bar window of each screen, by name
+    function menuGlyph(k) { return menuGlyphs.glyphFor(k); }
+    MenuStack { id: menuGlyphs; visible: false; width: 0; height: 0; menu: "" }
+    function openMenu(kind) {
+        const b = bars[focusedMonitorName()];
+        if (b) b.openMenuAt(kind);
+    }
+    function focusedMonitorName() { return Hyprland.focusedMonitor ? Hyprland.focusedMonitor.name : (screens.length > 0 ? screens[0].name : ""); }
     function closePopup() { popup = { "kind": "", "screen": "", "rect": {}, "glyph": "", "label": "" }; }
 
     function set(key, value) {
@@ -538,6 +546,7 @@ ShellRoot {
         function closeSettings() { shellRoot.closeSettings(); }
         function toggleLauncher() { shellRoot.toggleLauncher(); }
         function togglePower() { shellRoot.togglePower(); }
+        function openMenu(kind: string) { shellRoot.openMenu(kind); }
         function toggleDnd() { notifier.dnd = !notifier.dnd; }
     }
 

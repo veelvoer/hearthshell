@@ -2,6 +2,7 @@
 import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland
+import Quickshell.Networking
 import Quickshell.Wayland
 import Quickshell.Services.Pipewire
 import Quickshell.Services.UPower
@@ -30,13 +31,13 @@ Item {
     property string menu: ""                        // network | bluetooth | quick | ""
     property string menuGlyph: ""
     property string menuFrom: ""                    // "quick" when Wi-Fi / Bluetooth was opened from the quick settings menu
-    readonly property string quickGlyph: String.fromCodePoint(0xF0570)
     property string activity: ""                   // volume | brightness | workspace | battery | media | ""
     property bool hoverHold: false
+    readonly property bool split: shell.cfg.islandSplit     // three separate pieces instead of one pill that grows into the bar
     property bool armed: false
     property bool menuSettled: false
     readonly property string mode: menu !== "" ? "menu"
-        : (hoverHold || shell.settingsOpen) ? "bar"
+        : (!split && (hoverHold || shell.settingsOpen)) ? "bar"
         : activity !== "" ? "activity" : "idle"
     readonly property real base: shell.cfg.barHeight
     readonly property real pad: bar.pad
@@ -60,9 +61,10 @@ Item {
         settleTimer.restart();
         activity = "";
     }
+    function stackGlyph(k) { return stack.glyphFor(k); }
     function closeMenu() {  menu = ""; menuFrom = ""; menuSettled = false; }
     // from Wi-Fi / Bluetooth back to the quick settings menu it was opened from
-    function goBack() { if (menuFrom === "quick") openMenu("quick", quickGlyph, ""); else closeMenu(); }
+    function goBack() { if (menuFrom !== "") { const k = menuFrom; openMenu(k, stack.glyphFor(k), ""); } else closeMenu(); }
     function peek(kind) {
         if (!armed || menu !== "") return;
         activity = kind;
@@ -124,8 +126,8 @@ Item {
         function onIsPlayingChanged() { if (isl.player) isl.peek("media"); } }
 
     // ---------------------------------------------------------------- the shape
-    property var lastH: ({ "network": 380, "bluetooth": 300, "quick": 430, "notifications": 300, "calendar": 440 })
-    readonly property var menuItem: menu === "network" ? netLoader.item : menu === "bluetooth" ? btLoader.item : menu === "quick" ? quickLoader.item : menu === "notifications" ? notifLoader.item : menu === "calendar" ? calLoader.item : null
+    property var lastH: ({ "network": 380, "bluetooth": 300, "quick": 430, "notifications": 300, "calendar": 440, "media": 330, "sound": 360, "display": 300 })
+    readonly property var menuItem: stack.item
     readonly property real menuH: menu === "" ? 0 : Math.min(bar.maxMenuH, menuItem ? menuItem.wantedHeight : lastH[menu])
     onMenuHChanged: if (menu !== "" && menuItem) lastH[menu] = menuH
     readonly property real transientW: activity === "volume" || activity === "brightness" ? 250
@@ -174,6 +176,77 @@ Item {
             shadowEnabled: true; shadowColor: "#000000"; shadowOpacity: 0.38
             shadowBlur: 0.7; shadowVerticalOffset: 3; shadowHorizontalOffset: 0
         }
+    }
+
+    // ---------------------------------------------------------------- the side pieces of the split island
+    readonly property real pieceH: base - 6
+    readonly property real pieceGap: 8
+    readonly property real extL: split ? leftPiece.x - 6 : surface.x
+    readonly property real extR: split ? (isl.shell.notifier.dnd ? moonPiece.x + moonPiece.width : rightPiece.x + rightPiece.width) + 6 : surface.x + surface.width
+    readonly property real pieceY: atBottom ? surface.y + surface.height - pieceH : surface.y
+    readonly property var wifiDev: Networking.devices.values.find(d => d.type === DeviceType.Wifi)
+    readonly property var wifiNet: wifiDev ? wifiDev.networks.values.find(n => n.connected) : null
+    readonly property int wifiLevel: !Networking.wifiEnabled || !wifiNet ? 0 : (wifiNet.signalStrength >= 0.75 ? 4 : wifiNet.signalStrength >= 0.5 ? 3 : wifiNet.signalStrength >= 0.25 ? 2 : 1)
+
+    component Piece: Item {
+        id: pc
+        property string glyph: ""
+        property bool lit: false
+        default property alias content: inner.data
+        signal clicked()
+        visible: isl.split
+        width: isl.pieceH; height: isl.pieceH
+        y: isl.pieceY
+        Behavior on y { SpringAnimation { spring: 3.2; damping: 0.5; epsilon: 0.25 } }
+        opacity: bar.intro
+        scale: hov.hovered ? 1.14 : 1
+        transformOrigin: Item.Center
+        Behavior on scale { SpringAnimation { spring: 5; damping: 0.45; epsilon: 0.002 } }
+        Rectangle {
+            id: disc
+            anchors.fill: parent; radius: width / 2
+            color: main.bg; border.width: 1; border.color: pc.lit ? main.accent : main.border
+            opacity: bar.bgAlpha
+            layer.enabled: true
+            layer.effect: MultiEffect { shadowEnabled: true; shadowColor: "#000000"; shadowOpacity: 0.38; shadowBlur: 0.7; shadowVerticalOffset: 3 }
+        }
+        Item { id: inner; anchors.fill: parent }
+        HoverHandler { id: hov; cursorShape: Qt.PointingHandCursor }
+        TapHandler { onTapped: pc.clicked() }
+    }
+
+    Piece {
+        id: leftPiece
+        x: surface.x - isl.pieceGap - width
+        lit: isl.menu === "media"
+        onClicked: { if (isl.player) isl.openMenu("media", stack.glyphFor("media"), ""); else isl.shell.toggleLauncher(); }
+        Rectangle {
+            anchors.centerIn: parent; width: parent.width - 6; height: width; radius: width / 2; clip: true; color: Qt.rgba(main.accent.r, main.accent.g, main.accent.b, 0.2)
+            Image {
+                anchors.fill: parent; visible: status === Image.Ready
+                source: isl.player && isl.player.trackArtUrl ? isl.player.trackArtUrl : ""
+                fillMode: Image.PreserveAspectCrop; asynchronous: true; smooth: true; sourceSize: Qt.size(64, 64)
+            }
+            Text {
+                anchors.centerIn: parent; visible: !isl.player || !isl.player.trackArtUrl
+                text: String.fromCodePoint(isl.player ? 0xF075A : 0xF003B); color: main.accent
+                font { family: "JetBrainsMono Nerd Font Propo"; pixelSize: main.barPx }
+            }
+        }
+    }
+    Piece {
+        id: rightPiece
+        x: surface.x + surface.width + isl.pieceGap
+        lit: isl.menu === "quick"
+        onClicked: isl.openMenu("quick", stack.glyphFor("quick"), "")
+        SignalBars { anchors.centerIn: parent; level: isl.wifiLevel; off: !Networking.wifiEnabled; tint: main.icon; size: main.barPx }
+    }
+    Piece {
+        id: moonPiece
+        visible: isl.split && isl.shell.notifier.dnd
+        x: rightPiece.x + rightPiece.width + isl.pieceGap
+        onClicked: isl.shell.notifier.dnd = false
+        Text { anchors.centerIn: parent; text: String.fromCodePoint(0xF0594); color: main.accent; font { family: "JetBrainsMono Nerd Font Propo"; pixelSize: main.barPx } }
     }
 
     // ---------------------------------------------------------------- the content (separate from the shape so the shadow stays clean)
@@ -331,8 +404,7 @@ Item {
                 focus: isl.mode === "menu"
                 onVisibleChanged: if (visible && isl.mode === "menu") forceActiveFocus()
                 Keys.onEscapePressed: {
-                    const it = isl.menu === "network" ? netLoader.item : isl.menu === "bluetooth" ? btLoader.item : isl.menu === "notifications" ? notifLoader.item : isl.menu === "calendar" ? calLoader.item : quickLoader.item;
-                    if (it && it.typing) keys.forceActiveFocus(); else isl.goBack();
+                    if (stack.typing) keys.forceActiveFocus(); else isl.goBack();
                 }
             }
             Text {
@@ -341,40 +413,12 @@ Item {
                 font { family: "JetBrainsMono Nerd Font Propo"; pixelSize: 22 }
             }
             BackButton { x: 10; y: 9; visible: isl.menuFrom !== ""; onClicked: isl.goBack() }
-            Loader {
-                id: netLoader; width: 360; height: parent.height; asynchronous: true
-                visible: isl.menu === "network"
-                sourceComponent: NetworkPopup { active: isl.menu === "network"; settled: active && isl.menuSettled }
-            }
-            Loader {
-                id: btLoader; width: 360; height: parent.height; asynchronous: true
-                visible: isl.menu === "bluetooth"
-                sourceComponent: BluetoothPopup { active: isl.menu === "bluetooth"; settled: active && isl.menuSettled }
-            }
-            Loader {
-                id: calLoader; width: 360; height: parent.height; asynchronous: true
-                visible: isl.menu === "calendar"
-                sourceComponent: CalendarPopup {
-                    active: isl.menu === "calendar"; settled: active && isl.menuSettled; shell: isl.shell
-                    onRequestClose: isl.closeMenu()
-                }
-            }
-            Loader {
-                id: notifLoader; width: 360; height: parent.height; asynchronous: true
-                visible: isl.menu === "notifications"
-                sourceComponent: NotificationsPopup {
-                    active: isl.menu === "notifications"; settled: active && isl.menuSettled; shell: isl.shell
-                    onRequestClose: isl.closeMenu()
-                }
-            }
-            Loader {
-                id: quickLoader; width: 360; height: parent.height; asynchronous: true
-                visible: isl.menu === "quick"
-                sourceComponent: QuickPopup {
-                    active: isl.menu === "quick"; settled: active && isl.menuSettled; shell: isl.shell
-                    onRequestMenu: kind => isl.openMenu(kind, kind === "network" ? String.fromCodePoint(0xF05A9) : String.fromCodePoint(0xF00AF), "quick")
-                    onRequestClose: isl.closeMenu()
-                }
+            MenuStack {
+                id: stack
+                width: 360; height: parent.height
+                menu: isl.menu; settled: isl.menuSettled; shell: isl.shell; from: isl.menuFrom
+                onRequestMenu: k => isl.openMenu(k, stack.glyphFor(k), isl.menu)
+                onRequestClose: isl.closeMenu()
             }
         }
     }

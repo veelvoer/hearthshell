@@ -41,6 +41,13 @@ Item {
         text: root.valueText; color: root.frac > 0.86 ? main.bg : main.muted
         font { family: main.font; pixelSize: 12; weight: 600 }
     }
+    MouseArea {
+        id: area
+        anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+        function set(mx) { root.moved(root.from + Math.max(0, Math.min(1, mx / root.width)) * (root.to - root.from)); }
+        onPressed: mouse => { if (!(root.showChevron && mouse.x > root.width - 46)) set(mouse.x); }
+        onPositionChanged: mouse => { if (pressed) set(mouse.x); }
+    }
     Rectangle {
         visible: root.showChevron
         anchors { right: parent.right; rightMargin: 8; verticalCenter: parent.verticalCenter }
@@ -48,12 +55,5 @@ Item {
         color: cm.containsMouse ? Qt.rgba(main.text.r, main.text.g, main.text.b, 0.14) : "transparent"
         Text { anchors.centerIn: parent; text: "›"; color: main.text; font { pixelSize: 22; weight: 600 } }
         MouseArea { id: cm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.chevronClicked() }
-    }
-    MouseArea {
-        id: area
-        anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-        function set(mx) { root.moved(root.from + Math.max(0, Math.min(1, mx / root.width)) * (root.to - root.from)); }
-        onPressed: mouse => { if (!(root.showChevron && mouse.x > root.width - 46)) set(mouse.x); }
-        onPositionChanged: mouse => { if (pressed) set(mouse.x); }
     }
 }

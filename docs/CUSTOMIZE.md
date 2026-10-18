@@ -38,6 +38,7 @@ hearthshell lock
 hearthshell launcher              # open or close the app launcher (bind it to a key, e.g. Super + Space)
 hearthshell power                 # open or close the power menu
 hearthshell dnd                   # toggle Do not disturb
+hearthshell menu quick            # open a menu from a key bind: quick, network, bluetooth, calendar, notifications, media, sound, display
 ```
 
 Theme ids: `everforest pink yellow green blue teal gruvbox nord catppuccin tokyo rosepine dracula kanagawa`

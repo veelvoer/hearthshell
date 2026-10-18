@@ -110,12 +110,6 @@ Item {
         sh.running = true;
         nightOn = !nightOn;
     }
-    function nextSink() {
-        if (sinks.length < 2) return;
-        const i = sinks.indexOf(sink);
-        Pipewire.preferredDefaultAudioSink = sinks[(i + 1) % sinks.length];
-    }
-
     // ---------------------------------------------------------------- header
     Text {
         x: 54; y: 15; text: "Control Center"; color: main.text
@@ -239,9 +233,9 @@ Item {
             glyph: root.muted ? root.cp(0xF0581) : root.cp(0xF057E)
             title: "Audio"
             sub: root.sinkName
-            checked: !root.muted; chevron: root.sinks.length > 1
+            checked: !root.muted; chevron: true
             onClicked: if (root.soundReady) root.sink.audio.muted = !root.sink.audio.muted
-            onChevronClicked: root.nextSink()
+            onChevronClicked: root.requestMenu("sound")
         } }
     Component { id: quietC
         Tile {
@@ -264,8 +258,8 @@ Item {
             glyph: root.muted ? root.cp(0xF0581) : root.cp(0xF057E)
             from: 0; to: 1; value: root.soundReady ? root.sink.audio.volume : 0
             valueText: root.muted ? "Muted" : root.vol + "%"
-            showChevron: root.sinks.length > 1
-            onChevronClicked: root.nextSink()
+            showChevron: true
+            onChevronClicked: root.requestMenu("sound")
             onMoved: v => { if (root.soundReady) { root.sink.audio.volume = v; root.sink.audio.muted = false; } }
         } }
     Component { id: brightC
@@ -275,59 +269,11 @@ Item {
             valueText: root.bright + "%"
             onMoved: v => root.setBrightness(v)
             onPressedChanged: root.brightDragging = pressed
+            showChevron: true
+            onChevronClicked: root.requestMenu("display")
         } }
     Component { id: mediaC
-        Rectangle {
-            id: card
-            readonly property var p: root.player
-            height: 132; radius: 26; clip: true
-            color: Qt.rgba(main.text.r, main.text.g, main.text.b, 0.07)
-            Image {
-                id: art
-                anchors.fill: parent
-                source: card.p && card.p.trackArtUrl ? card.p.trackArtUrl : ""
-                fillMode: Image.PreserveAspectCrop; asynchronous: true; smooth: true; sourceSize: Qt.size(240, 240)
-                layer.enabled: true
-                layer.effect: MultiEffect { blurEnabled: true; blurMax: 48; blur: 1.0; saturation: 0.15 }
-            }
-            Rectangle { anchors.fill: parent; color: Qt.rgba(0, 0, 0, art.status === Image.Ready ? 0.45 : 0) }
-            Column {
-                x: 20; y: 16; width: parent.width - 40 - 56; spacing: 1
-                Text { width: parent.width; elide: Text.ElideRight; text: card.p ? (card.p.trackTitle || "Nothing playing") : ""; color: art.status === Image.Ready ? "#ffffff" : main.text
-                    font { family: main.font; pixelSize: 16; weight: 700 } }
-                Text { width: parent.width; elide: Text.ElideRight; text: card.p ? (card.p.trackArtist || "") : ""; color: art.status === Image.Ready ? "#d8d8d8" : main.muted
-                    font { family: main.font; pixelSize: 12 } }
-            }
-            EqBars { anchors { right: parent.right; rightMargin: 20; top: parent.top; topMargin: 18 } size: 18; running: !!card.p && card.p.isPlaying; tint: art.status === Image.Ready ? "#ffffff" : main.accent }
-            Row {
-                anchors { horizontalCenter: parent.horizontalCenter; top: parent.top; topMargin: 56 }
-                spacing: 22
-                Text { anchors.verticalCenter: parent.verticalCenter; text: root.cp(0xF04AE); opacity: card.p && card.p.canGoPrevious ? 1 : 0.4
-                    color: art.status === Image.Ready ? "#ffffff" : main.text; font { family: "JetBrainsMono Nerd Font Propo"; pixelSize: 20 }
-                    MouseArea { anchors.fill: parent; anchors.margins: -8; cursorShape: Qt.PointingHandCursor; onClicked: if (card.p && card.p.canGoPrevious) card.p.previous() } }
-                Rectangle {
-                    width: 44; height: 44; radius: 22; color: art.status === Image.Ready ? "#f2f2f2" : main.accent
-                    scale: pp.pressed ? 0.93 : 1
-                    Behavior on scale { NumberAnimation { duration: main.ms(150); easing.type: Easing.OutBack } }
-                    Text { anchors.centerIn: parent; text: root.cp(card.p && card.p.isPlaying ? 0xF03E4 : 0xF040A); color: "#101010"
-                        font { family: "JetBrainsMono Nerd Font Propo"; pixelSize: 22 } }
-                    MouseArea { id: pp; anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: if (card.p && card.p.canTogglePlaying) card.p.togglePlaying() }
-                }
-                Text { anchors.verticalCenter: parent.verticalCenter; text: root.cp(0xF04AD); opacity: card.p && card.p.canGoNext ? 1 : 0.4
-                    color: art.status === Image.Ready ? "#ffffff" : main.text; font { family: "JetBrainsMono Nerd Font Propo"; pixelSize: 20 }
-                    MouseArea { anchors.fill: parent; anchors.margins: -8; cursorShape: Qt.PointingHandCursor; onClicked: if (card.p && card.p.canGoNext) card.p.next() } }
-            }
-            Rectangle {
-                id: bar
-                x: 20; y: parent.height - 22; width: parent.width - 40; height: 5; radius: 3; color: Qt.rgba(1, 1, 1, 0.25)
-                visible: !!card.p && card.p.lengthSupported && card.p.length > 0
-                Rectangle {
-                    height: parent.height; radius: 3; color: art.status === Image.Ready ? "#ffffff" : main.accent
-                    width: card.p && card.p.length > 0 ? parent.width * Math.max(0, Math.min(1, card.p.position / card.p.length)) : 0
-                    Behavior on width { NumberAnimation { duration: main.ms(900); easing.type: Easing.Linear } }
-                }
-            }
-        } }
+        MediaCard { p: root.player } }
     Component { id: notifC
         Item {
             id: nbox

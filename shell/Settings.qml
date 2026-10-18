@@ -13,6 +13,26 @@ PanelWindow {
     property int page: 0
     readonly property var cfg: shell.cfg
     function put(key, value) { shell.set(key, value); }
+    // what each page is about, for the search box (the page names themselves always count)
+    readonly property var pageWords: [
+        "theme colour color wallpaper preset look accent text font background",
+        "creator custom theme make extract palette",
+        "bar island style top bottom opacity roundness height gap clock seconds 24 hour calendar monday icons drawn workspace dots pills numbers split three pieces bounce spring",
+        "modules launcher volume brightness network bluetooth battery media notifications bell power quick text hover labels",
+        "windows gaps border corner rounding inactive opacity focus shadow",
+        "input mouse touchpad keyboard scroll natural tap speed repeat",
+        "glass frosted blur transparent terminal browser files editors",
+        "system kitty fish rofi gtk hyprlock firefox yazi dolphin cava micro lodica terminal lock screen",
+        "control center tiles wifi bluetooth audio quiet night light volume brightness media order",
+        "notifications popups quiet do not disturb timeout daemon mako dunst",
+        "about shortcuts reset defaults keys"]
+    property string query: ""
+    onWantedChanged: if (!wanted) { query = ""; search.text = ""; }
+    function matches(i) {
+        const q = query.trim().toLowerCase();
+        return q === "" || pages[i].toLowerCase().indexOf(q) >= 0 || pageWords[i].indexOf(q) >= 0;
+    }
+    function firstMatch() { for (let i = 0; i < pages.length; i++) if (matches(i)) return i; return -1; }
     readonly property var pages: ["Appearance", "Creator", "Bar", "Modules", "Windows", "Input", "Glass", "System", "Control Center", "Notifications", "About"]
     property bool typing: false
     property bool accentPicker: false
@@ -69,6 +89,7 @@ PanelWindow {
             if (win.typing) return;
             if (ev.key === Qt.Key_Down || ev.key === Qt.Key_Tab) { win.page = (win.page + 1) % win.pages.length; ev.accepted = true; }
             else if (ev.key === Qt.Key_Up || ev.key === Qt.Key_Backtab) { win.page = (win.page + win.pages.length - 1) % win.pages.length; ev.accepted = true; }
+            else if (ev.key === Qt.Key_Slash || (ev.key === Qt.Key_F && (ev.modifiers & Qt.ControlModifier))) { search.focusInput(); ev.accepted = true; }
         }
 
         Rectangle {
@@ -96,13 +117,17 @@ PanelWindow {
                     x: 28; y: 30; text: "Settings"; color: main.text
                     font { family: main.serif; pixelSize: 26 }
                 }
-                Text {
-                    x: 28; y: 70; text: "MAKE IT YOURS"; color: main.muted
-                    font { family: main.font; pixelSize: 11; weight: 700; letterSpacing: 1.2 }
+                HInput {
+                    id: search
+                    x: 20; y: 70; width: nav.width - 40; height: 34
+                    placeholder: "Search settings  ( / )"
+                    onEdited: v => { win.query = v; const m = win.firstMatch(); if (m >= 0 && !win.matches(win.page)) win.page = m; }
+                    onSubmitted: v => { const m = win.firstMatch(); if (m >= 0) win.page = m; }
+                    onTypingChanged: win.typing = typing
                 }
                 Rectangle {   // sliding selection pill
                     x: 14; width: nav.width - 28; height: 40; radius: 12
-                    y: 104 + win.page * 46
+                    y: 122 + win.page * 44
                     color: main.card; border.width: 1; border.color: main.line
                     Behavior on y { NumberAnimation { duration: main.ms(340); easing.type: Easing.BezierSpline; easing.bezierCurve: win.ease } }
                     Rectangle { x: 0; width: 3; height: 18; radius: 2; anchors.verticalCenter: parent.verticalCenter; color: main.accent }
@@ -112,7 +137,9 @@ PanelWindow {
                     Item {
                         required property int index
                         required property string modelData
-                        x: 14; y: 104 + index * 46; width: nav.width - 28; height: 40
+                        x: 14; y: 122 + index * 44; width: nav.width - 28; height: 40
+                        opacity: win.matches(index) ? 1 : 0.28
+                        Behavior on opacity { NumberAnimation { duration: main.ms(180) } }
                         Text {
                             x: 18; anchors.verticalCenter: parent.verticalCenter; text: modelData
                             color: win.page === index ? main.accent : (hover.containsMouse ? main.text : main.muted)
@@ -146,6 +173,7 @@ PanelWindow {
                     contentWidth: width; contentHeight: stack.y + stack.height + 32
                     boundsBehavior: Flickable.StopAtBounds
                     interactive: contentHeight > height
+                    onCurrentChanged: if (current) contentY = 0     // every page opens at its top
                     visible: opacity > 0.01
                     opacity: current && win.wanted ? 1 : 0
                     transform: Translate {
@@ -551,7 +579,9 @@ PanelWindow {
                                     HSegment { readonly property var keys: ["accent", "text", "colour"]
                                         options: ["Accent", "Text", "Colourful"]; segWidth: 76
                                         current: Math.max(0, keys.indexOf(win.cfg.iconMode)); onPicked: i => win.put("iconMode", keys[i]) } }
-                                HRow { label: "Drawn icons"; desc: "Wi-Fi as signal bars and a drawn battery instead of font icons"
+                                HRow { label: "Island in three pieces"; desc: "Dynamic island style: a round button for music, the clock, and a round button for the Control Center"
+                                HToggle { checked: win.cfg.islandSplit; onToggled: v => win.put("islandSplit", v) } }
+                            HRow { label: "Drawn icons"; desc: "Wi-Fi as signal bars and a drawn battery instead of font icons"
                                     HToggle { checked: win.cfg.drawnIcons; onToggled: v => win.put("drawnIcons", v) } }
                                 HRow { label: "Workspace style"; desc: "How the workspace indicators look"
                                     HSegment { readonly property var keys: ["pills", "dots", "numbers"]

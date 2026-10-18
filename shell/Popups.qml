@@ -20,7 +20,7 @@ PanelWindow {
 
     readonly property real tw: 360
     readonly property real maxH: Math.max(200, Math.min(580, height - 140))
-    readonly property var openItem: kind === "network" ? netLoader.item : (kind === "bluetooth" ? btLoader.item : (kind === "quick" ? quickLoader.item : (kind === "notifications" ? notifLoader.item : (kind === "calendar" ? calLoader.item : null))))
+    readonly property var openItem: stack.item
     readonly property real wantedH: openItem ? Math.min(maxH, openItem.wantedHeight) : 120
     property real th: wantedH
     Behavior on th { NumberAnimation { duration: main.ms(280); easing.type: Easing.BezierSpline; easing.bezierCurve: [0.2, 0.8, 0.2, 1, 1, 1] } }
@@ -31,14 +31,13 @@ PanelWindow {
     readonly property real fontPx: 13
 
     // from the quick settings menu to the Wi-Fi or Bluetooth menu, in the same card
-    property string from: ""                 // "quick" while Wi-Fi / Bluetooth is open from the quick settings menu
-    property string quickGlyph: String.fromCodePoint(0xF0570)
+    property string from: ""                 // the menu this one was opened from ("" = the bar)
     function goBack() {
-        if (from === "quick") switchKind("quick"); else shell.closePopup();
+        if (from !== "") { const k = from; switchKind(k); from = ""; } else shell.closePopup();
     }
     function switchKind(k) {
-        const g = k === "network" ? String.fromCodePoint(0xF05A9) : k === "bluetooth" ? String.fromCodePoint(0xF00AF) : quickGlyph;
-        from = k === "quick" ? "" : "quick";
+        const g = stack.glyphFor(k);
+        from = kind;
         kind = k; glyph = g; label = "";
         shell.popupHost = k + "@" + myScreen;
         shell.popup = Object.assign({}, shell.popup, { "kind": k, "glyph": g, "label": "" });
@@ -144,66 +143,18 @@ PanelWindow {
 
         MouseArea { anchors.fill: parent }   // swallow clicks inside the card
 
-        // both menus are built once, up front; the open one is simply revealed
+        // every menu is built once, up front; the open one is simply revealed
         readonly property real reveal: win.warming ? 1 : win.cOp
-        Loader {
-            id: netLoader
+        MenuStack {
+            id: stack
             width: win.tw; height: parent.height
-            asynchronous: true; sourceComponent: netComp
-            visible: win.kind === "network" && card.reveal > 0.01
+            menu: win.kind; settled: win.wanted && win.p > 0.85; shell: win.shell; from: win.from
             opacity: card.reveal
+            visible: card.reveal > 0.01
             transform: Translate { y: (1 - card.reveal) * 8 }
+            onRequestMenu: k => win.switchKind(k)
+            onRequestClose: win.shell.closePopup()
         }
-        Loader {
-            id: btLoader
-            width: win.tw; height: parent.height
-            asynchronous: true; sourceComponent: btComp
-            visible: win.kind === "bluetooth" && card.reveal > 0.01
-            opacity: card.reveal
-            transform: Translate { y: (1 - card.reveal) * 8 }
-        }
-        Loader {
-            id: calLoader
-            width: win.tw; height: parent.height
-            asynchronous: true; sourceComponent: calComp
-            visible: win.kind === "calendar" && card.reveal > 0.01
-            opacity: card.reveal
-            transform: Translate { y: (1 - card.reveal) * 8 }
-        }
-        Component { id: calComp
-            CalendarPopup {
-                active: win.wanted && win.kind === "calendar"; settled: active && win.p > 0.85; shell: win.shell
-                onRequestClose: win.shell.closePopup()
-            } }
-        Loader {
-            id: notifLoader
-            width: win.tw; height: parent.height
-            asynchronous: true; sourceComponent: notifComp
-            visible: win.kind === "notifications" && card.reveal > 0.01
-            opacity: card.reveal
-            transform: Translate { y: (1 - card.reveal) * 8 }
-        }
-        Component { id: notifComp
-            NotificationsPopup {
-                active: win.wanted && win.kind === "notifications"; settled: active && win.p > 0.85; shell: win.shell
-                onRequestClose: win.shell.closePopup()
-            } }
-        Loader {
-            id: quickLoader
-            width: win.tw; height: parent.height
-            asynchronous: true; sourceComponent: quickComp
-            visible: win.kind === "quick" && card.reveal > 0.01
-            opacity: card.reveal
-            transform: Translate { y: (1 - card.reveal) * 8 }
-        }
-        Component { id: quickComp
-            QuickPopup {
-                active: win.wanted && win.kind === "quick"; settled: active && win.p > 0.85; shell: win.shell
-                onRequestMenu: k => win.switchKind(k)
-                onRequestClose: win.shell.closePopup()
-            } }
-        Component { id: netComp; NetworkPopup { active: win.wanted && win.kind === "network"; settled: active && win.p > 0.85 } }
-        Component { id: btComp; BluetoothPopup { active: win.wanted && win.kind === "bluetooth"; settled: active && win.p > 0.85 } }
     }
 
     BackButton {
