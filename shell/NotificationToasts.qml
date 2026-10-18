@@ -46,7 +46,7 @@ PanelWindow {
                 // time on screen: the app's own timeout, otherwise 6 s (critical ones stay until dismissed)
                 Timer {
                     id: life
-                    interval: toast.critical ? 600000 : (toast.n.expireTimeout > 0 ? toast.n.expireTimeout * 1000 : 6000)
+                    interval: toast.critical ? 600000 : (toast.n.expireTimeout > 0 ? toast.n.expireTimeout * 1000 : cfg.notifTimeout * 1000)
                     running: false
                     onTriggered: win.notifier.hide(toast.n)
                 }

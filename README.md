@@ -8,6 +8,7 @@ change almost everything: themes, wallpapers, the bar, the windows, even your te
   a **theme maker** for your own, your own wallpapers, accent colour, fonts
 - **Bar styles** (classic, pill, islands, flat, minimal and an Apple-style **dynamic island**: a small clock pill that morphs into the bar on hover, into Wi-Fi/Bluetooth/quick-settings menus on click, and into volume, brightness, workspace, charging and now-playing moments), top or bottom, and a **module picker** (with an option to show module text only on hover):
   workspaces, clock, volume, brightness, network, Bluetooth, quick settings, battery, app launcher button, now playing, notification bell, power menu; Wi-Fi as signal bars and a drawn battery if you like
+- **A Control Center** (pill tiles for Wi-Fi, Bluetooth, audio output, Quiet and Night Light; fat volume and brightness sliders; a now-playing card with blurred cover art; the latest notifications) that you can reorder and trim in Settings, and a **calendar** that opens from the clock
 - **Built-in app launcher, power menu and notifications**: pop-ups that glide in, a notification centre with Do not disturb, all themed and frosted with the rest
 - **Wi-Fi and Bluetooth menus** that grow out of the bar button: networks, passwords, devices
 - **Frosted glass** for the bar, its menus and (optionally) other app windows, quick looks (one-click bundles), **your own saved presets**, animation speed

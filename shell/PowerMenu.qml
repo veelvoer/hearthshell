@@ -25,10 +25,10 @@ PanelWindow {
     property string confirm: ""
     readonly property var items: [
         { "key": "lock", "label": "Lock", "glyph": 0xF033E },
-        { "key": "logout", "label": "Log out", "glyph": 0xF0343 },
-        { "key": "sleep", "label": "Sleep", "glyph": 0xF04B2 },
-        { "key": "reboot", "label": "Restart", "glyph": 0xF0709 },
-        { "key": "off", "label": "Shut down", "glyph": 0xF0425 }
+        { "key": "logout", "label": "Log Out", "glyph": 0xF0343 },
+        { "key": "sleep", "label": "Suspend", "glyph": 0xF04B2 },
+        { "key": "reboot", "label": "Reboot", "glyph": 0xF0709 },
+        { "key": "off", "label": "Power Off", "glyph": 0xF0425 }
     ]
     onWantedChanged: { if (wanted) { sel = 0; confirm = ""; keys.forceActiveFocus(); } }
     Timer { id: confirmTimer; interval: 3000; onTriggered: win.confirm = "" }
@@ -81,17 +81,17 @@ PanelWindow {
                     readonly property bool asking: win.confirm === modelData.key
                     readonly property bool on: index === win.sel
                     width: 100; height: 114; radius: 22
-                    color: asking ? Qt.rgba(main.red.r, main.red.g, main.red.b, 0.25) : on ? Qt.rgba(main.accent.r, main.accent.g, main.accent.b, 0.20) : (bm.containsMouse ? main.card : Qt.rgba(main.card.r, main.card.g, main.card.b, 0.7))
-                    border.width: 1; border.color: asking ? main.red : on ? Qt.rgba(main.accent.r, main.accent.g, main.accent.b, 0.55) : main.line
+                    color: asking ? Qt.rgba(main.red.r, main.red.g, main.red.b, 0.85) : on ? main.accent : Qt.rgba(main.text.r, main.text.g, main.text.b, 0.07)
+                    border.width: 0
                     scale: bm.pressed ? 0.95 : 1
                     Behavior on color { ColorAnimation { duration: main.ms(160) } }
                     Behavior on scale { NumberAnimation { duration: main.ms(170); easing.type: Easing.OutBack } }
                     Column {
                         anchors.centerIn: parent; spacing: 10
                         Text { anchors.horizontalCenter: parent.horizontalCenter; text: String.fromCodePoint(b.modelData.glyph)
-                            color: b.asking ? main.red : (b.on ? main.accent : main.text); font { family: "JetBrainsMono Nerd Font Propo"; pixelSize: 32 } }
+                            color: (b.on || b.asking) ? main.bg : main.text; font { family: "JetBrainsMono Nerd Font Propo"; pixelSize: 32 } }
                         Text { anchors.horizontalCenter: parent.horizontalCenter; text: b.asking ? "Sure?" : b.modelData.label
-                            color: b.asking ? main.red : main.muted; font { family: main.font; pixelSize: 12; weight: 600 } }
+                            color: (b.on || b.asking) ? main.bg : main.muted; font { family: main.font; pixelSize: 12; weight: 700 } }
                     }
                     MouseArea { id: bm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
                         onEntered: win.sel = b.index; onClicked: win.act(b.modelData.key) }

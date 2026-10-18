@@ -49,7 +49,7 @@ Item {
     readonly property real side: hasC ? Math.max(leftW, rightW) : 0
     readonly property real pillW: hasC ? side * 2 + centerW + bar.gap * 2 + pad * 2
                                        : leftW + rightW + ((leftW > 0 && rightW > 0) ? bar.gap * 2 : 0) + pad * 2
-    readonly property real collapsedW: Math.max(centerW + 28, 64)
+    readonly property real collapsedW: Math.max(centerW + 28, 64) + (!!player && player.isPlaying ? 26 : 0)
 
     function openMenu(kind, glyph, from) {
         if (menu === kind) { closeMenu(); return; }
@@ -124,8 +124,8 @@ Item {
         function onIsPlayingChanged() { if (isl.player) isl.peek("media"); } }
 
     // ---------------------------------------------------------------- the shape
-    property var lastH: ({ "network": 380, "bluetooth": 300, "quick": 430, "notifications": 300 })
-    readonly property var menuItem: menu === "network" ? netLoader.item : menu === "bluetooth" ? btLoader.item : menu === "quick" ? quickLoader.item : menu === "notifications" ? notifLoader.item : null
+    property var lastH: ({ "network": 380, "bluetooth": 300, "quick": 430, "notifications": 300, "calendar": 440 })
+    readonly property var menuItem: menu === "network" ? netLoader.item : menu === "bluetooth" ? btLoader.item : menu === "quick" ? quickLoader.item : menu === "notifications" ? notifLoader.item : menu === "calendar" ? calLoader.item : null
     readonly property real menuH: menu === "" ? 0 : Math.min(bar.maxMenuH, menuItem ? menuItem.wantedHeight : lastH[menu])
     onMenuHChanged: if (menu !== "" && menuItem) lastH[menu] = menuH
     readonly property real transientW: activity === "volume" || activity === "brightness" ? 250
@@ -146,17 +146,17 @@ Item {
         width: isl.targetW
         height: isl.targetH
         Behavior on width {
-            NumberAnimation {
-                duration: main.ms(isl.reshaping ? 560 : 280)
-                easing.type: isl.reshaping ? Easing.BezierSpline : Easing.OutCubic
-                easing.bezierCurve: isl.spring
+            SpringAnimation {
+                spring: isl.reshaping ? 2.6 : 4.2
+                damping: isl.reshaping ? 0.46 - 0.30 * Math.max(0, Math.min(1, shell.cfg.motionBounce)) : 0.62
+                epsilon: 0.25
             }
         }
         Behavior on height {
-            NumberAnimation {
-                duration: main.ms(isl.reshaping ? 560 : 280)
-                easing.type: isl.reshaping ? Easing.BezierSpline : Easing.OutCubic
-                easing.bezierCurve: isl.spring
+            SpringAnimation {
+                spring: isl.reshaping ? 2.6 : 4.2
+                damping: isl.reshaping ? 0.46 - 0.30 * Math.max(0, Math.min(1, shell.cfg.motionBounce)) : 0.62
+                epsilon: 0.25
             }
         }
         x: (parent.width - width) / 2
@@ -194,6 +194,13 @@ Item {
                 x: isl.pad - 5
                 opacity: Math.max(0, Math.min(1, (surface.width - isl.collapsedW) / Math.max(1, isl.pillW - isl.collapsedW) * 1.6 - 0.6))
                 enabled: isl.mode === "bar"
+            }
+            EqBars {
+                visible: isl.mode === "idle" && !!isl.player && isl.player.isPlaying
+                running: visible
+                size: 13
+                anchors.verticalCenter: parent.verticalCenter
+                x: zc.x - width - 8
             }
             BarZone {
                 id: zc; bar: isl.bar; name: "center"; ids: isl.bar.island ? isl.bar.mods.center : []
@@ -324,7 +331,7 @@ Item {
                 focus: isl.mode === "menu"
                 onVisibleChanged: if (visible && isl.mode === "menu") forceActiveFocus()
                 Keys.onEscapePressed: {
-                    const it = isl.menu === "network" ? netLoader.item : isl.menu === "bluetooth" ? btLoader.item : isl.menu === "notifications" ? notifLoader.item : quickLoader.item;
+                    const it = isl.menu === "network" ? netLoader.item : isl.menu === "bluetooth" ? btLoader.item : isl.menu === "notifications" ? notifLoader.item : isl.menu === "calendar" ? calLoader.item : quickLoader.item;
                     if (it && it.typing) keys.forceActiveFocus(); else isl.goBack();
                 }
             }
@@ -343,6 +350,14 @@ Item {
                 id: btLoader; width: 360; height: parent.height; asynchronous: true
                 visible: isl.menu === "bluetooth"
                 sourceComponent: BluetoothPopup { active: isl.menu === "bluetooth"; settled: active && isl.menuSettled }
+            }
+            Loader {
+                id: calLoader; width: 360; height: parent.height; asynchronous: true
+                visible: isl.menu === "calendar"
+                sourceComponent: CalendarPopup {
+                    active: isl.menu === "calendar"; settled: active && isl.menuSettled; shell: isl.shell
+                    onRequestClose: isl.closeMenu()
+                }
             }
             Loader {
                 id: notifLoader; width: 360; height: parent.height; asynchronous: true

@@ -10,4 +10,10 @@ Item {
     height: main.barPx + 11
     opacity: bar && bar.shell.holdBar ? 0 : 1
     Clock { id: face; anchors.centerIn: parent }
+    // click for the calendar
+    MouseArea {
+        anchors.fill: parent; anchors.margins: -2
+        cursorShape: Qt.PointingHandCursor
+        onClicked: if (bar) bar.openPopup("calendar", root, String.fromCodePoint(0xF00ED), "")
+    }
 }

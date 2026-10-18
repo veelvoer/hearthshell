@@ -151,7 +151,7 @@ ShellRoot {
         "termOpacity": 0.92, "blurSize": 6,
         "barStyle": "classic", "barPos": "top",
         "glassBar": false, "glassPanel": false, "glassLauncher": false, "glassTerminal": false, "glassAmount": 0.4,
-        "drawnIcons": false, "notifications": true, "glassWindows": false, "glassBrowsers": true, "glassFiles": true, "glassEditors": true, "glassChat": true, "glassOther": true,
+        "drawnIcons": false, "notifTimeout": 6, "weekMonday": true, "ccOrder": ["wifi", "bluetooth", "audio", "quiet", "night", "volume", "brightness", "media", "notifications"], "ccHidden": [], "motionBounce": 0.5, "notifications": true, "glassWindows": false, "glassBrowsers": true, "glassFiles": true, "glassEditors": true, "glassChat": true, "glassOther": true,
         "userWalls": {},
         "font": "Inter", "motion": "normal", "accent": "", "wallFit": "fill",
         "barHeight": 30, "barGap": 4, "barSide": 10, "barFont": 13, "modSpacing": 0, "iconMode": "accent",
@@ -243,6 +243,28 @@ ShellRoot {
         m[zone][j] = id;
         set("modules", m);
     }
+
+    // ---- Control Center layout ---------------------------------------------
+    readonly property var ccAll: ["wifi", "bluetooth", "audio", "quiet", "night", "volume", "brightness", "media", "notifications"]
+    readonly property var ccLabels: ({ "wifi": ["Wi-Fi", "Network tile with the name of the network"], "bluetooth": ["Bluetooth", "Tile with the connected device"],
+        "audio": ["Audio", "Output device tile; the arrow switches output"], "quiet": ["Quiet", "Do not disturb for notification pop-ups"],
+        "night": ["Night Light", "Warm screen colour (needs hyprsunset, gammastep or wlsunset)"], "volume": ["Volume", "Slider"],
+        "brightness": ["Brightness", "Slider (laptop screens)"], "media": ["Now playing", "Card with the cover, buttons and progress"],
+        "notifications": ["Notifications", "The latest three, with Clear all"] })
+    function ccMove(id, delta) {
+        const o = (cfg.ccOrder && cfg.ccOrder.length > 0 ? cfg.ccOrder : ccAll).slice();
+        const i = o.indexOf(id), j = i + delta;
+        if (i < 0 || j < 0 || j >= o.length) return;
+        o[i] = o[j]; o[j] = id;
+        set("ccOrder", o);
+    }
+    function ccToggle(id) {
+        const h = (cfg.ccHidden || []).slice();
+        const i = h.indexOf(id);
+        if (i >= 0) h.splice(i, 1); else h.push(id);
+        set("ccHidden", h);
+    }
+    function ccReset() { set("ccOrder", ccAll.slice()); set("ccHidden", []); }
 
     // ---- popup menus (Wi-Fi, Bluetooth) ---------------------------------
     property var popup: ({ "kind": "", "screen": "", "rect": {}, "glyph": "", "label": "" })

@@ -22,11 +22,25 @@ BarButton {
     onClicked: if (player && player.canTogglePlaying) player.togglePlaying()
     onScrolled: dir => { if (!player) return; if (dir > 0 && player.canGoNext) player.next(); else if (dir < 0 && player.canGoPrevious) player.previous(); }
 
-    Text {
-        text: root.icon
-        color: root.iconColor
-        font { family: "JetBrainsMono Nerd Font Propo"; pixelSize: main.barPx }
+    // album art as a small round thumbnail, with the equaliser over it while playing
+    Item {
+        implicitWidth: main.barPx + 6
+        implicitHeight: main.barPx + 6
+        Rectangle {
+            id: art
+            anchors.fill: parent; radius: width / 2; color: Qt.rgba(main.accent.r, main.accent.g, main.accent.b, 0.2); clip: true
+            Image {
+                anchors.fill: parent; visible: status === Image.Ready
+                source: root.player && root.player.trackArtUrl ? root.player.trackArtUrl : ""
+                fillMode: Image.PreserveAspectCrop; asynchronous: true; smooth: true; sourceSize: Qt.size(64, 64)
+            }
+            Text {
+                anchors.centerIn: parent; visible: !root.player || !root.player.trackArtUrl
+                text: root.icon; color: root.iconColor; font { family: "JetBrainsMono Nerd Font Propo"; pixelSize: main.barPx - 2 }
+            }
+        }
     }
+    EqBars { running: root.playing; size: main.barPx - 2; tint: root.iconColor; visible: root.playing }
     HoverLabel {
         host: root
         shown: cfg.labelNetwork

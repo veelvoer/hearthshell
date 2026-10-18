@@ -5,9 +5,12 @@ import Quickshell.Networking
 import Quickshell.Bluetooth
 import Quickshell.Services.Pipewire
 import Quickshell.Services.UPower
+import Quickshell.Services.Mpris
 import QtQuick
+import QtQuick.Effects
 
-// Quick settings: toggles, sound and brightness sliders, battery, power actions.
+// Control Center: pill tiles, fat sliders, a now-playing card and the notification list.
+// Which parts show, and in what order, is chosen in Settings -> Control Center (cfg.ccOrder / cfg.ccHidden).
 Item {
     id: root
     property bool active: false
@@ -16,28 +19,57 @@ Item {
     readonly property bool typing: false
     signal requestMenu(string kind)     // switch to the Wi-Fi or Bluetooth menu
     signal requestClose()
-    readonly property real wantedHeight: 62 + body.implicitHeight + 16
+    readonly property real wantedHeight: 62 + flow.implicitHeight + 16
 
+    // ---------------------------------------------------------------- data
     readonly property var sink: Pipewire.defaultAudioSink
     readonly property bool soundReady: !!sink && sink.ready && !!sink.audio
     readonly property bool muted: soundReady && sink.audio.muted
     readonly property int vol: soundReady ? Math.round(sink.audio.volume * 100) : 0
+    readonly property var sinks: Pipewire.nodes.values.filter(n => n.isSink && !n.isStream && !!n.audio)
+    readonly property string sinkName: !sink ? "No output" : (sink.nickname || sink.description || sink.name || "Output")
     readonly property var wifiDev: Networking.devices.values.find(d => d.type === DeviceType.Wifi)
     readonly property var wifiNet: wifiDev ? wifiDev.networks.values.find(n => n.connected) : null
     readonly property var adapter: Bluetooth.defaultAdapter
-    readonly property int btLinked: adapter ? adapter.devices.values.filter(d => d.connected).length : 0
+    readonly property var btDevs: adapter ? adapter.devices.values.filter(d => d.connected) : []
     readonly property var battery: UPower.displayDevice
     readonly property bool hasBattery: !!battery && battery.isPresent && battery.isLaptopBattery
     readonly property int level: battery ? Math.round(battery.percentage * 100) : 0
     readonly property bool charging: !!battery && battery.state === UPowerDeviceState.Charging
+    readonly property var nf: shell ? shell.notifier : null
+    readonly property var players: Mpris.players ? Mpris.players.values : []
+    readonly property var player: {
+        for (const p of players) if (p.isPlaying) return p;
+        return players.length > 0 ? players[0] : null;
+    }
     property int bright: 0
     property bool brightAvailable: false
-    property string confirm: ""
+    property bool brightDragging: false
+    property string nightTool: ""
+    property bool nightOn: false
 
     function cp(n) { return String.fromCodePoint(n); }
     readonly property string batGlyph: charging ? cp(0xF0084) : level >= 100 ? cp(0xF0079) : level < 10 ? cp(0xF0083) : cp(0xF007A + (Math.floor(level / 10) - 1))
 
-    PwObjectTracker { objects: [root.sink] }
+    // the parts, in the user's order, minus the hidden ones (and minus what this computer cannot do)
+    readonly property var defaultOrder: ["wifi", "bluetooth", "audio", "quiet", "night", "volume", "brightness", "media", "notifications"]
+    readonly property var sections: {
+        const hidden = shell && shell.cfg.ccHidden ? shell.cfg.ccHidden : [];
+        const order = shell && shell.cfg.ccOrder && shell.cfg.ccOrder.length > 0 ? shell.cfg.ccOrder : defaultOrder;
+        const out = [];
+        for (const id of order) {
+            if (hidden.indexOf(id) >= 0) continue;
+            if (id === "bluetooth" && !adapter) continue;
+            if (id === "brightness" && !brightAvailable) continue;
+            if (id === "night" && nightTool === "") continue;
+            if (id === "media" && !player) continue;
+            out.push(id);
+        }
+        return out;
+    }
+    function isTile(id) { return id === "wifi" || id === "bluetooth" || id === "audio" || id === "quiet" || id === "night"; }
+
+    PwObjectTracker { objects: root.sinks.concat([root.sink]) }
     Process {
         id: reader
         command: ["brightnessctl", "-m"]
@@ -45,33 +77,85 @@ Item {
             onStreamFinished: {
                 const f = text.trim().split("\n")[0].split(",");
                 root.brightAvailable = f.length >= 5 && f[1] === "backlight";
-                if (root.brightAvailable && !dragB.pressed) root.bright = parseInt(f[3]);
+                if (root.brightAvailable && !root.brightDragging) root.bright = parseInt(f[3]);
             }
         }
     }
     Process { id: setter }
-    Process { id: power }
-    Timer { interval: 1200; running: root.active; repeat: true; triggeredOnStart: true; onTriggered: reader.running = true }
-    Timer { id: confirmTimer; interval: 3000; onTriggered: root.confirm = "" }
+    Process { id: sh }
+    Process {
+        id: nightFind
+        command: ["sh", "-c", "for t in hyprsunset gammastep wlsunset; do command -v $t >/dev/null && { echo $t; exit; }; done"]
+        running: true
+        stdout: StdioCollector { onStreamFinished: root.nightTool = text.trim() }
+    }
+    Process {
+        id: nightState
+        command: ["pgrep", "-x", root.nightTool || "none"]
+        stdout: StdioCollector { onStreamFinished: root.nightOn = text.trim() !== "" }
+    }
+    Timer { interval: 1200; running: root.active; repeat: true; triggeredOnStart: true; onTriggered: { reader.running = true; if (root.nightTool !== "") nightState.running = true; } }
     Timer { id: lockTimer; interval: 420; onTriggered: if (root.shell) root.shell.lockNow() }
-    onActiveChanged: if (!active) confirm = ""
+    Timer { interval: 1000; running: root.active && !!root.player && root.player.isPlaying; repeat: true; onTriggered: root.player.positionChanged() }
 
     function setBrightness(p) {
         bright = Math.round(p);
         setter.command = ["brightnessctl", "-q", "set", bright + "%"];
         setter.running = true;
     }
-    function run(cmd) { power.command = cmd; power.running = true; }
-    function powerAction(key, cmd) {
-        if (confirm === key) { confirm = ""; run(cmd); } else { confirm = key; confirmTimer.restart(); }
+    function toggleNight() {
+        const t = nightTool;
+        const start = t === "hyprsunset" ? "hyprsunset -t 3800" : t === "gammastep" ? "gammastep -O 3800" : "wlsunset -t 3800 -T 3801";
+        sh.command = ["sh", "-c", nightOn ? "pkill -x " + t : "setsid -f " + start + " >/dev/null 2>&1"];
+        sh.running = true;
+        nightOn = !nightOn;
+    }
+    function nextSink() {
+        if (sinks.length < 2) return;
+        const i = sinks.indexOf(sink);
+        Pipewire.preferredDefaultAudioSink = sinks[(i + 1) % sinks.length];
     }
 
+    // ---------------------------------------------------------------- header
     Text {
-        x: 54; y: 15; text: "Quick settings"; color: main.text
+        x: 54; y: 15; text: "Control Center"; color: main.text
         font { family: main.serif; pixelSize: 18 }
     }
+    Row {
+        anchors { right: parent.right; rightMargin: 14; top: parent.top; topMargin: 12 }
+        spacing: 6
+        Rectangle {
+            visible: root.hasBattery
+            height: 30; width: batRow.width + 20; radius: 15
+            color: Qt.rgba(main.text.r, main.text.g, main.text.b, 0.08)
+            Row {
+                id: batRow; anchors.centerIn: parent; spacing: 5
+                Text { text: root.batGlyph; anchors.verticalCenter: parent.verticalCenter
+                    color: root.charging ? main.accent : (root.level <= 15 ? "#ff002f" : main.text)
+                    font { family: "JetBrainsMono Nerd Font Propo"; pixelSize: 15 } }
+                Text { text: root.level + "%"; anchors.verticalCenter: parent.verticalCenter; color: main.text; font { family: main.font; pixelSize: 12; weight: 600 } }
+            }
+        }
+        Rectangle {
+            width: 30; height: 30; radius: 15
+            color: gm.containsMouse ? Qt.rgba(main.accent.r, main.accent.g, main.accent.b, 0.25) : Qt.rgba(main.text.r, main.text.g, main.text.b, 0.08)
+            Behavior on color { ColorAnimation { duration: main.ms(150) } }
+            Text { anchors.centerIn: parent; text: root.cp(0xF0493); color: main.text; font { family: "JetBrainsMono Nerd Font Propo"; pixelSize: 15 } }
+            MouseArea { id: gm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                onClicked: { root.requestClose(); if (root.shell) root.shell.openSettings(); } }
+        }
+        Rectangle {
+            width: 30; height: 30; radius: 15
+            color: pm.containsMouse ? Qt.rgba(main.red.r, main.red.g, main.red.b, 0.28) : Qt.rgba(main.text.r, main.text.g, main.text.b, 0.08)
+            Behavior on color { ColorAnimation { duration: main.ms(150) } }
+            Text { anchors.centerIn: parent; text: root.cp(0xF0425); color: pm.containsMouse ? main.red : main.text; font { family: "JetBrainsMono Nerd Font Propo"; pixelSize: 15 } }
+            MouseArea { id: pm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                onClicked: { root.requestClose(); if (root.shell) root.shell.togglePower(); } }
+        }
+    }
 
-    // one square toggle
+    // ---------------------------------------------------------------- the parts
+    // a pill tile: a round icon, a title, a subtitle, and an optional chevron
     component Tile: Item {
         id: tile
         property string glyph: ""
@@ -81,156 +165,200 @@ Item {
         property bool chevron: false
         signal clicked()
         signal chevronClicked()
-        width: parent ? (parent.width - 10) / 2 : 150; height: 62
-        scale: tm.pressed ? 0.96 : 1
+        height: 58
+        scale: tm.pressed ? 0.97 : 1
         Behavior on scale { NumberAnimation { duration: main.ms(170); easing.type: Easing.OutBack } }
         Rectangle {
-            anchors.fill: parent; radius: 18
-            color: tile.checked ? Qt.rgba(main.accent.r, main.accent.g, main.accent.b, 0.20) : (tm.containsMouse ? main.card : Qt.rgba(main.card.r, main.card.g, main.card.b, 0.7))
-            border.width: 1; border.color: tile.checked ? Qt.rgba(main.accent.r, main.accent.g, main.accent.b, 0.55) : main.line
-            Behavior on color { ColorAnimation { duration: main.ms(180) } }
-            Behavior on border.color { ColorAnimation { duration: main.ms(180) } }
+            anchors.fill: parent; radius: height / 2
+            color: tile.checked ? Qt.rgba(main.accent.r, main.accent.g, main.accent.b, 0.92) : (tm.containsMouse ? Qt.rgba(main.text.r, main.text.g, main.text.b, 0.12) : Qt.rgba(main.text.r, main.text.g, main.text.b, 0.07))
+            Behavior on color { ColorAnimation { duration: main.ms(200) } }
         }
-        Text {
-            x: 14; anchors.verticalCenter: parent.verticalCenter; text: tile.glyph
-            color: tile.checked ? main.accent : main.text
-            font { family: "JetBrainsMono Nerd Font Propo"; pixelSize: 22 }
+        Rectangle {
+            x: 7; anchors.verticalCenter: parent.verticalCenter; width: 44; height: 44; radius: 22
+            color: tile.checked ? Qt.rgba(main.bg.r, main.bg.g, main.bg.b, 0.16) : Qt.rgba(main.text.r, main.text.g, main.text.b, 0.08)
+            Behavior on color { ColorAnimation { duration: main.ms(200) } }
+            Text {
+                anchors.centerIn: parent; text: tile.glyph
+                color: tile.checked ? main.bg : main.text
+                font { family: "JetBrainsMono Nerd Font Propo"; pixelSize: 19 }
+            }
         }
         Column {
-            x: 50; anchors.verticalCenter: parent.verticalCenter; spacing: 1; width: parent.width - 50 - (tile.chevron ? 32 : 10)
-            Text { width: parent.width; elide: Text.ElideRight; text: tile.title; color: main.text; font { family: main.font; pixelSize: 13; weight: 600 } }
-            Text { width: parent.width; elide: Text.ElideRight; text: tile.sub; color: main.muted; font { family: main.font; pixelSize: 11 } }
+            x: 62; anchors.verticalCenter: parent.verticalCenter; spacing: 1; width: parent.width - 62 - (tile.chevron ? 34 : 12)
+            Text { width: parent.width; elide: Text.ElideRight; text: tile.title; color: tile.checked ? main.bg : main.text; font { family: main.font; pixelSize: 13; weight: 700 } }
+            Text { width: parent.width; elide: Text.ElideRight; text: tile.sub; color: tile.checked ? Qt.rgba(main.bg.r, main.bg.g, main.bg.b, 0.72) : main.muted; font { family: main.font; pixelSize: 11 } }
         }
         MouseArea { id: tm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: tile.clicked() }
         Item {
-            visible: tile.chevron; anchors.right: parent.right; width: 32; height: parent.height
-            Text { anchors.centerIn: parent; text: "›"; color: cm.containsMouse ? main.accent : main.muted
+            visible: tile.chevron; anchors.right: parent.right; anchors.rightMargin: 4; width: 30; height: parent.height
+            Text { anchors.centerIn: parent; text: "›"; color: cm.containsMouse ? (tile.checked ? main.bg : main.accent) : (tile.checked ? main.bg : main.muted)
                 font { pixelSize: 22; weight: 600 } }
             MouseArea { id: cm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: tile.chevronClicked() }
         }
     }
 
-    Column {
-        id: body
-        x: 12; y: 60; width: parent.width - 24; spacing: 10
+    Flow {
+        id: flow
+        x: 12; y: 60; width: parent.width - 24; spacing: 8
+        move: Transition { NumberAnimation { properties: "x,y"; duration: main.ms(300); easing.type: Easing.OutCubic } }
 
-        Flow {
-            width: parent.width; spacing: 10
-            Tile {
-                glyph: Networking.wifiEnabled ? root.cp(0xF05A9) : root.cp(0xF05AA)
-                title: "Wi-Fi"
-                sub: !Networking.wifiEnabled ? "Off" : (root.wifiNet ? root.wifiNet.name : "Not connected")
-                checked: Networking.wifiEnabled; chevron: true
-                onClicked: Networking.wifiEnabled = !Networking.wifiEnabled
-                onChevronClicked: root.requestMenu("network")
-            }
-            Tile {
-                visible: !!root.adapter
-                glyph: !root.adapter || !root.adapter.enabled ? root.cp(0xF00B2) : root.cp(0xF00AF)
-                title: "Bluetooth"
-                sub: !root.adapter || !root.adapter.enabled ? "Off" : (root.btLinked > 0 ? root.btLinked + " connected" : "On")
-                checked: !!root.adapter && root.adapter.enabled; chevron: true
-                onClicked: if (root.adapter) root.adapter.enabled = !root.adapter.enabled
-                onChevronClicked: root.requestMenu("bluetooth")
-            }
-            Tile {
-                glyph: root.muted ? "󰸈" : root.cp(0xF057E)
-                title: "Sound"; sub: root.muted ? "Muted" : root.vol + "%"
-                checked: !root.muted
-                onClicked: if (root.soundReady) root.sink.audio.muted = !root.sink.audio.muted
-            }
-            Tile {
-                glyph: root.cp(0xF0493)
-                title: "Settings"; sub: "Open the panel"
-                onClicked: { root.requestClose(); if (root.shell) root.shell.openSettings(); }
-            }
-        }
-
-        Rectangle {
-            width: parent.width; height: sliders.implicitHeight + 28; radius: 18
-            color: Qt.rgba(main.card.r, main.card.g, main.card.b, 0.7); border.width: 1; border.color: main.line
-            Column {
-                id: sliders
-                x: 16; y: 14; width: parent.width - 32; spacing: 12
-                Row {
-                    width: sliders.width; spacing: 12; height: 26
-                    Text { width: 24; anchors.verticalCenter: parent.verticalCenter; text: root.muted ? "󰸈" : root.cp(0xF057E); color: main.accent
-                        font { family: "JetBrainsMono Nerd Font Propo"; pixelSize: 18 } }
-                    HSlider {
-                        id: dragV; width: parent.width - 84; anchors.verticalCenter: parent.verticalCenter
-                        from: 0; to: 1; value: root.soundReady ? root.sink.audio.volume : 0
-                        onMoved: v => { if (root.soundReady) { root.sink.audio.volume = v; root.sink.audio.muted = false; } }
-                    }
-                    Text { width: 36; anchors.verticalCenter: parent.verticalCenter; horizontalAlignment: Text.AlignRight
-                        text: root.vol + "%"; color: main.muted; font { family: main.font; pixelSize: 12; weight: 600 } }
-                }
-                Row {
-                    visible: root.brightAvailable
-                    width: sliders.width; spacing: 12; height: 26
-                    Text { width: 24; anchors.verticalCenter: parent.verticalCenter; text: root.cp(0xF00E0); color: main.accent
-                        font { family: "JetBrainsMono Nerd Font Propo"; pixelSize: 18 } }
-                    HSlider {
-                        id: dragB; width: parent.width - 84; anchors.verticalCenter: parent.verticalCenter
-                        from: 5; to: 100; value: root.bright
-                        onMoved: v => root.setBrightness(v)
-                    }
-                    Text { width: 36; anchors.verticalCenter: parent.verticalCenter; horizontalAlignment: Text.AlignRight
-                        text: root.bright + "%"; color: main.muted; font { family: main.font; pixelSize: 12; weight: 600 } }
-                }
-            }
-        }
-
-        Rectangle {
-            visible: root.hasBattery
-            width: parent.width; height: 48; radius: 18
-            color: Qt.rgba(main.card.r, main.card.g, main.card.b, 0.7); border.width: 1; border.color: main.line
-            Text { x: 16; anchors.verticalCenter: parent.verticalCenter; text: root.batGlyph
-                color: root.charging ? main.accent : (root.level <= 15 ? "#ff002f" : main.text)
-                font { family: "JetBrainsMono Nerd Font Propo"; pixelSize: 20 } }
-            Text { x: 50; anchors.verticalCenter: parent.verticalCenter; color: main.text
-                text: root.level + "%  ·  " + (root.charging ? "Charging" : "On battery")
-                font { family: main.font; pixelSize: 13; weight: 600 } }
-        }
-
-        Row {
-            width: parent.width; spacing: 8
-            readonly property real bw: (width - 24) / 4
-            Repeater {
-                model: [
-                    { "key": "lock", "glyph": 0xF033E, "label": "Lock" },
-                    { "key": "sleep", "glyph": 0xF04B2, "label": "Sleep" },
-                    { "key": "reboot", "glyph": 0xF0709, "label": "Restart" },
-                    { "key": "off", "glyph": 0xF0425, "label": "Shut down" }
-                ]
-                Rectangle {
-                    id: pb
-                    required property var modelData
-                    readonly property bool asking: root.confirm === modelData.key
-                    width: parent.bw; height: 58; radius: 16
-                    color: asking ? Qt.rgba(main.red.r, main.red.g, main.red.b, 0.25) : (pm.containsMouse ? main.card : Qt.rgba(main.card.r, main.card.g, main.card.b, 0.7))
-                    border.width: 1; border.color: asking ? main.red : main.line
-                    scale: pm.pressed ? 0.95 : 1
-                    Behavior on color { ColorAnimation { duration: main.ms(160) } }
-                    Behavior on scale { NumberAnimation { duration: main.ms(170); easing.type: Easing.OutBack } }
-                    Column {
-                        anchors.centerIn: parent; spacing: 3
-                        Text { anchors.horizontalCenter: parent.horizontalCenter; text: root.cp(pb.modelData.glyph)
-                            color: pb.asking ? main.red : main.text; font { family: "JetBrainsMono Nerd Font Propo"; pixelSize: 18 } }
-                        Text { anchors.horizontalCenter: parent.horizontalCenter; text: pb.asking ? "Sure?" : pb.modelData.label
-                            color: pb.asking ? main.red : main.muted; font { family: main.font; pixelSize: 10; weight: 600 } }
-                    }
-                    MouseArea {
-                        id: pm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                        onClicked: {
-                            const k = pb.modelData.key;
-                            if (k === "lock") { root.requestClose(); lockTimer.restart(); }
-                            else if (k === "sleep") { root.requestClose(); root.run(["systemctl", "suspend"]); }
-                            else if (k === "reboot") root.powerAction(k, ["systemctl", "reboot"]);
-                            else root.powerAction(k, ["systemctl", "poweroff"]);
-                        }
-                    }
-                }
+        Repeater {
+            model: root.sections
+            delegate: Loader {
+                id: part
+                required property string modelData
+                readonly property bool tile: root.isTile(modelData)
+                width: tile ? (flow.width - flow.spacing) / 2 : flow.width
+                sourceComponent: modelData === "wifi" ? wifiC : modelData === "bluetooth" ? btC : modelData === "audio" ? audioC
+                    : modelData === "quiet" ? quietC : modelData === "night" ? nightC : modelData === "volume" ? volC
+                    : modelData === "brightness" ? brightC : modelData === "media" ? mediaC : notifC
             }
         }
     }
+
+    Component { id: wifiC
+        Tile {
+            glyph: Networking.wifiEnabled ? root.cp(0xF05A9) : root.cp(0xF05AA)
+            title: "Wi-Fi"
+            sub: !Networking.wifiEnabled ? "Off" : (root.wifiNet ? root.wifiNet.name : "Not connected")
+            checked: Networking.wifiEnabled; chevron: true
+            onClicked: Networking.wifiEnabled = !Networking.wifiEnabled
+            onChevronClicked: root.requestMenu("network")
+        } }
+    Component { id: btC
+        Tile {
+            glyph: !root.adapter || !root.adapter.enabled ? root.cp(0xF00B2) : root.cp(0xF00AF)
+            title: "Bluetooth"
+            sub: !root.adapter || !root.adapter.enabled ? "Off" : (root.btDevs.length > 0 ? (root.btDevs.length === 1 ? root.btDevs[0].name : root.btDevs.length + " connected") : "On")
+            checked: !!root.adapter && root.adapter.enabled; chevron: true
+            onClicked: if (root.adapter) root.adapter.enabled = !root.adapter.enabled
+            onChevronClicked: root.requestMenu("bluetooth")
+        } }
+    Component { id: audioC
+        Tile {
+            glyph: root.muted ? root.cp(0xF0581) : root.cp(0xF057E)
+            title: "Audio"
+            sub: root.sinkName
+            checked: !root.muted; chevron: root.sinks.length > 1
+            onClicked: if (root.soundReady) root.sink.audio.muted = !root.sink.audio.muted
+            onChevronClicked: root.nextSink()
+        } }
+    Component { id: quietC
+        Tile {
+            glyph: root.cp(0xF009B)
+            title: "Quiet"
+            sub: root.nf && root.nf.dnd ? "On" : "Off"
+            checked: !!root.nf && root.nf.dnd
+            onClicked: if (root.nf) root.nf.dnd = !root.nf.dnd
+        } }
+    Component { id: nightC
+        Tile {
+            glyph: root.cp(0xF0594)
+            title: "Night Light"
+            sub: root.nightOn ? "On" : "Off"
+            checked: root.nightOn
+            onClicked: root.toggleNight()
+        } }
+    Component { id: volC
+        PillSlider {
+            glyph: root.muted ? root.cp(0xF0581) : root.cp(0xF057E)
+            from: 0; to: 1; value: root.soundReady ? root.sink.audio.volume : 0
+            valueText: root.muted ? "Muted" : root.vol + "%"
+            showChevron: root.sinks.length > 1
+            onChevronClicked: root.nextSink()
+            onMoved: v => { if (root.soundReady) { root.sink.audio.volume = v; root.sink.audio.muted = false; } }
+        } }
+    Component { id: brightC
+        PillSlider {
+            glyph: root.cp(0xF00E0)
+            from: 5; to: 100; value: root.bright
+            valueText: root.bright + "%"
+            onMoved: v => root.setBrightness(v)
+            onPressedChanged: root.brightDragging = pressed
+        } }
+    Component { id: mediaC
+        Rectangle {
+            id: card
+            readonly property var p: root.player
+            height: 132; radius: 26; clip: true
+            color: Qt.rgba(main.text.r, main.text.g, main.text.b, 0.07)
+            Image {
+                id: art
+                anchors.fill: parent
+                source: card.p && card.p.trackArtUrl ? card.p.trackArtUrl : ""
+                fillMode: Image.PreserveAspectCrop; asynchronous: true; smooth: true; sourceSize: Qt.size(240, 240)
+                layer.enabled: true
+                layer.effect: MultiEffect { blurEnabled: true; blurMax: 48; blur: 1.0; saturation: 0.15 }
+            }
+            Rectangle { anchors.fill: parent; color: Qt.rgba(0, 0, 0, art.status === Image.Ready ? 0.45 : 0) }
+            Column {
+                x: 20; y: 16; width: parent.width - 40 - 56; spacing: 1
+                Text { width: parent.width; elide: Text.ElideRight; text: card.p ? (card.p.trackTitle || "Nothing playing") : ""; color: art.status === Image.Ready ? "#ffffff" : main.text
+                    font { family: main.font; pixelSize: 16; weight: 700 } }
+                Text { width: parent.width; elide: Text.ElideRight; text: card.p ? (card.p.trackArtist || "") : ""; color: art.status === Image.Ready ? "#d8d8d8" : main.muted
+                    font { family: main.font; pixelSize: 12 } }
+            }
+            EqBars { anchors { right: parent.right; rightMargin: 20; top: parent.top; topMargin: 18 } size: 18; running: !!card.p && card.p.isPlaying; tint: art.status === Image.Ready ? "#ffffff" : main.accent }
+            Row {
+                anchors { horizontalCenter: parent.horizontalCenter; top: parent.top; topMargin: 56 }
+                spacing: 22
+                Text { anchors.verticalCenter: parent.verticalCenter; text: root.cp(0xF04AE); opacity: card.p && card.p.canGoPrevious ? 1 : 0.4
+                    color: art.status === Image.Ready ? "#ffffff" : main.text; font { family: "JetBrainsMono Nerd Font Propo"; pixelSize: 20 }
+                    MouseArea { anchors.fill: parent; anchors.margins: -8; cursorShape: Qt.PointingHandCursor; onClicked: if (card.p && card.p.canGoPrevious) card.p.previous() } }
+                Rectangle {
+                    width: 44; height: 44; radius: 22; color: art.status === Image.Ready ? "#f2f2f2" : main.accent
+                    scale: pp.pressed ? 0.93 : 1
+                    Behavior on scale { NumberAnimation { duration: main.ms(150); easing.type: Easing.OutBack } }
+                    Text { anchors.centerIn: parent; text: root.cp(card.p && card.p.isPlaying ? 0xF03E4 : 0xF040A); color: "#101010"
+                        font { family: "JetBrainsMono Nerd Font Propo"; pixelSize: 22 } }
+                    MouseArea { id: pp; anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: if (card.p && card.p.canTogglePlaying) card.p.togglePlaying() }
+                }
+                Text { anchors.verticalCenter: parent.verticalCenter; text: root.cp(0xF04AD); opacity: card.p && card.p.canGoNext ? 1 : 0.4
+                    color: art.status === Image.Ready ? "#ffffff" : main.text; font { family: "JetBrainsMono Nerd Font Propo"; pixelSize: 20 }
+                    MouseArea { anchors.fill: parent; anchors.margins: -8; cursorShape: Qt.PointingHandCursor; onClicked: if (card.p && card.p.canGoNext) card.p.next() } }
+            }
+            Rectangle {
+                id: bar
+                x: 20; y: parent.height - 22; width: parent.width - 40; height: 5; radius: 3; color: Qt.rgba(1, 1, 1, 0.25)
+                visible: !!card.p && card.p.lengthSupported && card.p.length > 0
+                Rectangle {
+                    height: parent.height; radius: 3; color: art.status === Image.Ready ? "#ffffff" : main.accent
+                    width: card.p && card.p.length > 0 ? parent.width * Math.max(0, Math.min(1, card.p.position / card.p.length)) : 0
+                    Behavior on width { NumberAnimation { duration: main.ms(900); easing.type: Easing.Linear } }
+                }
+            }
+        } }
+    Component { id: notifC
+        Item {
+            id: nbox
+            readonly property var items: root.nf ? root.nf.history.slice(0, 3) : []
+            height: 30 + (items.length > 0 ? items.length * 52 : 40)
+            Text { x: 6; y: 4; text: "Notifications"; color: main.muted; font { family: main.font; pixelSize: 12; weight: 600 } }
+            Text {
+                anchors { right: parent.right; rightMargin: 6; top: parent.top; topMargin: 4 }
+                visible: nbox.items.length > 0; text: "Clear all"; color: ca.containsMouse ? main.text : main.accent
+                font { family: main.font; pixelSize: 12; weight: 600 }
+                MouseArea { id: ca; anchors.fill: parent; anchors.margins: -6; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: if (root.nf) root.nf.clearAll() }
+            }
+            Text { visible: nbox.items.length === 0; x: 6; y: 30; text: root.nf && root.nf.dnd ? "Quiet mode is on" : "No notifications"; color: main.muted; font { family: main.font; pixelSize: 13 } }
+            Column {
+                y: 26; width: parent.width; spacing: 6
+                Repeater {
+                    model: nbox.items
+                    delegate: Rectangle {
+                        required property var modelData
+                        width: nbox.width; height: 46; radius: 18
+                        color: Qt.rgba(main.text.r, main.text.g, main.text.b, 0.07)
+                        Column {
+                            x: 16; anchors.verticalCenter: parent.verticalCenter; width: parent.width - 56
+                            Text { width: parent.width; elide: Text.ElideRight; text: modelData.summary; color: main.text; font { family: main.font; pixelSize: 12; weight: 700 } }
+                            Text { width: parent.width; elide: Text.ElideRight; visible: text !== ""; text: modelData.body; color: main.muted; font { family: main.font; pixelSize: 11 } }
+                        }
+                        Text { anchors { right: parent.right; rightMargin: 14; verticalCenter: parent.verticalCenter } text: "×"
+                            color: xm.containsMouse ? main.red : main.muted; font { pixelSize: 18 }
+                            MouseArea { id: xm; anchors.fill: parent; anchors.margins: -8; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: if (root.nf) root.nf.removeHistory(modelData) } }
+                    }
+                }
+            }
+        } }
 }

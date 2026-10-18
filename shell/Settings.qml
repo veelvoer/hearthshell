@@ -13,7 +13,7 @@ PanelWindow {
     property int page: 0
     readonly property var cfg: shell.cfg
     function put(key, value) { shell.set(key, value); }
-    readonly property var pages: ["Appearance", "Creator", "Bar", "Modules", "Windows", "Input", "Glass", "System", "About"]
+    readonly property var pages: ["Appearance", "Creator", "Bar", "Modules", "Windows", "Input", "Glass", "System", "Control Center", "Notifications", "About"]
     property bool typing: false
     property bool accentPicker: false
     property string presetName: ""
@@ -527,10 +527,14 @@ PanelWindow {
                                 from: 0.35; to: 1; step: 0.01; value: win.cfg.barOpacity; onMoved: v => win.put("barOpacity", v) }
                             HSliderRow { label: "Bar roundness"; desc: "Corner radius of the bar"
                                 from: 0; to: 15; step: 1; decimals: 0; unit: " px"; value: win.cfg.barRadius; onMoved: v => win.put("barRadius", v) }
+                            HSliderRow { label: "Island bounce"; desc: "How springy the dynamic island is when it changes shape"
+                                from: 0; to: 1; step: 0.05; value: win.cfg.motionBounce; onMoved: v => win.put("motionBounce", v) }
                             HRow { label: "24-hour clock"; desc: "Use 14:30 instead of 2:30 PM"
                                 HToggle { checked: win.cfg.clock24; onToggled: v => win.put("clock24", v) } }
                             HRow { label: "Show seconds"; desc: "Tick every second in the bar"
                                 HToggle { checked: win.cfg.clockSeconds; onToggled: v => win.put("clockSeconds", v) } }
+                            HRow { label: "Week starts on Monday"; desc: "In the calendar that opens when you click the clock"
+                                HToggle { checked: win.cfg.weekMonday; onToggled: v => win.put("weekMonday", v) } }
                             HAdvanced {
                                 title: "More bar options"
                                 HSliderRow { label: "Bar height"; desc: "Thickness of the bar"
@@ -775,8 +779,6 @@ PanelWindow {
                                 HToggle { checked: win.cfg.syncRofi; onToggled: v => win.put("syncRofi", v) } }
                             HRow { label: "GTK apps"; desc: "Accent and surfaces, applied when an app starts"
                                 HToggle { checked: win.cfg.syncGtk; onToggled: v => win.put("syncGtk", v) } }
-                            HRow { label: "Notifications"; desc: "Pop-ups and a notification centre. Turn off if mako, dunst or another daemon should handle them (takes effect after a restart)"
-                                HToggle { checked: win.cfg.notifications; onToggled: v => win.put("notifications", v) } }
                             HRow { label: "Other apps"; desc: "Firefox, Yazi, Lodica, Dolphin and other KDE apps, micro, cava. Restart the app to see it"
                                 HToggle { checked: win.cfg.syncApps; onToggled: v => win.put("syncApps", v) } }
                             HRow { label: "Hyprlock"; desc: "The Super + Shift + X lock screen"
@@ -833,11 +835,62 @@ PanelWindow {
                     }
                 }
 
+                // ===== Control Center =====
+                Page {
+                    idx: 8; heading: "Control Center"; sub: "Choose what the Control Center shows and in what order."
+                    HCard {
+                        active: win.page === 8 && win.wanted; order: 0; title: "Tiles and sections"
+                        Column {
+                            width: parent.width; spacing: 2
+                            Repeater {
+                                model: win.cfg.ccOrder && win.cfg.ccOrder.length > 0 ? win.cfg.ccOrder : win.shell.ccAll
+                                Item {
+                                    id: crow
+                                    required property string modelData
+                                    readonly property bool shown: (win.cfg.ccHidden || []).indexOf(modelData) < 0
+                                    readonly property var info: win.shell.ccLabels[modelData] || [modelData, ""]
+                                    width: parent.width; height: 52
+                                    Column {
+                                        anchors.verticalCenter: parent.verticalCenter; width: parent.width - 170; spacing: 1
+                                        Text { text: crow.info[0]; color: crow.shown ? main.text : main.muted; font { family: main.font; pixelSize: 14; weight: 600 } }
+                                        Text { width: parent.width; elide: Text.ElideRight; text: crow.info[1]; color: main.muted; font { family: main.font; pixelSize: 12 } }
+                                    }
+                                    Row {
+                                        anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter; spacing: 8
+                                        HButton { label: "↑"; padX: 11; onClicked: win.shell.ccMove(crow.modelData, -1) }
+                                        HButton { label: "↓"; padX: 11; onClicked: win.shell.ccMove(crow.modelData, 1) }
+                                        HToggle { checked: crow.shown; onToggled: v => win.shell.ccToggle(crow.modelData) }
+                                    }
+                                }
+                            }
+                            HRow { label: "Start over"; desc: "Show everything in the original order"
+                                HButton { label: "Reset"; onClicked: win.shell.ccReset() } }
+                        }
+                    }
+                }
+
+                // ===== Notifications =====
+                Page {
+                    idx: 9; heading: "Notifications"; sub: "Pop-ups, the notification centre and quiet mode."
+                    HCard {
+                        active: win.page === 9 && win.wanted; order: 0; title: "Pop-ups"
+                        Column {
+                            width: parent.width; spacing: 4
+                            HRow { label: "Show notifications"; desc: "Pop-ups and a notification centre. Turn off if mako, dunst or another daemon should handle them (takes effect after a restart)"
+                                HToggle { checked: win.cfg.notifications; onToggled: v => win.put("notifications", v) } }
+                            HSliderRow { label: "Time on screen"; desc: "How long a pop-up stays when the app does not say"
+                                from: 3; to: 15; step: 1; decimals: 0; unit: " s"; value: win.cfg.notifTimeout; onMoved: v => win.put("notifTimeout", v) }
+                            HRow { label: "Quiet mode"; desc: "Hide pop-ups (critical ones still show). Also on the bell: right click"
+                                HToggle { checked: win.shell.notifier.dnd; onToggled: v => { win.shell.notifier.dnd = v; } } }
+                        }
+                    }
+                }
+
                 // ===== About =====
                 Page {
-                    idx: 8; heading: "About"; sub: "Shortcuts and housekeeping."
+                    idx: 10; heading: "About"; sub: "Shortcuts and housekeeping."
                     HCard {
-                        active: win.page === 8 && win.wanted; order: 0; title: "Shortcuts"
+                        active: win.page === 10 && win.wanted; order: 0; title: "Shortcuts"
                         Column {
                             width: parent.width; spacing: 2
                             Repeater {
@@ -858,7 +911,7 @@ PanelWindow {
                         }
                     }
                     HCard {
-                        active: win.page === 8 && win.wanted; order: 1; title: "Housekeeping"
+                        active: win.page === 10 && win.wanted; order: 1; title: "Housekeeping"
                         HRow {
                             label: "Reset to defaults"; desc: "Restore Everforest and the original layout"
                             HButton { label: "Reset"; onClicked: win.shell.resetSettings() }
