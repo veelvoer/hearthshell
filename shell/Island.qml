@@ -124,8 +124,8 @@ Item {
         function onIsPlayingChanged() { if (isl.player) isl.peek("media"); } }
 
     // ---------------------------------------------------------------- the shape
-    property var lastH: ({ "network": 380, "bluetooth": 300, "quick": 430 })
-    readonly property var menuItem: menu === "network" ? netLoader.item : menu === "bluetooth" ? btLoader.item : menu === "quick" ? quickLoader.item : null
+    property var lastH: ({ "network": 380, "bluetooth": 300, "quick": 430, "notifications": 300 })
+    readonly property var menuItem: menu === "network" ? netLoader.item : menu === "bluetooth" ? btLoader.item : menu === "quick" ? quickLoader.item : menu === "notifications" ? notifLoader.item : null
     readonly property real menuH: menu === "" ? 0 : Math.min(bar.maxMenuH, menuItem ? menuItem.wantedHeight : lastH[menu])
     onMenuHChanged: if (menu !== "" && menuItem) lastH[menu] = menuH
     readonly property real transientW: activity === "volume" || activity === "brightness" ? 250
@@ -324,7 +324,7 @@ Item {
                 focus: isl.mode === "menu"
                 onVisibleChanged: if (visible && isl.mode === "menu") forceActiveFocus()
                 Keys.onEscapePressed: {
-                    const it = isl.menu === "network" ? netLoader.item : isl.menu === "bluetooth" ? btLoader.item : quickLoader.item;
+                    const it = isl.menu === "network" ? netLoader.item : isl.menu === "bluetooth" ? btLoader.item : isl.menu === "notifications" ? notifLoader.item : quickLoader.item;
                     if (it && it.typing) keys.forceActiveFocus(); else isl.goBack();
                 }
             }
@@ -343,6 +343,14 @@ Item {
                 id: btLoader; width: 360; height: parent.height; asynchronous: true
                 visible: isl.menu === "bluetooth"
                 sourceComponent: BluetoothPopup { active: isl.menu === "bluetooth"; settled: active && isl.menuSettled }
+            }
+            Loader {
+                id: notifLoader; width: 360; height: parent.height; asynchronous: true
+                visible: isl.menu === "notifications"
+                sourceComponent: NotificationsPopup {
+                    active: isl.menu === "notifications"; settled: active && isl.menuSettled; shell: isl.shell
+                    onRequestClose: isl.closeMenu()
+                }
             }
             Loader {
                 id: quickLoader; width: 360; height: parent.height; asynchronous: true

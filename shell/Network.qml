@@ -36,7 +36,14 @@ BarButton {
     morphing: !!bar && bar.hostIs("network")
     onClicked: if (bar) bar.openPopup("network", root, icon, label)
 
+    SignalBars {
+        visible: cfg.drawnIcons && !root.ethernet
+        level: !Networking.wifiEnabled || !root.active ? 0 : (root.signal >= 0.75 ? 4 : root.signal >= 0.5 ? 3 : root.signal >= 0.25 ? 2 : 1)
+        off: !Networking.wifiEnabled
+        tint: root.iconColor
+    }
     Text {
+        visible: !cfg.drawnIcons || root.ethernet
         text: root.icon
         color: root.iconColor
         font {

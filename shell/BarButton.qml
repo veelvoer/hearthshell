@@ -9,6 +9,7 @@ Rectangle {
     property bool morphing: false          // a popup menu belongs to this button (shown highlighted)
     default property alias content: row.data
     signal clicked()
+    signal rightClicked()
     signal scrolled(int dir)               // +1 = up, -1 = down
 
     // modules supply these; Bar sets them when it loads the module
@@ -48,7 +49,8 @@ Rectangle {
         enabled: root.interactive
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
-        onClicked: root.clicked()
+        acceptedButtons: Qt.LeftButton | Qt.RightButton
+        onClicked: mouse => { if (mouse.button === Qt.RightButton) root.rightClicked(); else root.clicked(); }
         onWheel: wheel => { if (wheel.angleDelta.y !== 0) root.scrolled(wheel.angleDelta.y > 0 ? 1 : -1); }
     }
 }

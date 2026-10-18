@@ -22,7 +22,14 @@ BarButton {
         return String.fromCodePoint(0xF007A + (Math.floor(level / 10) - 1))
     }
 
+    BatteryIcon {
+        visible: cfg.drawnIcons
+        level: root.level
+        charging: root.charging
+        tint: root.iconColor
+    }
     Text {
+        visible: !cfg.drawnIcons
         text: root.icon
         color: root.charging ? root.iconColor
                              : root.level <= 15 ? '#ff002f' 

@@ -4,6 +4,9 @@
 #   hearthshell              start the shell (what autostart runs)
 #   hearthshell settings     open / close the settings panel
 #   hearthshell lock         lock the screen
+#   hearthshell launcher     open / close the app launcher
+#   hearthshell power        open / close the power menu
+#   hearthshell dnd          toggle Do not disturb
 #   hearthshell theme NAME   switch theme          (e.g. nord, tokyo, everforest)
 #   hearthshell look NAME    apply a quick look    (e.g. cozy, glass, compact)
 #   hearthshell set KEY JSON change one setting    (e.g. hearthshell set barStyle '"pill"')
@@ -125,6 +128,9 @@ case "${1:-run}" in
     run|start) cmd_run ;;
     settings)  cmd_ipc call shell toggleSettings ;;
     lock)      cmd_ipc call shell lock ;;
+    launcher)  cmd_ipc call shell toggleLauncher ;;
+    power)     cmd_ipc call shell togglePower ;;
+    dnd)       cmd_ipc call shell toggleDnd ;;
     theme)     [ $# -ge 2 ] || { echo "usage: hearthshell theme NAME" >&2; exit 2; }; cmd_ipc call shell setTheme "$2" ;;
     look)      [ $# -ge 2 ] || { echo "usage: hearthshell look NAME" >&2; exit 2; }; cmd_ipc call shell applyLook "$2" ;;
     set)       [ $# -ge 3 ] || { echo 'usage: hearthshell set KEY JSON-VALUE   e.g. hearthshell set gapsIn 4' >&2; exit 2; }; cmd_ipc call shell set "$2" "$3" ;;

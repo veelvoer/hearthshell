@@ -151,7 +151,7 @@ ShellRoot {
         "termOpacity": 0.92, "blurSize": 6,
         "barStyle": "classic", "barPos": "top",
         "glassBar": false, "glassPanel": false, "glassLauncher": false, "glassTerminal": false, "glassAmount": 0.4,
-        "glassWindows": false, "glassBrowsers": true, "glassFiles": true, "glassEditors": true, "glassChat": true, "glassOther": true,
+        "drawnIcons": false, "notifications": true, "glassWindows": false, "glassBrowsers": true, "glassFiles": true, "glassEditors": true, "glassChat": true, "glassOther": true,
         "userWalls": {},
         "font": "Inter", "motion": "normal", "accent": "", "wallFit": "fill",
         "barHeight": 30, "barGap": 4, "barSide": 10, "barFont": 13, "modSpacing": 0, "iconMode": "accent",
@@ -172,6 +172,21 @@ ShellRoot {
         "pointerSpeed", "repeatRate", "repeatDelay", "kittyFont", "kittyPad", "kittyCursor", "rofiWidth", "rofiLines", "rofiIcons"]
     property var cfg: defaults
     property bool settingsOpen: false
+    property bool launcherOpen: false
+    property bool powerOpen: false
+    property string overlayScreen: ""         // the screen the launcher / power menu opened on (the focused one at that moment)
+    function toggleLauncher() {
+        powerOpen = false;
+        if (!launcherOpen) overlayScreen = Hyprland.focusedMonitor ? Hyprland.focusedMonitor.name : (screens.length > 0 ? screens[0].name : "");
+        launcherOpen = !launcherOpen;
+    }
+    function togglePower() {
+        launcherOpen = false;
+        if (!powerOpen) overlayScreen = Hyprland.focusedMonitor ? Hyprland.focusedMonitor.name : (screens.length > 0 ? screens[0].name : "");
+        powerOpen = !powerOpen;
+    }
+    Notifier { id: notifierObj }
+    readonly property var notifier: notifierObj
     property bool settingsLoaded: false
     readonly property int wallIndex: cfg.wallIdx[cfg.theme] || 1
     readonly property string wallpaperSource: Quickshell.shellPath("wallpapers/" + cfg.theme + "/" + wallIndex + ".jpg")
@@ -185,9 +200,13 @@ ShellRoot {
         "network": { "label": "Network", "desc": "Wi-Fi or ethernet, click for the network menu", "file": "Network.qml" },
         "bluetooth": { "label": "Bluetooth", "desc": "Click for the device menu, hidden without an adapter", "file": "Bluetooth.qml" },
         "quick": { "label": "Quick settings", "desc": "Wi-Fi, Bluetooth, sound, brightness and power in one menu", "file": "QuickSettings.qml" },
+        "launcher": { "label": "App launcher", "desc": "A button that opens the built-in launcher", "file": "LauncherButton.qml" },
+        "media": { "label": "Now playing", "desc": "Title and artist of the song or video playing; click to pause, scroll to skip", "file": "MediaModule.qml" },
+        "notifications": { "label": "Notifications", "desc": "Bell with the notification list; right click for Do not disturb", "file": "NotifButton.qml" },
+        "power": { "label": "Power menu", "desc": "Lock, log out, sleep, restart, shut down", "file": "PowerButton.qml" },
         "battery": { "label": "Battery", "desc": "Hidden when there is no battery", "file": "Battery.qml" }
     })
-    readonly property var moduleOrder: ["workspaces", "clock", "volume", "brightness", "network", "bluetooth", "quick", "battery"]
+    readonly property var moduleOrder: ["workspaces", "clock", "volume", "brightness", "network", "bluetooth", "quick", "battery", "launcher", "media", "notifications", "power"]
     function moduleFile(id) { return moduleInfo[id] ? moduleInfo[id].file : "Workspaces.qml"; }
     property real barClockX: -1             // centre of the bar clock on screen, -1 = none
 
@@ -358,7 +377,7 @@ ShellRoot {
     // ---- quick looks: one click sets bar, spacing, borders and effects together -------
     readonly property var lookKeys: ["barStyle", "barRadius", "barOpacity", "barHeight", "barGap", "barSide", "barFont", "modSpacing",
         "rounding", "gapsIn", "gapsOut", "borderSize", "inactiveOpacity", "shadow", "shadowSize", "gradientBorder",
-        "glassBar", "glassPanel", "glassLauncher", "glassTerminal", "glassAmount", "glassWindows", "glassBrowsers", "glassFiles", "glassEditors", "glassChat", "glassOther", "blur", "blurSize", "wsStyle", "iconMode"]
+        "glassBar", "glassPanel", "glassLauncher", "glassTerminal", "glassAmount", "glassWindows", "glassBrowsers", "glassFiles", "glassEditors", "glassChat", "glassOther", "blur", "blurSize", "wsStyle", "iconMode", "drawnIcons"]
     readonly property var looks: [
         { "id": "classic", "name": "Classic", "desc": "The original pill bar", "set": {} },
         { "id": "cozy", "name": "Cozy", "desc": "Soft, round, roomy",
@@ -495,6 +514,9 @@ ShellRoot {
         function toggleSettings() { shellRoot.settingsOpen = !shellRoot.settingsOpen; }
         function openSettings() { shellRoot.openSettings(); }
         function closeSettings() { shellRoot.closeSettings(); }
+        function toggleLauncher() { shellRoot.toggleLauncher(); }
+        function togglePower() { shellRoot.togglePower(); }
+        function toggleDnd() { notifier.dnd = !notifier.dnd; }
     }
 
     // Wallpaper (replaces swaybg; crossfades on theme change)
@@ -540,6 +562,14 @@ ShellRoot {
             screen: modelData
             shell: shellRoot
         }
+    }
+
+    // app launcher, power menu and notification pop-ups
+    Variants { model: shellRoot.screens; Launcher { required property var modelData; screen: modelData; shell: shellRoot } }
+    Variants { model: shellRoot.screens; PowerMenu { required property var modelData; screen: modelData; shell: shellRoot } }
+    Variants {
+        model: shellRoot.screens.length > 0 ? [shellRoot.screens[0]] : []
+        NotificationToasts { required property var modelData; screen: modelData; shell: shellRoot; notifier: shellRoot.notifier }
     }
 
     // =========================================================================

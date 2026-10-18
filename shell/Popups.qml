@@ -20,7 +20,7 @@ PanelWindow {
 
     readonly property real tw: 360
     readonly property real maxH: Math.max(200, Math.min(580, height - 140))
-    readonly property var openItem: kind === "network" ? netLoader.item : (kind === "bluetooth" ? btLoader.item : (kind === "quick" ? quickLoader.item : null))
+    readonly property var openItem: kind === "network" ? netLoader.item : (kind === "bluetooth" ? btLoader.item : (kind === "quick" ? quickLoader.item : (kind === "notifications" ? notifLoader.item : null)))
     readonly property real wantedH: openItem ? Math.min(maxH, openItem.wantedHeight) : 120
     property real th: wantedH
     Behavior on th { NumberAnimation { duration: main.ms(280); easing.type: Easing.BezierSpline; easing.bezierCurve: [0.2, 0.8, 0.2, 1, 1, 1] } }
@@ -162,6 +162,19 @@ PanelWindow {
             opacity: card.reveal
             transform: Translate { y: (1 - card.reveal) * 8 }
         }
+        Loader {
+            id: notifLoader
+            width: win.tw; height: parent.height
+            asynchronous: true; sourceComponent: notifComp
+            visible: win.kind === "notifications" && card.reveal > 0.01
+            opacity: card.reveal
+            transform: Translate { y: (1 - card.reveal) * 8 }
+        }
+        Component { id: notifComp
+            NotificationsPopup {
+                active: win.wanted && win.kind === "notifications"; settled: active && win.p > 0.85; shell: win.shell
+                onRequestClose: win.shell.closePopup()
+            } }
         Loader {
             id: quickLoader
             width: win.tw; height: parent.height

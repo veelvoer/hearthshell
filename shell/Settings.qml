@@ -547,6 +547,8 @@ PanelWindow {
                                     HSegment { readonly property var keys: ["accent", "text", "colour"]
                                         options: ["Accent", "Text", "Colourful"]; segWidth: 76
                                         current: Math.max(0, keys.indexOf(win.cfg.iconMode)); onPicked: i => win.put("iconMode", keys[i]) } }
+                                HRow { label: "Drawn icons"; desc: "Wi-Fi as signal bars and a drawn battery instead of font icons"
+                                    HToggle { checked: win.cfg.drawnIcons; onToggled: v => win.put("drawnIcons", v) } }
                                 HRow { label: "Workspace style"; desc: "How the workspace indicators look"
                                     HSegment { readonly property var keys: ["pills", "dots", "numbers"]
                                         options: ["Pills", "Dots", "Numbers"]; segWidth: 72
@@ -773,6 +775,8 @@ PanelWindow {
                                 HToggle { checked: win.cfg.syncRofi; onToggled: v => win.put("syncRofi", v) } }
                             HRow { label: "GTK apps"; desc: "Accent and surfaces, applied when an app starts"
                                 HToggle { checked: win.cfg.syncGtk; onToggled: v => win.put("syncGtk", v) } }
+                            HRow { label: "Notifications"; desc: "Pop-ups and a notification centre. Turn off if mako, dunst or another daemon should handle them (takes effect after a restart)"
+                                HToggle { checked: win.cfg.notifications; onToggled: v => win.put("notifications", v) } }
                             HRow { label: "Other apps"; desc: "Firefox, Yazi, Lodica, Dolphin and other KDE apps, micro, cava. Restart the app to see it"
                                 HToggle { checked: win.cfg.syncApps; onToggled: v => win.put("syncApps", v) } }
                             HRow { label: "Hyprlock"; desc: "The Super + Shift + X lock screen"

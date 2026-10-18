@@ -2,6 +2,7 @@
 import Quickshell
 import Quickshell.Hyprland
 import QtQuick
+import QtQuick.Effects
 import QtQuick.Layouts
 
 RowLayout {
@@ -34,6 +35,13 @@ RowLayout {
                  : isActive ? main.wsa : (flat && !dots ? "transparent" : (ws ? main.wso : main.wsi))
 
             Behavior on color { ColorAnimation { duration: main.ms(240); easing.type: Easing.OutCubic } }
+
+            // the active dot glows in the accent colour
+            layer.enabled: dots && isActive
+            layer.effect: MultiEffect {
+                shadowEnabled: true; shadowColor: main.wsa; shadowBlur: 0.9; shadowOpacity: 0.85
+                shadowHorizontalOffset: 0; shadowVerticalOffset: 0
+            }
 
             scale: press.pressed ? 0.92 : (press.containsMouse ? 1.08 : 1)
             Behavior on scale { NumberAnimation { duration: main.ms(200); easing.type: Easing.OutBack } }

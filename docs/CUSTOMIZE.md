@@ -33,6 +33,9 @@ hearthshell set gapsIn 4
 hearthshell apply                 # rewrite the themed config files (kitty, rofi, hyprland ...)
 hearthshell ipc show              # every function the shell exposes
 hearthshell lock
+hearthshell launcher              # open or close the app launcher (bind it to a key, e.g. Super + Space)
+hearthshell power                 # open or close the power menu
+hearthshell dnd                   # toggle Do not disturb
 ```
 
 Theme ids: `everforest pink yellow green blue teal gruvbox nord catppuccin tokyo rosepine dracula kanagawa`
