@@ -136,7 +136,7 @@ PanelWindow {
         height: win.lerp(win.rect.h, win.th, win.p)
         radius: win.lerp(8, 22, win.p)
         // starts out as the bar's own colour so the button seems to lift off the bar
-        color: Qt.tint(main.bg, Qt.rgba(main.page.r, main.page.g, main.page.b, win.clamp01(win.p * 2.2) * main.panelAlpha))
+        color: Qt.alpha(Qt.tint(main.bg, Qt.rgba(main.page.r, main.page.g, main.page.b, win.clamp01(win.p * 2.2))), main.menuAlpha)
         border.width: 1
         border.color: main.border
         opacity: win.warming ? 0.01 : Math.min(1, 0.25 + win.p * 6)

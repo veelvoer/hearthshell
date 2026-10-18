@@ -5,6 +5,7 @@ import QtQuick
 QtObject {
     id: root
     property var src: ({})
+    property real menuAlpha: 1      // < 1 = frosted bar menus
     property real panelAlpha: 1     // < 1 = frosted settings panel
     property string font: "Inter"   // UI font, chosen in Appearance
     property string serif: "Noto Serif"

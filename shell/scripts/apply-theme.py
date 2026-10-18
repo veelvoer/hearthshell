@@ -159,11 +159,11 @@ $qs_accent = rgb({bare(c['accent'])})
 
 GLASS_RULE = (
     'QS_GLASS_BAR = QS_GLASS_BAR or hl.layer_rule({ name = "qs-glass-bar", '
-    'match = { namespace = "^quickshell-bar$" }, blur = true, ignore_alpha = 0.05 })\n'
+    'match = { namespace = "^quickshell-bar$" }, blur = true, ignore_alpha = 0.2 })\n'
     'QS_GLASS_POPUP = QS_GLASS_POPUP or hl.layer_rule({ name = "qs-glass-popup", '
-    'match = { namespace = "^quickshell-popup$" }, blur = true, ignore_alpha = 0.1 })\n'
+    'match = { namespace = "^quickshell-popup$" }, blur = true, ignore_alpha = 0.2 })\n'
     'QS_GLASS_SETTINGS = QS_GLASS_SETTINGS or hl.layer_rule({ name = "qs-glass-settings", '
-    'match = { namespace = "^quickshell-settings$" }, blur = true, ignore_alpha = 0.1 })\n'
+    'match = { namespace = "^quickshell-settings$" }, blur = true, ignore_alpha = 0.2 })\n'
 )
 
 
@@ -192,9 +192,9 @@ def lua_config(t: Theme, c: dict[str, str], opt: Opt) -> str:
         "})\n"
     )
     toggle = (f"if QS_GLASS_BAR then QS_GLASS_BAR:set_enabled({tf('glassBar')}) end "
-              f"if QS_GLASS_POPUP then QS_GLASS_POPUP:set_enabled({tf('glassPanel')}) end "
+              f"if QS_GLASS_POPUP then QS_GLASS_POPUP:set_enabled({tf('glassPanel') if not opt['glassBar'] else 'true'}) end "
               f"if QS_GLASS_SETTINGS then QS_GLASS_SETTINGS:set_enabled({tf('glassPanel')}) end\n")
-    return config + toggle
+    return config + toggle + window_lua(opt)
 
 
 def keyword_settings(t: Theme, c: dict[str, str], opt: Opt) -> list[tuple[str, str]]:
@@ -238,6 +238,37 @@ def hyprlang_file(settings: list[tuple[str, str]]) -> str:
         for depth in range(len(parts) - 1, -1, -1):
             lines.append("    " * depth + "}")
     return "\n".join(lines) + "\n"
+
+
+# Frosted app windows: groups of window classes that get a see-through window over the blurred backdrop.
+# (?i) makes the match case-insensitive; flatpak ids and plain names are both listed.
+WINDOW_GROUPS = {
+    "glassBrowsers": r"^(?i)(firefox|org\.mozilla\.firefox|lodica|chromium|google-chrome|brave-browser|zen|zen-browser|librewolf)$",
+    "glassFiles": r"^(?i)(org\.kde\.dolphin|dolphin|org\.gnome\.nautilus|nautilus|thunar|pcmanfm.*|nemo)$",
+    "glassEditors": r"^(?i)(code|code-oss|vscodium|org\.kde\.kate|kate|org\.kde\.kwrite|org\.gnome\.gedit|org\.gnome\.texteditor)$",
+    "glassChat": r"^(?i)(discord|vesktop|spotify|telegram.*|org\.telegram.*|signal|hearth|element|slack)$",
+    "glassOther": r"^(?i)(org\.kde\.(okular|gwenview|ark|spectacle|kcalc|systemsettings|kinfocenter|konsole)|systemsettings|org\.gnome\.(calculator|evince|eog|loupe|papers|settings|baobab))$",
+}
+
+
+def window_lua(opt: Opt) -> str:
+    """Lua that switches the frosted-window rules to the current settings. A rule is created once per group and
+    opacity step and only toggled afterwards, so applying a theme over and over never piles up rules."""
+    alpha = max(0.65, 1.0 - float(opt["glassAmount"]) * 0.6)
+    step = round(alpha * 20) / 20
+    inactive = max(0.6, step - 0.05)
+    lines = [
+        "QS_WIN = QS_WIN or {}",
+        "for _, h in pairs(QS_WIN) do h:set_enabled(false) end",
+        "local function qsw(key, cls, op) local h = QS_WIN[key .. op]; "
+        "if not h then h = hl.window_rule({ name = 'qs-win-' .. key .. op, match = { class = cls }, opacity = op }); QS_WIN[key .. op] = h end; "
+        "h:set_enabled(true) end",
+    ]
+    if opt.get("glassWindows") and opt["blur"]:
+        for key, cls in WINDOW_GROUPS.items():
+            if opt.get(key, True):
+                lines.append(f"qsw('{key}', [[{cls}]], '{step:.2f} {inactive:.2f}')")
+    return " ".join(lines) + "\n"
 
 
 def apply_hyprland(t: Theme, c: dict[str, str], opt: Opt) -> None:

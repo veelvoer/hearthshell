@@ -13,7 +13,7 @@ the command line, the files, and how to add things.
 | Modules | choose which modules appear and where (left / middle / right, order), whether each shows text, and "Text on hover only" (labels slide out when you rest the pointer on a module); includes the Quick settings module |
 | Windows | gaps, border width, corner radius, focus dimming; "Shadows and borders" for shadow and gradient borders |
 | Input | focus follows mouse, natural scrolling, tap to click, pointer speed, key repeat |
-| Glass | frosted glass for the bar, the settings panel, the launcher and the terminal, glass amount, blur strength |
+| Glass | frosted glass for the bar and its menus, the settings panel (only the panel is blurred, nothing around it changes), the launcher, the terminal and, per group, other apps (browsers, file managers, editors, chat and media, KDE and GNOME apps); glass amount, blur strength |
 | System | which apps follow the theme; terminal opacity, font size, padding, cursor; launcher size; lock screen clock |
 
 Rarely used options sit behind a **More ...** row that is collapsed by default. A **Reset** button on

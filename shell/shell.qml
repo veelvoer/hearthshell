@@ -139,6 +139,7 @@ ShellRoot {
         barPx: shellRoot.cfg.barFont
         iconMode: shellRoot.cfg.iconMode
         panelAlpha: shellRoot.cfg.glassPanel ? Math.max(0.35, 1 - shellRoot.cfg.glassAmount) : 1
+        menuAlpha: (shellRoot.cfg.glassPanel || shellRoot.cfg.glassBar) ? Math.max(0.35, 1 - shellRoot.cfg.glassAmount) : 1
     }
     readonly property var main: palette
 
@@ -150,6 +151,7 @@ ShellRoot {
         "termOpacity": 0.92, "blurSize": 6,
         "barStyle": "classic", "barPos": "top",
         "glassBar": false, "glassPanel": false, "glassLauncher": false, "glassTerminal": false, "glassAmount": 0.4,
+        "glassWindows": false, "glassBrowsers": true, "glassFiles": true, "glassEditors": true, "glassChat": true, "glassOther": true,
         "userWalls": {},
         "font": "Inter", "motion": "normal", "accent": "", "wallFit": "fill",
         "barHeight": 30, "barGap": 4, "barSide": 10, "barFont": 13, "modSpacing": 0, "iconMode": "accent",
@@ -165,7 +167,7 @@ ShellRoot {
     })
     // keys that need scripts/apply-theme.py to run when they change
     readonly property var systemKeys: ["theme", "gapsIn", "gapsOut", "rounding", "borderSize", "inactiveOpacity",
-        "blur", "blurSize", "termOpacity", "glassBar", "glassPanel", "glassLauncher", "glassTerminal", "glassAmount", "syncKitty", "syncRofi", "syncFish", "syncGtk", "syncLock", "syncApps",
+        "blur", "blurSize", "termOpacity", "glassBar", "glassPanel", "glassLauncher", "glassTerminal", "glassAmount", "glassWindows", "glassBrowsers", "glassFiles", "glassEditors", "glassChat", "glassOther", "syncKitty", "syncRofi", "syncFish", "syncGtk", "syncLock", "syncApps",
         "motion", "accent", "shadow", "shadowSize", "gradientBorder", "followMouse", "naturalScroll", "tapToClick",
         "pointerSpeed", "repeatRate", "repeatDelay", "kittyFont", "kittyPad", "kittyCursor", "rofiWidth", "rofiLines", "rofiIcons"]
     property var cfg: defaults
@@ -356,13 +358,13 @@ ShellRoot {
     // ---- quick looks: one click sets bar, spacing, borders and effects together -------
     readonly property var lookKeys: ["barStyle", "barRadius", "barOpacity", "barHeight", "barGap", "barSide", "barFont", "modSpacing",
         "rounding", "gapsIn", "gapsOut", "borderSize", "inactiveOpacity", "shadow", "shadowSize", "gradientBorder",
-        "glassBar", "glassPanel", "glassLauncher", "glassTerminal", "glassAmount", "blur", "blurSize", "wsStyle", "iconMode"]
+        "glassBar", "glassPanel", "glassLauncher", "glassTerminal", "glassAmount", "glassWindows", "glassBrowsers", "glassFiles", "glassEditors", "glassChat", "glassOther", "blur", "blurSize", "wsStyle", "iconMode"]
     readonly property var looks: [
         { "id": "classic", "name": "Classic", "desc": "The original pill bar", "set": {} },
         { "id": "cozy", "name": "Cozy", "desc": "Soft, round, roomy",
           "set": { "barHeight": 32, "barGap": 6, "rounding": 18, "gapsIn": 8, "gapsOut": 14, "shadowSize": 20 } },
         { "id": "glass", "name": "Glass", "desc": "Frosted and blurred",
-          "set": { "barStyle": "pill", "glassBar": true, "glassPanel": true, "glassLauncher": true, "glassTerminal": true,
+          "set": { "barStyle": "pill", "glassBar": true, "glassPanel": true, "glassLauncher": true, "glassTerminal": true, "glassWindows": true,
                    "glassAmount": 0.45, "blurSize": 9, "rounding": 16, "gapsIn": 6, "gapsOut": 12, "borderSize": 1, "wsStyle": "dots" } },
         { "id": "compact", "name": "Compact", "desc": "Slim and tight",
           "set": { "barStyle": "flat", "barHeight": 26, "barFont": 12, "barRadius": 12, "rounding": 10, "gapsIn": 3, "gapsOut": 5,

@@ -53,16 +53,10 @@ PanelWindow {
         y: win.barBottom ? 0 : win.barZone
         height: parent.height - win.barZone
     }
-    Rectangle {
+    // Nothing around the panel changes while it is open (no dimming, no blur): this only catches clicks outside it.
+    Item {
         id: scrim
         x: 0; width: parent.width; y: inputArea.y; height: inputArea.height
-        readonly property real fadeFrac: Math.min(0.5, 26 / Math.max(1, height))
-        gradient: Gradient {
-            GradientStop { position: 0; color: win.barBottom ? Qt.rgba(0, 0, 0, win.scrimK) : Qt.rgba(0, 0, 0, 0) }
-            GradientStop { position: win.barBottom ? 1 - scrim.fadeFrac : scrim.fadeFrac
-                color: Qt.rgba(0, 0, 0, win.scrimK) }
-            GradientStop { position: 1; color: win.barBottom ? Qt.rgba(0, 0, 0, 0) : Qt.rgba(0, 0, 0, win.scrimK) }
-        }
         MouseArea { anchors.fill: parent; onClicked: win.shell.closeSettings() }
     }
 
@@ -722,7 +716,7 @@ PanelWindow {
                         active: win.page === 6 && win.wanted; order: 0; title: "Frosted glass on"
                         Column {
                             width: parent.width; spacing: 2
-                            HRow { label: "Status bar"; desc: "The bar becomes see-through and blurs what is behind it"
+                            HRow { label: "Status bar"; desc: "The bar and its menus (Wi-Fi, Bluetooth, quick settings) turn see-through and blur what is behind them"
                                 HToggle { checked: win.cfg.glassBar; onToggled: v => win.put("glassBar", v) } }
                             HRow { label: "Settings panel"; desc: "This window"
                                 HToggle { checked: win.cfg.glassPanel; onToggled: v => win.put("glassPanel", v) } }
@@ -733,7 +727,25 @@ PanelWindow {
                         }
                     }
                     HCard {
-                        active: win.page === 6 && win.wanted; order: 1; title: "Tuning"
+                        active: win.page === 6 && win.wanted; order: 1; title: "Frosted app windows"
+                        Column {
+                            width: parent.width; spacing: 2
+                            HRow { label: "Frost other apps"; desc: "Makes the windows of the groups below see-through with the blurred backdrop"
+                                HToggle { checked: win.cfg.glassWindows; onToggled: v => win.put("glassWindows", v) } }
+                            HRow { label: "Browsers"; desc: "Firefox, Lodica, Chromium, Brave, Zen"
+                                HToggle { checked: win.cfg.glassBrowsers; onToggled: v => win.put("glassBrowsers", v) } }
+                            HRow { label: "File managers"; desc: "Dolphin, Nautilus, Thunar"
+                                HToggle { checked: win.cfg.glassFiles; onToggled: v => win.put("glassFiles", v) } }
+                            HRow { label: "Editors"; desc: "VS Code, Kate, Gedit, Text Editor"
+                                HToggle { checked: win.cfg.glassEditors; onToggled: v => win.put("glassEditors", v) } }
+                            HRow { label: "Chat and media"; desc: "Discord, Spotify, Telegram, Signal, Hearth"
+                                HToggle { checked: win.cfg.glassChat; onToggled: v => win.put("glassChat", v) } }
+                            HRow { label: "Other KDE and GNOME apps"; desc: "Okular, Gwenview, System Settings, Calculator and the like"
+                                HToggle { checked: win.cfg.glassOther; onToggled: v => win.put("glassOther", v) } }
+                        }
+                    }
+                    HCard {
+                        active: win.page === 6 && win.wanted; order: 2; title: "Tuning"
                         Column {
                             width: parent.width; spacing: 4
                             HSliderRow { label: "Glass amount"; desc: "How see-through glass surfaces are"

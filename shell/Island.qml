@@ -166,7 +166,7 @@ Item {
         border.color: main.border
         border.width: 1
         // menus are nearly opaque so text behind them never makes them hard to read
-        opacity: Math.max(bar.bgAlpha, isl.mode === "menu" ? 0.97 : 0) * bar.intro
+        opacity: Math.max(bar.bgAlpha, isl.mode === "menu" && !shell.cfg.glassBar ? 0.97 : 0) * bar.intro
         Behavior on opacity { NumberAnimation { duration: main.ms(260) } }
         transform: Translate { y: (1 - bar.intro) * (isl.atBottom ? 14 : -14) }
         layer.enabled: true
