@@ -228,10 +228,9 @@ Item {
                 source: isl.player && isl.player.trackArtUrl ? isl.player.trackArtUrl : ""
                 fillMode: Image.PreserveAspectCrop; asynchronous: true; smooth: true; sourceSize: Qt.size(64, 64)
             }
-            Text {
-                anchors.centerIn: parent; visible: !isl.player || !isl.player.trackArtUrl
-                text: String.fromCodePoint(isl.player ? 0xF075A : 0xF003B); color: main.accent
-                font { family: "JetBrainsMono Nerd Font Propo"; pixelSize: main.barPx }
+            CenteredGlyph {
+                visible: !isl.player || !isl.player.trackArtUrl
+                glyph: String.fromCodePoint(isl.player ? 0xF075A : 0xF003B); color: main.accent; size: main.barPx
             }
         }
     }
@@ -245,11 +244,9 @@ Item {
             present: isl.hasBattery; level: isl.level; charging: isl.charging; tint: main.accent
             stroke: Math.max(2, parent.width * 0.1)
         }
-        Text {
-            anchors.centerIn: parent; anchors.verticalCenterOffset: -parent.width * 0.04
-            text: String.fromCodePoint(!Networking.wifiEnabled ? 0xF05AA : isl.wifiNet ? 0xF091F + (Math.max(1, isl.wifiLevel) - 1) * 3 : 0xF092D)
-            color: main.icon
-            font { family: "JetBrainsMono Nerd Font Propo"; pixelSize: parent.width * 0.5 }
+        CenteredGlyph {
+            glyph: String.fromCodePoint(!Networking.wifiEnabled ? 0xF05AA : isl.wifiNet ? 0xF091F + (Math.max(1, isl.wifiLevel) - 1) * 3 : 0xF092D)
+            color: main.icon; size: parent.width * 0.5
         }
     }
     Piece {
