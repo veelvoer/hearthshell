@@ -1,0 +1,150 @@
+#!/bin/sh
+# hearthshell: launcher and remote control for the shell.
+#
+#   hearthshell              start the shell (what autostart runs)
+#   hearthshell settings     open / close the settings panel
+#   hearthshell lock         lock the screen
+#   hearthshell launcher     open / close the app launcher
+#   hearthshell power        open / close the power menu
+#   hearthshell dnd          toggle Do not disturb
+#   hearthshell theme NAME   switch theme          (e.g. nord, tokyo, everforest)
+#   hearthshell look NAME    apply a quick look    (e.g. cozy, glass, compact)
+#   hearthshell set KEY JSON change one setting    (e.g. hearthshell set barStyle '"pill"')
+#   hearthshell preset save|apply|delete NAME   your saved presets
+#   hearthshell apply        re-write the themed config files (kitty, rofi, hyprland ...)
+#   hearthshell restart      stop and start the shell again
+#   hearthshell doctor       check dependencies and integration
+#   hearthshell ipc ...      raw Quickshell IPC, e.g.  hearthshell ipc show
+#   hearthshell uninstall    undo everything install.sh did
+#   hearthshell where        print the install directory
+set -u
+
+NAME=hearthshell
+CONF_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
+DIR="$CONF_HOME/quickshell/$NAME"
+
+# a Quickshell the installer built lives in ~/.local/bin
+PATH="$HOME/.local/bin:$PATH"; export PATH
+QS=$(command -v qs || command -v quickshell || true)
+
+# Hyprland puts its instance signature in a socket directory, not in the environment of
+# services or of programs started from another session. Rebuild the variables Quickshell
+# needs (Hyprland IPC + Wayland display) from the newest live socket.
+setup_env() {
+    XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+    export XDG_RUNTIME_DIR
+    if [ -z "${HYPRLAND_INSTANCE_SIGNATURE:-}" ] || [ ! -S "$XDG_RUNTIME_DIR/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket.sock" ]; then
+        for d in $(ls -1dt "$XDG_RUNTIME_DIR"/hypr/*/ 2>/dev/null); do
+            if [ -S "${d}.socket.sock" ] || [ -f "${d}.socket.sock" ]; then
+                sig="${d%/}"; HYPRLAND_INSTANCE_SIGNATURE="${sig##*/}"; export HYPRLAND_INSTANCE_SIGNATURE
+                break
+            fi
+        done
+    fi
+    if [ -z "${WAYLAND_DISPLAY:-}" ]; then
+        for s in "$XDG_RUNTIME_DIR"/wayland-*; do
+            [ -S "$s" ] || continue
+            WAYLAND_DISPLAY="${s##*/}"; export WAYLAND_DISPLAY
+            break
+        done
+    fi
+    # these make Qt Quick fall back to a platform theme that breaks rendering on some systems
+    unset QT_STYLE_OVERRIDE QT_QPA_PLATFORMTHEME
+}
+
+need_qs() { [ -n "$QS" ] || { echo "hearthshell: Quickshell is not installed (no 'qs' or 'quickshell' in PATH)" >&2; exit 1; }; }
+
+cmd_ipc() { need_qs; setup_env; "$QS" -c "$NAME" ipc "$@"; }
+
+cmd_run() {
+    need_qs
+    setup_env
+    # wait a little for the compositor when started very early (autostart, systemd)
+    waited=0
+    while [ -z "${HYPRLAND_INSTANCE_SIGNATURE:-}" ] && [ "$waited" -lt 30 ]; do
+        sleep 1; waited=$((waited + 1)); setup_env
+    done
+    if [ -z "${HYPRLAND_INSTANCE_SIGNATURE:-}" ] && [ "${HEARTHSHELL_FORCE:-0}" != 1 ]; then
+        echo "hearthshell: no Hyprland session found, not starting (set HEARTHSHELL_FORCE=1 to start anyway)" >&2
+        exit 0
+    fi
+    exec "$QS" -c "$NAME"
+}
+
+cmd_apply() {
+    s="$DIR/settings.json"
+    theme=everforest
+    opts='{}'
+    if [ -f "$s" ]; then
+        theme=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('theme','everforest'))" "$s" 2>/dev/null || echo everforest)
+        opts=$(cat "$s")
+    fi
+    setup_env
+    python3 "$DIR/scripts/apply-theme.py" "$theme" "$opts"
+}
+
+cmd_doctor() {
+    ok=0
+    chk() {  # chk <label> <required|optional> <cmd...>
+        label=$1; kind=$2; shift 2
+        for c in "$@"; do
+            if command -v "$c" >/dev/null 2>&1; then printf '  [ok]       %-22s %s\n' "$label" "$(command -v "$c")"; return; fi
+        done
+        if [ "$kind" = required ]; then printf '  [MISSING]  %-22s (required)\n' "$label"; ok=1
+        else printf '  [missing]  %-22s (optional)\n' "$label"; fi
+    }
+    echo "hearthshell doctor"
+    echo
+    chk "Quickshell" required qs quickshell
+    chk "Hyprland (hyprctl)" required hyprctl
+    chk "Python 3" required python3
+    chk "ImageMagick" required magick convert
+    chk "grim (lock screen)" required grim
+    chk "file chooser" optional kdialog zenity yad
+    chk "brightnessctl" optional brightnessctl
+    chk "NetworkManager (nmcli)" optional nmcli
+    chk "Bluetooth (bluetoothctl)" optional bluetoothctl
+    chk "PipeWire (sound)" optional pipewire
+    chk "WirePlumber (wpctl)" optional wpctl
+    chk "UPower (battery)" optional upower
+    chk "kitty" optional kitty
+    chk "rofi" optional rofi
+    chk "fish" optional fish
+    chk "hyprlock" optional hyprlock
+    echo
+    if [ -f "$DIR/shell.qml" ]; then echo "  [ok]       config                 $DIR"; else echo "  [MISSING]  config                 $DIR"; ok=1; fi
+    if [ -f "$DIR/pam-service" ]; then echo "  [ok]       lock PAM service       $(cat "$DIR/pam-service")"; fi
+    n=$(ls "$DIR"/wallpapers/*/*.jpg 2>/dev/null | wc -l)
+    echo "  [info]     wallpapers             $n image(s)  (fetch more with: python3 $DIR/scripts/fetch-wallpapers.py)"
+    if fc-list ':charset=f0581' family 2>/dev/null | grep -q .; then echo "  [ok]       Nerd Font (icons)      found"; else echo "  [missing]  Nerd Font (icons)      bar icons will show as boxes"; fi
+    setup_env
+    if [ -n "$QS" ] && "$QS" -c "$NAME" ipc show >/dev/null 2>&1; then echo "  [ok]       shell                  running"; else echo "  [info]     shell                  not running (start with: hearthshell)"; fi
+    [ "$ok" = 0 ] && echo && echo "Everything required is present." || { echo; echo "Something required is missing, see docs/INSTALL.md."; }
+    return "$ok"
+}
+
+case "${1:-run}" in
+    run|start) cmd_run ;;
+    settings)  cmd_ipc call shell toggleSettings ;;
+    lock)      cmd_ipc call shell lock ;;
+    launcher)  cmd_ipc call shell toggleLauncher ;;
+    menu)      [ $# -ge 2 ] || { echo "usage: hearthshell menu quick|network|bluetooth|calendar|notifications|media|sound|display" >&2; exit 2; }; cmd_ipc call shell openMenu "$2" ;;
+    power)     cmd_ipc call shell togglePower ;;
+    dnd)       cmd_ipc call shell toggleDnd ;;
+    theme)     [ $# -ge 2 ] || { echo "usage: hearthshell theme NAME" >&2; exit 2; }; cmd_ipc call shell setTheme "$2" ;;
+    look)      [ $# -ge 2 ] || { echo "usage: hearthshell look NAME" >&2; exit 2; }; cmd_ipc call shell applyLook "$2" ;;
+    set)       [ $# -ge 3 ] || { echo 'usage: hearthshell set KEY JSON-VALUE   e.g. hearthshell set gapsIn 4' >&2; exit 2; }; cmd_ipc call shell set "$2" "$3" ;;
+    preset)    [ $# -ge 3 ] || { echo 'usage: hearthshell preset save|apply|delete NAME' >&2; exit 2; }
+               case "$2" in save) f=savePreset ;; apply) f=applyPreset ;; delete) f=deletePreset ;; *) echo 'usage: hearthshell preset save|apply|delete NAME' >&2; exit 2 ;; esac
+               cmd_ipc call shell "$f" "$3" ;;
+    apply)     cmd_apply ;;
+    restart)   need_qs; setup_env; "$QS" kill -c "$NAME" >/dev/null 2>&1 || true; sleep 1
+               nohup "$0" run >/dev/null 2>&1 & ;;
+    doctor)    cmd_doctor ;;
+    ipc)       shift; cmd_ipc "$@" ;;
+    where)     echo "$DIR" ;;
+    uninstall) shift; exec sh "$DATA_HOME/$NAME/uninstall.sh" "$@" ;;
+    -h|--help|help) sed -n '2,/^set -u/p' "$0" | sed '$d' | sed 's/^# \{0,1\}//' ;;
+    *) echo "hearthshell: unknown command '$1' (try: hearthshell help)" >&2; exit 2 ;;
+esac

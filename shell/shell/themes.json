@@ -1,0 +1,353 @@
+{
+  "everforest": {
+    "name": "Everforest",
+    "blurb": "Soft forest greens",
+    "walls": 4,
+    "grad": [
+      "a7c080",
+      "83c092",
+      "dbbc7f"
+    ],
+    "bg": "#2d353b",
+    "border": "#4f5b587f",
+    "text": "#d3c6aa",
+    "wsa": "#a7c080",
+    "wso": "#4f5b58",
+    "wsi": "#2d353b",
+    "wst": "#e6e2cc",
+    "wsti": "#7fbbb3",
+    "icon": "#83c092",
+    "term": {
+      "red": "#e67e80",
+      "green": "#a7c080",
+      "yellow": "#dbbc7f",
+      "blue": "#7fbbb3",
+      "magenta": "#d699b6",
+      "cyan": "#83c092"
+    }
+  },
+  "pink": {
+    "name": "Sakura",
+    "blurb": "Plum night, cherry blossom",
+    "walls": 4,
+    "grad": [
+      "ff7188",
+      "ffa4b4",
+      "c75d83"
+    ],
+    "bg": "#2a1c30",
+    "border": "#ff71887f",
+    "text": "#FFEEF3",
+    "wsa": "#FF7188",
+    "wso": "#A9557F",
+    "wsi": "#3b2842",
+    "wst": "#2a1c30",
+    "wsti": "#D9BFD0",
+    "icon": "#FF9DB0",
+    "term": {
+      "red": "#ff7188",
+      "green": "#7be0a5",
+      "yellow": "#ffd36a",
+      "blue": "#73c9f0",
+      "magenta": "#d28bff",
+      "cyan": "#7fe0e6"
+    }
+  },
+  "yellow": {
+    "name": "Amber",
+    "blurb": "Warm brown, golden hour",
+    "walls": 4,
+    "grad": [
+      "ffd36a",
+      "ffe08a",
+      "ff9d4d"
+    ],
+    "bg": "#2a2118",
+    "border": "#FFD36A7F",
+    "text": "#FFF2D8",
+    "wsa": "#FFC857",
+    "wso": "#A27B3C",
+    "wsi": "#3a2e21",
+    "wst": "#2a2118",
+    "wsti": "#DCCBA6",
+    "icon": "#FFDD8A",
+    "term": {
+      "red": "#ff6f6f",
+      "green": "#9bd67a",
+      "yellow": "#ffd36a",
+      "blue": "#6fb7ff",
+      "magenta": "#ff9ad5",
+      "cyan": "#6fe0d0"
+    }
+  },
+  "green": {
+    "name": "Fern",
+    "blurb": "Deep woodland mint",
+    "walls": 4,
+    "grad": [
+      "62c98c",
+      "7be0a5",
+      "3e8b6a"
+    ],
+    "bg": "#14261d",
+    "border": "#62C98C7f",
+    "text": "#EAFFF1",
+    "wsa": "#62C98C",
+    "wso": "#3E8B6A",
+    "wsi": "#1f382b",
+    "wst": "#14261d",
+    "wsti": "#B3D9C3",
+    "icon": "#7BE0A5",
+    "term": {
+      "red": "#ff7b7b",
+      "green": "#62c98c",
+      "yellow": "#f0d56a",
+      "blue": "#6fb8ff",
+      "magenta": "#d49cff",
+      "cyan": "#5fe0c8"
+    }
+  },
+  "blue": {
+    "name": "Glacier",
+    "blurb": "Cold water, high peaks",
+    "walls": 4,
+    "grad": [
+      "4bb9e8",
+      "73c9f0",
+      "7f9cf5"
+    ],
+    "bg": "#14233f",
+    "border": "#4BB9E87f",
+    "text": "#EEF8FF",
+    "wsa": "#4BB9E8",
+    "wso": "#3A7FB0",
+    "wsi": "#1f3358",
+    "wst": "#14233f",
+    "wsti": "#B3CEE2",
+    "icon": "#73C9F0",
+    "term": {
+      "red": "#ff7b8a",
+      "green": "#7be0a5",
+      "yellow": "#ffd36a",
+      "blue": "#4bb9e8",
+      "magenta": "#b39cff",
+      "cyan": "#5fe0e8"
+    }
+  },
+  "teal": {
+    "name": "Lagoon",
+    "blurb": "Teal dusk and tide",
+    "walls": 4,
+    "grad": [
+      "2bb1bb",
+      "3fd0dc",
+      "7ae7c7"
+    ],
+    "bg": "#12424C",
+    "border": "#219BA47F",
+    "text": "#E8F8FA",
+    "wsa": "#2BB1BB",
+    "wso": "#186A73",
+    "wsi": "#12424C",
+    "wst": "#F2FCFD",
+    "wsti": "#92D5DD",
+    "icon": "#3FD0DC",
+    "term": {
+      "red": "#ff7b7b",
+      "green": "#7ae7a0",
+      "yellow": "#f2d36a",
+      "blue": "#5fa8ff",
+      "magenta": "#c89cff",
+      "cyan": "#3fd0dc"
+    }
+  },
+  "gruvbox": {
+    "name": "Gruvbox",
+    "blurb": "Warm retro earth tones",
+    "walls": 4,
+    "grad": [
+      "fabd2f",
+      "fe8019",
+      "b8bb26"
+    ],
+    "bg": "#282828",
+    "border": "#d795217f",
+    "text": "#ebdbb2",
+    "wsa": "#fabd2f",
+    "wso": "#665c54",
+    "wsi": "#3c3836",
+    "wst": "#282828",
+    "wsti": "#bdae93",
+    "icon": "#fe8019",
+    "term": {
+      "red": "#fb4934",
+      "green": "#b8bb26",
+      "yellow": "#fabd2f",
+      "blue": "#83a598",
+      "magenta": "#d3869b",
+      "cyan": "#8ec07c"
+    }
+  },
+  "nord": {
+    "name": "Nord",
+    "blurb": "Arctic, calm and clean",
+    "walls": 4,
+    "grad": [
+      "88c0d0",
+      "81a1c1",
+      "b48ead"
+    ],
+    "bg": "#2e3440",
+    "border": "#88c0d07f",
+    "text": "#eceff4",
+    "wsa": "#88c0d0",
+    "wso": "#4c566a",
+    "wsi": "#3b4252",
+    "wst": "#2e3440",
+    "wsti": "#d8dee9",
+    "icon": "#81a1c1",
+    "term": {
+      "red": "#bf616a",
+      "green": "#a3be8c",
+      "yellow": "#ebcb8b",
+      "blue": "#81a1c1",
+      "magenta": "#b48ead",
+      "cyan": "#88c0d0"
+    }
+  },
+  "catppuccin": {
+    "name": "Catppuccin",
+    "blurb": "Mocha, soft pastels",
+    "walls": 4,
+    "grad": [
+      "cba6f7",
+      "89b4fa",
+      "f5c2e7"
+    ],
+    "bg": "#1e1e2e",
+    "border": "#cba6f77f",
+    "text": "#cdd6f4",
+    "wsa": "#cba6f7",
+    "wso": "#45475a",
+    "wsi": "#313244",
+    "wst": "#1e1e2e",
+    "wsti": "#bac2de",
+    "icon": "#89b4fa",
+    "term": {
+      "red": "#f38ba8",
+      "green": "#a6e3a1",
+      "yellow": "#f9e2af",
+      "blue": "#89b4fa",
+      "magenta": "#f5c2e7",
+      "cyan": "#94e2d5"
+    }
+  },
+  "tokyo": {
+    "name": "Tokyo Night",
+    "blurb": "Neon dusk over the city",
+    "walls": 4,
+    "grad": [
+      "7aa2f7",
+      "bb9af7",
+      "7dcfff"
+    ],
+    "bg": "#1a1b26",
+    "border": "#7aa2f77f",
+    "text": "#c0caf5",
+    "wsa": "#7aa2f7",
+    "wso": "#3b4261",
+    "wsi": "#24283b",
+    "wst": "#1a1b26",
+    "wsti": "#a9b1d6",
+    "icon": "#7dcfff",
+    "term": {
+      "red": "#f7768e",
+      "green": "#9ece6a",
+      "yellow": "#e0af68",
+      "blue": "#7aa2f7",
+      "magenta": "#bb9af7",
+      "cyan": "#7dcfff"
+    }
+  },
+  "rosepine": {
+    "name": "Ros\u00e9 Pine",
+    "blurb": "Dusky rose and pine",
+    "walls": 4,
+    "grad": [
+      "ebbcba",
+      "c4a7e7",
+      "9ccfd8"
+    ],
+    "bg": "#191724",
+    "border": "#ebbcba7f",
+    "text": "#e0def4",
+    "wsa": "#ebbcba",
+    "wso": "#403d52",
+    "wsi": "#26233a",
+    "wst": "#191724",
+    "wsti": "#908caa",
+    "icon": "#c4a7e7",
+    "term": {
+      "red": "#eb6f92",
+      "green": "#95b1ac",
+      "yellow": "#f6c177",
+      "blue": "#7aa7c7",
+      "magenta": "#c4a7e7",
+      "cyan": "#9ccfd8"
+    }
+  },
+  "dracula": {
+    "name": "Dracula",
+    "blurb": "Vivid purple on charcoal",
+    "walls": 4,
+    "grad": [
+      "bd93f9",
+      "ff79c6",
+      "8be9fd"
+    ],
+    "bg": "#282a36",
+    "border": "#bd93f97f",
+    "text": "#f8f8f2",
+    "wsa": "#bd93f9",
+    "wso": "#44475a",
+    "wsi": "#343746",
+    "wst": "#282a36",
+    "wsti": "#bfbfd0",
+    "icon": "#ff79c6",
+    "term": {
+      "red": "#ff5555",
+      "green": "#50fa7b",
+      "yellow": "#f1fa8c",
+      "blue": "#bd93f9",
+      "magenta": "#ff79c6",
+      "cyan": "#8be9fd"
+    }
+  },
+  "kanagawa": {
+    "name": "Kanagawa",
+    "blurb": "Ink, waves and wisteria",
+    "walls": 4,
+    "grad": [
+      "7e9cd8",
+      "957fb8",
+      "e6c384"
+    ],
+    "bg": "#1f1f28",
+    "border": "#7e9cd87f",
+    "text": "#dcd7ba",
+    "wsa": "#7e9cd8",
+    "wso": "#54546d",
+    "wsi": "#2a2a37",
+    "wst": "#1f1f28",
+    "wsti": "#c8c093",
+    "icon": "#98bb6c",
+    "term": {
+      "red": "#c34043",
+      "green": "#76946a",
+      "yellow": "#c0a36e",
+      "blue": "#7e9cd8",
+      "magenta": "#957fb8",
+      "cyan": "#6a9589"
+    }
+  }
+}
