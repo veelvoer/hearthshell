@@ -37,7 +37,7 @@ Item {
     property bool armed: false
     property bool menuSettled: false
     readonly property string mode: menu !== "" ? "menu"
-        : (!split && (hoverHold || shell.settingsOpen)) ? "bar"
+        : (shell.settingsOpen || (!split && hoverHold)) ? "bar"
         : activity !== "" ? "activity" : "idle"
     readonly property real base: shell.cfg.barHeight
     readonly property real pad: bar.pad
@@ -134,7 +134,7 @@ Item {
         : activity === "workspace" ? wsPane.implicitWidth + 40
         : activity === "battery" ? 200 : activity === "media" ? 330 : 0
     readonly property real targetW: mode === "menu" ? 360 : mode === "bar" ? pillW : mode === "activity" ? transientW : collapsedW
-    readonly property real targetH: mode === "menu" ? menuH : mode === "bar" ? base : mode === "activity" ? base + 14 : base - 6
+    readonly property real targetH: mode === "menu" ? menuH : mode === "bar" ? base : mode === "activity" ? base + 14 : base - (split ? 2 : 6)
 
     // a little overshoot on every size change, like a spring
     readonly property var spring: [0.34, 1.2, 0.64, 1, 1, 1]
@@ -171,18 +171,28 @@ Item {
         opacity: Math.max(bar.bgAlpha, isl.mode === "menu" && !shell.cfg.glassBar ? 0.97 : 0) * bar.intro
         Behavior on opacity { NumberAnimation { duration: main.ms(260) } }
         transform: Translate { y: (1 - bar.intro) * (isl.atBottom ? 14 : -14) }
-        layer.enabled: true
-        layer.effect: MultiEffect {
-            shadowEnabled: true; shadowColor: "#000000"; shadowOpacity: 0.38
-            shadowBlur: 0.7; shadowVerticalOffset: 3; shadowHorizontalOffset: 0
-        }
+    }
+    SoftShadow {
+        z: -1
+        visible: !shell.cfg.glassBar                      // frosted glass has no drop shadow
+        x: surface.x; y: surface.y; width: surface.width; height: surface.height
+        radius: surface.radius; opacity: bar.intro
     }
 
     // ---------------------------------------------------------------- the side pieces of the split island
-    readonly property real pieceH: base - 6
+    readonly property real pieceH: base - 2
     readonly property real pieceGap: 8
-    readonly property real extL: split ? leftPiece.x - 6 : surface.x
-    readonly property real extR: split ? (isl.shell.notifier.dnd ? moonPiece.x + moonPiece.width : rightPiece.x + rightPiece.width) + 6 : surface.x + surface.width
+    readonly property bool piecesOn: split && mode !== "bar"
+    // The input region must not follow the animation (the compositor would be told a new region every frame):
+    // it is the bounding box of where the island is going, kept until the motion has settled.
+    property real bbW: collapsedW
+    property real bbH: base
+    readonly property real sideExtra: piecesOn ? pieceGap + pieceH + 6 + (shell.notifier.dnd ? pieceGap + pieceH : 0) : 0
+    onTargetWChanged: { bbW = Math.max(bbW, targetW); bbShrink.restart(); }
+    onTargetHChanged: { bbH = Math.max(bbH, targetH); bbShrink.restart(); }
+    Timer { id: bbShrink; interval: 900; onTriggered: { isl.bbW = isl.targetW; isl.bbH = isl.targetH; } }
+    readonly property real extL: (width - bbW) / 2 - sideExtra
+    readonly property real extR: width - extL
     readonly property real pieceY: atBottom ? surface.y + surface.height - pieceH : surface.y
     readonly property var wifiDev: Networking.devices.values.find(d => d.type === DeviceType.Wifi)
     readonly property var wifiNet: wifiDev ? wifiDev.networks.values.find(n => n.connected) : null
@@ -194,21 +204,22 @@ Item {
         property bool lit: false
         default property alias content: inner.data
         signal clicked()
-        visible: isl.split
+        property bool shown: isl.split && isl.mode !== "bar"
+        visible: opacity > 0.01
         width: isl.pieceH; height: isl.pieceH
         y: isl.pieceY
         Behavior on y { SpringAnimation { spring: 3.2; damping: 0.5; epsilon: 0.25 } }
-        opacity: bar.intro
+        opacity: shown ? bar.intro : 0
+        Behavior on opacity { NumberAnimation { duration: main.ms(260); easing.type: Easing.OutCubic } }
         scale: hov.hovered ? 1.14 : 1
         transformOrigin: Item.Center
         Behavior on scale { SpringAnimation { spring: 5; damping: 0.45; epsilon: 0.002 } }
+        SoftShadow { z: -1; visible: !isl.shell.cfg.glassBar; anchors.fill: parent; radius: width / 2; opacity: bar.intro }
         Rectangle {
             id: disc
             anchors.fill: parent; radius: width / 2
             color: main.bg; border.width: 1; border.color: pc.lit ? main.accent : main.border
             opacity: bar.bgAlpha
-            layer.enabled: true
-            layer.effect: MultiEffect { shadowEnabled: true; shadowColor: "#000000"; shadowOpacity: 0.38; shadowBlur: 0.7; shadowVerticalOffset: 3 }
         }
         Item { id: inner; anchors.fill: parent }
         HoverHandler { id: hov; cursorShape: Qt.PointingHandCursor }
@@ -239,11 +250,16 @@ Item {
         x: surface.x + surface.width + isl.pieceGap
         lit: isl.menu === "quick"
         onClicked: isl.openMenu("quick", stack.glyphFor("quick"), "")
-        SignalBars { anchors.centerIn: parent; level: isl.wifiLevel; off: !Networking.wifiEnabled; tint: main.icon; size: main.barPx }
+        BatteryRing {
+            anchors.fill: parent; anchors.margins: 1
+            present: isl.hasBattery; level: isl.level; charging: isl.charging; tint: main.accent
+            stroke: Math.max(2, parent.width * 0.1)
+        }
+        SignalBars { anchors.centerIn: parent; level: isl.wifiLevel; off: !Networking.wifiEnabled; tint: main.icon; size: parent.width * 0.5 }
     }
     Piece {
         id: moonPiece
-        visible: isl.split && isl.shell.notifier.dnd
+        shown: isl.split && isl.mode !== "bar" && isl.shell.notifier.dnd
         x: rightPiece.x + rightPiece.width + isl.pieceGap
         onClicked: isl.shell.notifier.dnd = false
         Text { anchors.centerIn: parent; text: String.fromCodePoint(0xF0594); color: main.accent; font { family: "JetBrainsMono Nerd Font Propo"; pixelSize: main.barPx } }

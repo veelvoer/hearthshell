@@ -27,6 +27,7 @@ PanelWindow {
         "notifications popups quiet do not disturb timeout daemon mako dunst",
         "about shortcuts reset defaults keys"]
     property string query: ""
+    readonly property var pageIcons: [0xF03D8, 0xF0A1F, 0xF0572, 0xF003B, 0xF05B1, 0xF037D, 0xF05CC, 0xF0493, 0xF0570, 0xF009A, 0xF02FD]
     onWantedChanged: if (!wanted) { query = ""; search.text = ""; }
     function matches(i) {
         const q = query.trim().toLowerCase();
@@ -140,8 +141,14 @@ PanelWindow {
                         x: 14; y: 122 + index * 44; width: nav.width - 28; height: 40
                         opacity: win.matches(index) ? 1 : 0.28
                         Behavior on opacity { NumberAnimation { duration: main.ms(180) } }
+                        IconTile {
+                            x: 8; anchors.verticalCenter: parent.verticalCenter; size: 26
+                            glyph: String.fromCodePoint(win.pageIcons[index])
+                            tint: win.page === index ? main.accent : main.muted
+                            Behavior on tint { ColorAnimation { duration: main.ms(180) } }
+                        }
                         Text {
-                            x: 18; anchors.verticalCenter: parent.verticalCenter; text: modelData
+                            x: 44; anchors.verticalCenter: parent.verticalCenter; text: modelData
                             color: win.page === index ? main.accent : (hover.containsMouse ? main.text : main.muted)
                             Behavior on color { ColorAnimation { duration: main.ms(180) } }
                             font { family: main.font; pixelSize: 14; weight: 600 }
@@ -182,7 +189,7 @@ PanelWindow {
                     }
                     Behavior on opacity { NumberAnimation { duration: main.ms(240); easing.type: Easing.OutCubic } }
                     Text { x: 32; y: 30; text: pg.heading; color: main.text; font { family: main.serif; pixelSize: 28 } }
-                    Text { x: 32; y: 70; text: pg.sub; color: main.muted; font { family: main.font; pixelSize: 13 } }
+                    Text { x: 32; y: 70; text: pg.sub; color: Qt.lighter(main.muted, 1.25); font { family: main.font; pixelSize: 13 } }
                     Column { id: stack; x: 32; y: 108; width: pg.width - 64; spacing: 14 }
                 }
 
@@ -536,7 +543,7 @@ PanelWindow {
                                          "islands": "Workspaces, clock and status each in their own pill.",
                                          "flat": "Edge to edge, rounded only on the free side.",
                                          "minimal": "No surface at all, just the content.",
-                                         "island": "A small clock pill that morphs into whatever is happening: the full bar on hover, volume, brightness, workspaces, charging, now playing, and the Wi-Fi, Bluetooth and quick settings menus." })[win.cfg.barStyle]
+                                         "island": "One pill that morphs into the bar, menus and pop-ups." })[win.cfg.barStyle]
                                 font { family: main.font; pixelSize: 12 }
                             }
                             HRow {
@@ -619,14 +626,12 @@ PanelWindow {
                                     required property string modelData
                                     readonly property string zone: win.shell.zoneOf(modelData)
                                     readonly property var info: win.shell.moduleInfo[modelData]
-                                    width: parent.width; height: 56
-                                    Column {
-                                        anchors.verticalCenter: parent.verticalCenter; width: parent.width - 330
-                                        spacing: 1
-                                        Text { text: mrow.info.label; color: mrow.zone === "" ? main.muted : main.text
-                                            font { family: main.font; pixelSize: 14; weight: 600 } }
-                                        Text { width: parent.width; elide: Text.ElideRight; text: mrow.info.desc; color: main.muted
-                                            font { family: main.font; pixelSize: 12 } }
+                                    width: parent.width; height: 48
+                                    IconTile { x: 2; anchors.verticalCenter: parent.verticalCenter; glyph: main.iconFor(mrow.info.label); tint: mrow.zone === "" ? main.muted : main.accent }
+                                    Text {
+                                        x: 46; anchors.verticalCenter: parent.verticalCenter; width: parent.width - 330 - 46; elide: Text.ElideRight
+                                        text: mrow.info.label; color: mrow.zone === "" ? main.muted : main.text
+                                        font { family: main.font; pixelSize: 14; weight: 600 }
                                     }
                                     Row {
                                         anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter; spacing: 8
@@ -879,11 +884,11 @@ PanelWindow {
                                     required property string modelData
                                     readonly property bool shown: (win.cfg.ccHidden || []).indexOf(modelData) < 0
                                     readonly property var info: win.shell.ccLabels[modelData] || [modelData, ""]
-                                    width: parent.width; height: 52
-                                    Column {
-                                        anchors.verticalCenter: parent.verticalCenter; width: parent.width - 170; spacing: 1
-                                        Text { text: crow.info[0]; color: crow.shown ? main.text : main.muted; font { family: main.font; pixelSize: 14; weight: 600 } }
-                                        Text { width: parent.width; elide: Text.ElideRight; text: crow.info[1]; color: main.muted; font { family: main.font; pixelSize: 12 } }
+                                    width: parent.width; height: 48
+                                    IconTile { x: 2; anchors.verticalCenter: parent.verticalCenter; glyph: main.iconFor(crow.info[0]); tint: crow.shown ? main.accent : main.muted }
+                                    Text {
+                                        x: 46; anchors.verticalCenter: parent.verticalCenter; width: parent.width - 170 - 46; elide: Text.ElideRight
+                                        text: crow.info[0]; color: crow.shown ? main.text : main.muted; font { family: main.font; pixelSize: 14; weight: 600 }
                                     }
                                     Row {
                                         anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter; spacing: 8

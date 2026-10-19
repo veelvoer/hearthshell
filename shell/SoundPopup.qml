@@ -22,7 +22,7 @@ Item {
     readonly property var source: Pipewire.defaultAudioSource
     readonly property bool ready: !!sink && sink.ready && !!sink.audio
     readonly property real wantedHeight: 62 + col.implicitHeight + 16
-    PwObjectTracker { objects: root.all }
+    PwObjectTracker { objects: root.active ? root.all : [] }
 
     function nameOf(n) { return n ? (n.nickname || n.description || n.name || "Device") : ""; }
     function appName(n) { const p = n.properties || {}; return p["application.name"] || p["media.name"] || n.nickname || n.name || "App"; }

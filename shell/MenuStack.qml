@@ -28,11 +28,15 @@ Item {
                   "calendar": "Calendar", "media": "Now playing", "sound": "Sound", "display": "Display" })[k] || "";
     }
 
+    // A menu is built the first time it is opened (the two used most are built up front) and stays; the rest cost nothing.
     component Slot: Loader {
         required property string kind
+        property bool wanted: kind === "quick" || kind === "network"
         width: st.width; height: st.height
         asynchronous: true
+        active: wanted || st.menu === kind
         visible: st.menu === kind
+        onVisibleChanged: if (visible) wanted = true
     }
     Slot { id: net; kind: "network"; sourceComponent: NetworkPopup { active: st.menu === "network"; settled: active && st.settled } }
     Slot { id: bt; kind: "bluetooth"; sourceComponent: BluetoothPopup { active: st.menu === "bluetooth"; settled: active && st.settled } }
