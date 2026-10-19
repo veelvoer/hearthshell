@@ -100,21 +100,10 @@ Item {
     readonly property bool charging: !!battery && battery.state === UPowerDeviceState.Charging
     Connections { target: isl.battery; function onStateChanged() { if (isl.hasBattery) isl.peek("battery"); } }
 
-    property int bright: -1
-    Process {
-        id: brightReader
-        command: ["brightnessctl", "-m"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                const f = text.trim().split("\n")[0].split(",");
-                if (f.length < 5 || f[1] !== "backlight") return;
-                const v = parseInt(f[3]);
-                if (isl.bright >= 0 && v !== isl.bright) isl.peek("brightness");
-                isl.bright = v;
-            }
-        }
-    }
-    Timer { interval: 1000; running: isl.bar.island; repeat: true; triggeredOnStart: true; onTriggered: brightReader.running = true }
+    BacklightReader { id: backlight; running: isl.bar.island }
+    readonly property int bright: backlight.percent
+    onBrightChanged: if (backlight.percent >= 0 && prevBright >= 0 && bright !== prevBright) { peek("brightness"); prevBright = bright; } else prevBright = bright
+    property int prevBright: -1
 
     readonly property var players: Mpris.players ? Mpris.players.values : []
     readonly property var player: {
@@ -255,7 +244,12 @@ Item {
             present: isl.hasBattery; level: isl.level; charging: isl.charging; tint: main.accent
             stroke: Math.max(2, parent.width * 0.1)
         }
-        SignalBars { anchors.centerIn: parent; level: isl.wifiLevel; off: !Networking.wifiEnabled; tint: main.icon; size: parent.width * 0.5 }
+        Text {
+            anchors.centerIn: parent
+            text: String.fromCodePoint(!Networking.wifiEnabled ? 0xF05AA : isl.wifiNet ? 0xF091F + (Math.max(1, isl.wifiLevel) - 1) * 3 : 0xF092D)
+            color: main.icon
+            font { family: "JetBrainsMono Nerd Font Propo"; pixelSize: parent.width * 0.5 }
+        }
     }
     Piece {
         id: moonPiece

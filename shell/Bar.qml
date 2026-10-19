@@ -41,9 +41,10 @@ PanelWindow {
                                        : leftW + rightW + ((leftW > 0 && rightW > 0) ? gap * 2 : 0) + pad * 2
 
     color: "transparent"
-    // the island needs room to grow into menus; its input region is only the pill itself
-    implicitHeight: island ? 640 : shell.cfg.barHeight
-    implicitWidth: island ? Math.max(pillW, 400) + 160 : (pill ? pillW : 0)
+    // The island's window is only as big as the island is about to be (plus a little room): a big transparent window
+    // costs the compositor a blur and a redraw of every pixel of it, which held the whole desktop near 30 fps.
+    implicitHeight: island ? (islandRef ? Math.ceil(islandGap + islandRef.bbH + 14) : 64) : shell.cfg.barHeight
+    implicitWidth: island ? (islandRef ? Math.ceil(islandRef.bbW + 2 * islandRef.sideExtra + 60) : 400) : (pill ? pillW : 0)
     // every style reserves its own strip, so windows tile below the bar instead of sliding under it
     exclusionMode: ExclusionMode.Normal
     exclusiveZone: island ? islandGap + shell.cfg.barHeight : shell.cfg.barHeight
@@ -55,7 +56,7 @@ PanelWindow {
     // The island's input region is its pill plus a little slack, running out to the screen edge so a flick to the edge finds it
     readonly property real maskX: maskIsland && islandRef ? Math.max(0, islandRef.extL - 12) : 0
     readonly property real maskW: maskIsland && islandRef ? Math.min(width - maskX, islandRef.extR - islandRef.extL + 24) : width
-    readonly property real maskBoxH: maskIsland && islandRef ? islandGap + islandRef.bbH + 10 : height
+    readonly property real maskBoxH: maskIsland && islandRef ? Math.min(height, islandGap + islandRef.bbH + 10) : height
     readonly property real maskY: maskIsland && atBottom ? height - maskBoxH : 0
     readonly property real maskH: !maskIsland ? height : maskBoxH
     mask: Region { x: win.maskX; y: win.maskY; width: win.maskW; height: win.maskH }

@@ -167,6 +167,13 @@ GLASS_RULE = (
 )
 
 
+def blur_params(size: int) -> tuple[int, int]:
+    """Hyprland blur passes and size for the "Blur strength" slider. Every pass costs a full-screen filter, and on a
+    laptop GPU four of them held the whole desktop at 30 fps, so two passes with a wider spread give the same softness."""
+    passes = 2 if size <= 10 else 3
+    return passes, size * 2 if passes == 2 else size
+
+
 def lua_config(t: Theme, c: dict[str, str], opt: Opt) -> str:
     """Hyprland builds with the Lua config: one hl.config call plus the glass toggles."""
     grad = ",".join(f'"rgba({bare(col)}ff)"' for col in t["grad"])
@@ -174,7 +181,7 @@ def lua_config(t: Theme, c: dict[str, str], opt: Opt) -> str:
     active = f"{{colors={{{grad}}},angle=45}}" if opt["gradientBorder"] else solid
     shadow = bare(mix(c["bg"], "#000000", 0.5))
     size = int(opt["blurSize"])
-    passes = max(1, min(4, round(size / 2)))
+    passes, size = blur_params(size)
     tf = lambda k: "true" if opt[k] else "false"
     shadows = "true" if opt["shadow"] and int(opt["shadowSize"]) > 0 else "false"
     anims = "false" if opt["motion"] == "off" else "true"
@@ -212,8 +219,8 @@ def keyword_settings(t: Theme, c: dict[str, str], opt: Opt) -> list[tuple[str, s
         ("decoration:inactive_opacity", f"{float(opt['inactiveOpacity']):.2f}"),
         ("decoration:shadow:enabled", shadows), ("decoration:shadow:range", str(max(1, int(opt["shadowSize"])))),
         ("decoration:shadow:color", f"rgba({bare(mix(c['bg'], '#000000', 0.5))}aa)"),
-        ("decoration:blur:enabled", yn("blur")), ("decoration:blur:size", str(size)),
-        ("decoration:blur:passes", str(max(1, min(4, round(size / 2))))),
+        ("decoration:blur:enabled", yn("blur")), ("decoration:blur:size", str(blur_params(size)[1])),
+        ("decoration:blur:passes", str(blur_params(size)[0])),
         ("animations:enabled", "false" if opt["motion"] == "off" else "true"),
         ("input:follow_mouse", "1" if opt["followMouse"] else "0"),
         ("input:sensitivity", f"{float(opt['pointerSpeed']):.2f}"),

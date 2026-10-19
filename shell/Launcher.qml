@@ -17,7 +17,7 @@ PanelWindow {
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.namespace: "quickshell-popup"
     WlrLayershell.keyboardFocus: wanted ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
-    visible: true                       // stays mapped but empty (like Popups), so opening is instant
+    visible: wanted || k > 0.005
     mask: Region { item: (wanted || k > 0.005) ? hit : null }
 
     property string query: ""

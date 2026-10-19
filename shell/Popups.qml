@@ -107,7 +107,8 @@ PanelWindow {
     property bool warming: false
     readonly property bool live: wanted || (p > 0.002 && !warming)
     color: "transparent"
-    visible: true
+    // mapped only while a menu is up or warming: a permanently mapped full-screen glass layer is blurred every frame
+    visible: wanted || p > 0.002 || warming
     mask: Region { item: win.live ? hitArea : null }
     anchors { top: true; bottom: true; left: true; right: true }
     exclusionMode: ExclusionMode.Ignore

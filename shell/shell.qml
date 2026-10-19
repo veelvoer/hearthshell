@@ -587,7 +587,7 @@ ShellRoot {
 
     // Wi-Fi / Bluetooth menus that grow out of the bar buttons
     Variants {
-        model: shellRoot.screens
+        model: shellRoot.cfg.barStyle === "island" ? [] : shellRoot.screens      // the island hosts its own menus
         Popups {
             required property var modelData
             screen: modelData
