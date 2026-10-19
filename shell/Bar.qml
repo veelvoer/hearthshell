@@ -44,7 +44,7 @@ PanelWindow {
     // The island's window is only as big as the island is about to be (plus a little room): a big transparent window
     // costs the compositor a blur and a redraw of every pixel of it, which held the whole desktop near 30 fps.
     implicitHeight: island ? (islandRef ? Math.ceil(islandGap + islandRef.bbH + 14) : 64) : shell.cfg.barHeight
-    implicitWidth: island ? (islandRef ? Math.ceil(islandRef.bbW + 2 * islandRef.sideExtra + 60) : 400) : (pill ? pillW : 0)
+    implicitWidth: island ? Math.ceil((Math.max(pillW, 400) + 2 * (islandRef ? islandRef.sideMax : 0) + 60) / 40) * 40 : (pill ? pillW : 0)   // fixed while it animates, so nothing slides sideways
     // every style reserves its own strip, so windows tile below the bar instead of sliding under it
     exclusionMode: ExclusionMode.Normal
     exclusiveZone: island ? islandGap + shell.cfg.barHeight : shell.cfg.barHeight

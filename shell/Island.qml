@@ -171,11 +171,12 @@ Item {
     // ---------------------------------------------------------------- the side pieces of the split island
     readonly property real pieceH: base - 2
     readonly property real pieceGap: 8
-    readonly property bool piecesOn: split && mode !== "bar"
+    readonly property bool piecesOn: split && (mode === "idle" || mode === "activity")
     // The input region must not follow the animation (the compositor would be told a new region every frame):
     // it is the bounding box of where the island is going, kept until the motion has settled.
     property real bbW: collapsedW
     property real bbH: base
+    readonly property real sideMax: split ? 2 * (pieceGap + pieceH) + 12 : 0
     readonly property real sideExtra: piecesOn ? pieceGap + pieceH + 6 + (shell.notifier.dnd ? pieceGap + pieceH : 0) : 0
     onTargetWChanged: { bbW = Math.max(bbW, targetW); bbShrink.restart(); }
     onTargetHChanged: { bbH = Math.max(bbH, targetH); bbShrink.restart(); }
@@ -193,7 +194,7 @@ Item {
         property bool lit: false
         default property alias content: inner.data
         signal clicked()
-        property bool shown: isl.split && isl.mode !== "bar"
+        property bool shown: isl.split && (isl.mode === "idle" || isl.mode === "activity")
         visible: opacity > 0.01
         width: isl.pieceH; height: isl.pieceH
         y: isl.pieceY
@@ -245,7 +246,7 @@ Item {
             stroke: Math.max(2, parent.width * 0.1)
         }
         Text {
-            anchors.centerIn: parent
+            anchors.centerIn: parent; anchors.verticalCenterOffset: -parent.width * 0.04
             text: String.fromCodePoint(!Networking.wifiEnabled ? 0xF05AA : isl.wifiNet ? 0xF091F + (Math.max(1, isl.wifiLevel) - 1) * 3 : 0xF092D)
             color: main.icon
             font { family: "JetBrainsMono Nerd Font Propo"; pixelSize: parent.width * 0.5 }
@@ -253,7 +254,7 @@ Item {
     }
     Piece {
         id: moonPiece
-        shown: isl.split && isl.mode !== "bar" && isl.shell.notifier.dnd
+        shown: isl.split && (isl.mode === "idle" || isl.mode === "activity") && isl.shell.notifier.dnd
         x: rightPiece.x + rightPiece.width + isl.pieceGap
         onClicked: isl.shell.notifier.dnd = false
         Text { anchors.centerIn: parent; text: String.fromCodePoint(0xF0594); color: main.accent; font { family: "JetBrainsMono Nerd Font Propo"; pixelSize: main.barPx } }
