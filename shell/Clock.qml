@@ -11,6 +11,7 @@ Text {
     font {
         family: main.font
         letterSpacing: 0
+        features: ["tnum"]
         pixelSize: main.barPx + 1
         weight: 600
     }

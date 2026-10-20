@@ -62,7 +62,7 @@ Item {
             Behavior on scale { NumberAnimation { duration: main.ms(140); easing.type: Easing.OutBack } }
         }
         MouseArea {
-            id: m; anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+            id: m; anchors.fill: parent; preventStealing: true; cursorShape: Qt.PointingHandCursor
             function set(mx) { track.moved(Math.max(0, Math.min(1, (mx - 10) / (track.width - 20)))); }
             onPressed: mouse => { root.dragging = true; set(mouse.x); }
             onPositionChanged: mouse => { if (pressed) set(mouse.x); }

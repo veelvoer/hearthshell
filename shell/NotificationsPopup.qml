@@ -71,9 +71,9 @@ Item {
                 }
                 Column {
                     width: parent.width - 42 - 26; spacing: 1
-                    Text { width: parent.width; elide: Text.ElideRight; text: row.modelData.summary; color: main.text; font { family: main.font; pixelSize: 13; weight: 600 } }
-                    Text { visible: text !== ""; width: parent.width; maximumLineCount: 2; wrapMode: Text.Wrap; elide: Text.ElideRight
-                        text: row.modelData.body; color: main.muted; font { family: main.font; pixelSize: 11 } }
+                    Text { width: parent.width; elide: Text.ElideRight; maximumLineCount: 1; textFormat: Text.PlainText; text: String(row.modelData.summary || "").replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim(); color: main.text; font { family: main.font; pixelSize: 13; weight: 600 } }
+                    Text { visible: text !== ""; width: parent.width; maximumLineCount: 2; wrapMode: Text.Wrap; elide: Text.ElideRight; textFormat: Text.PlainText
+                        text: String(row.modelData.body || "").replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim(); color: main.muted; font { family: main.font; pixelSize: 11 } }
                     Text { text: row.modelData.appName; color: main.muted; opacity: 0.7; font { family: main.font; pixelSize: 10; weight: 600 } }
                 }
                 Text {

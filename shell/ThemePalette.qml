@@ -6,12 +6,18 @@ QtObject {
     id: root
     property var src: ({})
     property real menuAlpha: 1      // < 1 = frosted bar menus
+    property color barOverride: "transparent"       // "transparent" = follow the theme
+    property color panelOverride: "transparent"
+    readonly property color barBg: barOverride.a > 0 ? barOverride : bg
+    readonly property color panelBase: panelOverride.a > 0 ? panelOverride : page
     property real panelAlpha: 1     // < 1 = frosted settings panel
     property string font: "Inter"   // UI font, chosen in Appearance
     property string serif: "Noto Serif"
     property real speed: 1          // animation speed multiplier, big = effectively instant
     property int barPx: 13          // text size of bar modules
     property string iconMode: "accent"   // accent | text | colour
+    property bool burst: false          // a different palette colour per surface
+    function tone(i) { const t = [wsa, blue, green, yellow, magenta, cyan]; return burst ? t[((i % 6) + 6) % 6] : wsa; }
     function ms(d) { return Math.max(1, Math.round(d / speed)); }
 
     property color bg: src.bg
@@ -34,7 +40,7 @@ QtObject {
     readonly property color dim: Qt.darker(bg, 1.54)                       // deepest background (bar, terminal)
     readonly property color surface: Qt.tint(dim, Qt.rgba(bg.r, bg.g, bg.b, 0.55)) // active workspace, raised bits
     readonly property color page: Qt.darker(bg, 1.35)
-    readonly property color card: Qt.lighter(bg, 1.28)
+    readonly property color card: Qt.lighter(panelOverride.a > 0 ? panelOverride : bg, 1.28)
     // neutral hairline for the bar and lock input: never clashes with a theme's accent
     readonly property color border: Qt.rgba(text.r, text.g, text.b, 0.16)
     readonly property color line: Qt.rgba(text.r, text.g, text.b, 0.13)

@@ -21,7 +21,7 @@ Item {
     readonly property real barX: shell.barClockX >= 0 ? shell.barClockX : cx
     readonly property real barY: shell.cfg.barPos === "bottom" ? height - shell.barCenterY : shell.barCenterY
     readonly property real cx: width / 2
-    readonly property real cy: height * 0.40
+    readonly property real cy: height * shell.cfg.lockClockY
     readonly property real gap: shell.stackGap * f / shell.lockFontPx
     function lerp(a, b) { return a + (b - a) * p; }
 
@@ -43,6 +43,27 @@ Item {
         blurMax: 56
         brightness: -0.12 * shell.blurAmt * shell.cfg.lockBlur
         saturation: -0.1 * shell.blurAmt * shell.cfg.lockBlur
+    }
+
+    Rectangle { anchors.fill: parent; color: "black"; opacity: shell.cfg.lockDim * shell.blurAmt }
+
+    // ---- your widgets (arranged in Settings > Desktop)
+    Repeater {
+        model: shell.cfg.lockWidgetsEnabled ? (shell.cfg.lockWidgets || []) : []
+        delegate: Item {
+            id: lw
+            required property var modelData
+            readonly property real k: modelData.scale * root.height / 1080
+            readonly property var def: root.shell.widgetTypes[modelData.type]
+            visible: !!def
+            x: modelData.x * root.width; y: modelData.y * root.height
+            width: def ? def.w * k : 0; height: def ? def.h * k : 0
+            opacity: root.shell.uiOpacity
+            DesktopWidget {
+                spec: lw.modelData; shell: root.shell; live: lw.modelData.type === "media"; scale: lw.k; transformOrigin: Item.TopLeft
+                originX: lw.x; originY: lw.y; screenW: root.width; screenH: root.height; backdropUrl: root.shotPath
+            }
+        }
     }
 
     // ---- bar-size measuring (exact end state) -------------------------

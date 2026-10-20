@@ -2,7 +2,7 @@
   "everforest": {
     "name": "Everforest",
     "blurb": "Soft forest greens",
-    "walls": 4,
+    "walls": 8,
     "grad": [
       "a7c080",
       "83c092",
@@ -29,7 +29,7 @@
   "pink": {
     "name": "Sakura",
     "blurb": "Plum night, cherry blossom",
-    "walls": 4,
+    "walls": 8,
     "grad": [
       "ff7188",
       "ffa4b4",
@@ -56,7 +56,7 @@
   "yellow": {
     "name": "Amber",
     "blurb": "Warm brown, golden hour",
-    "walls": 4,
+    "walls": 8,
     "grad": [
       "ffd36a",
       "ffe08a",
@@ -83,7 +83,7 @@
   "green": {
     "name": "Fern",
     "blurb": "Deep woodland mint",
-    "walls": 4,
+    "walls": 8,
     "grad": [
       "62c98c",
       "7be0a5",
@@ -110,7 +110,7 @@
   "blue": {
     "name": "Glacier",
     "blurb": "Cold water, high peaks",
-    "walls": 4,
+    "walls": 8,
     "grad": [
       "4bb9e8",
       "73c9f0",
@@ -137,7 +137,7 @@
   "teal": {
     "name": "Lagoon",
     "blurb": "Teal dusk and tide",
-    "walls": 4,
+    "walls": 8,
     "grad": [
       "2bb1bb",
       "3fd0dc",
@@ -164,7 +164,7 @@
   "gruvbox": {
     "name": "Gruvbox",
     "blurb": "Warm retro earth tones",
-    "walls": 4,
+    "walls": 8,
     "grad": [
       "fabd2f",
       "fe8019",
@@ -191,7 +191,7 @@
   "nord": {
     "name": "Nord",
     "blurb": "Arctic, calm and clean",
-    "walls": 4,
+    "walls": 8,
     "grad": [
       "88c0d0",
       "81a1c1",
@@ -218,7 +218,7 @@
   "catppuccin": {
     "name": "Catppuccin",
     "blurb": "Mocha, soft pastels",
-    "walls": 4,
+    "walls": 8,
     "grad": [
       "cba6f7",
       "89b4fa",
@@ -245,7 +245,7 @@
   "tokyo": {
     "name": "Tokyo Night",
     "blurb": "Neon dusk over the city",
-    "walls": 4,
+    "walls": 8,
     "grad": [
       "7aa2f7",
       "bb9af7",
@@ -272,7 +272,7 @@
   "rosepine": {
     "name": "Ros\u00e9 Pine",
     "blurb": "Dusky rose and pine",
-    "walls": 4,
+    "walls": 8,
     "grad": [
       "ebbcba",
       "c4a7e7",
@@ -299,7 +299,7 @@
   "dracula": {
     "name": "Dracula",
     "blurb": "Vivid purple on charcoal",
-    "walls": 4,
+    "walls": 8,
     "grad": [
       "bd93f9",
       "ff79c6",
@@ -326,7 +326,7 @@
   "kanagawa": {
     "name": "Kanagawa",
     "blurb": "Ink, waves and wisteria",
-    "walls": 4,
+    "walls": 8,
     "grad": [
       "7e9cd8",
       "957fb8",

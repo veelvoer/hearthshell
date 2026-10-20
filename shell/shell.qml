@@ -138,6 +138,9 @@ ShellRoot {
         speed: ({ "off": 40, "relaxed": 0.65, "normal": 1, "snappy": 1.6 })[shellRoot.cfg.motion]
         barPx: shellRoot.cfg.barFont
         iconMode: shellRoot.cfg.iconMode
+        burst: shellRoot.cfg.colorBurst
+        barOverride: shellRoot.cfg.barColor !== "" ? shellRoot.cfg.barColor : "transparent"
+        panelOverride: shellRoot.cfg.panelColor !== "" ? shellRoot.cfg.panelColor : "transparent"
         panelAlpha: shellRoot.cfg.glassPanel ? Math.max(0.35, 1 - shellRoot.cfg.glassAmount) : 1
         menuAlpha: (shellRoot.cfg.glassPanel || shellRoot.cfg.glassBar) ? Math.max(0.35, 1 - shellRoot.cfg.glassAmount) : 1
     }
@@ -151,7 +154,7 @@ ShellRoot {
         "termOpacity": 0.92, "blurSize": 6,
         "barStyle": "classic", "barPos": "top",
         "glassBar": false, "glassPanel": false, "glassLauncher": false, "glassTerminal": false, "glassAmount": 0.4,
-        "drawnIcons": false, "islandSplit": false, "notifTimeout": 6, "weekMonday": true, "ccOrder": ["wifi", "bluetooth", "audio", "quiet", "night", "volume", "brightness", "media", "notifications"], "ccHidden": [], "motionBounce": 0.5, "notifications": true, "glassWindows": false, "glassBrowsers": true, "glassFiles": true, "glassEditors": true, "glassChat": true, "glassOther": true,
+        "drawnIcons": false, "islandSplit": false, "islandPanel": true, "colorBurst": false, "barColor": "", "panelColor": "", "islandCollapsedW": 0, "islandPanelH": 172, "ccLayout": { "cols": 6, "items": {} }, "nightLevel": 2, "shortcuts": {}, "shortcutsApplied": [], "homeEnabled": true, "homeWidgets": [], "lockWidgetsEnabled": true, "lockWidgets": [], "widgetNotes": {}, "widgetStyle": "auto", "widgetRadius": 26, "lockClockY": 0.4, "lockDim": 0, "notifTimeout": 6, "weekMonday": true, "ccOrder": ["wifi", "bluetooth", "audio", "quiet", "night", "volume", "brightness", "media", "notifications"], "ccHidden": ["airplane", "caffeine", "game", "mic", "micvol", "screenshot", "wallpaper", "theme", "battery", "system"], "motionBounce": 0.5, "notifications": true, "glassWindows": false, "glassBrowsers": true, "glassFiles": true, "glassEditors": true, "glassChat": true, "glassOther": true,
         "userWalls": {},
         "font": "Inter", "motion": "normal", "accent": "", "wallFit": "fill",
         "barHeight": 30, "barGap": 4, "barSide": 10, "barFont": 13, "modSpacing": 0, "iconMode": "accent",
@@ -187,6 +190,48 @@ ShellRoot {
     }
     Notifier { id: notifierObj }
     readonly property var notifier: notifierObj
+    readonly property var shortcutActions: [
+        { "id": "quick", "group": "Island menus", "label": "Control Center", "desc": "Open or close the Control Center", "fn": "openMenu", "arg": "quick" },
+        { "id": "theme", "group": "Island menus", "label": "Theme menu", "desc": "Pick a theme", "fn": "openMenu", "arg": "theme" },
+        { "id": "wallpaper", "group": "Island menus", "label": "Wallpaper menu", "desc": "Pick a wallpaper", "fn": "openMenu", "arg": "wallpaper" },
+        { "id": "calendar", "group": "Island menus", "label": "Calendar", "desc": "Open the calendar", "fn": "openMenu", "arg": "calendar" },
+        { "id": "notifications", "group": "Island menus", "label": "Notifications", "desc": "Open the notification centre", "fn": "openMenu", "arg": "notifications" },
+        { "id": "sound", "group": "Island menus", "label": "Sound menu", "desc": "Volume, outputs and microphones", "fn": "openMenu", "arg": "sound" },
+        { "id": "display", "group": "Island menus", "label": "Display menu", "desc": "Brightness and screen options", "fn": "openMenu", "arg": "display" },
+        { "id": "network", "group": "Island menus", "label": "Wi-Fi menu", "desc": "Networks", "fn": "openMenu", "arg": "network" },
+        { "id": "bluetooth", "group": "Island menus", "label": "Bluetooth menu", "desc": "Devices", "fn": "openMenu", "arg": "bluetooth" },
+        { "id": "media", "group": "Island menus", "label": "Now playing", "desc": "Open the media player", "fn": "openMenu", "arg": "media" },
+        { "id": "launcher", "group": "Shell", "label": "App launcher", "desc": "Open the launcher", "fn": "toggleLauncher", "arg": "" },
+        { "id": "power", "group": "Shell", "label": "Power menu", "desc": "Lock, sleep, restart, shut down", "fn": "togglePower", "arg": "" },
+        { "id": "settings", "group": "Shell", "label": "Settings", "desc": "Open or close settings", "fn": "toggleSettings", "arg": "" },
+        { "id": "lock", "group": "Shell", "label": "Lock screen", "desc": "Lock the computer", "fn": "lock", "arg": "" },
+        { "id": "dnd", "group": "Quick actions", "label": "Quiet mode", "desc": "Toggle do not disturb", "fn": "toggleDnd", "arg": "" },
+        { "id": "night", "group": "Quick actions", "label": "Night Light", "desc": "Toggle the warm screen colour", "fn": "toggle", "arg": "night" },
+        { "id": "game", "group": "Quick actions", "label": "Game Mode", "desc": "Toggle Game Mode", "fn": "toggle", "arg": "game" },
+        { "id": "caffeine", "group": "Quick actions", "label": "Keep Awake", "desc": "Toggle Keep Awake", "fn": "toggle", "arg": "caffeine" },
+        { "id": "nextWall", "group": "Quick actions", "label": "Next wallpaper", "desc": "Shuffle to another wallpaper", "fn": "shuffleWallpaper", "arg": "" },
+        { "id": "editDesktop", "group": "Shell", "label": "Edit desktop", "desc": "Customize the desktop widgets", "fn": "editDesktop", "arg": "home" },
+        { "id": "nextTheme", "group": "Quick actions", "label": "Next theme", "desc": "Switch to the next theme", "fn": "nextTheme", "arg": "" } ]
+    ShortcutManager { id: shortcutsObj; shell: shellRoot }
+    readonly property var shortcuts: shortcutsObj
+    WidgetDefs { id: widgetDefsObj }
+    readonly property var widgetDefs: widgetDefsObj
+    readonly property var widgetTypes: widgetDefsObj.types
+    readonly property var widgetOrder: widgetDefsObj.order
+    function setNote(id, text) {
+        const n = Object.assign({}, cfg.widgetNotes || {});
+        n[id] = text;
+        set("widgetNotes", n);
+    }
+    SystemStats { id: statsObj }
+    readonly property var stats: statsObj
+    DesktopEditor { id: editorObj; shell: shellRoot }
+    readonly property var editor: editorObj
+    HomeWidgets { shell: shellRoot }
+    UpdateChecker { id: updaterObj }
+    readonly property var updater: updaterObj
+    SystemToggles { id: togglesObj; nightLevel: shellRoot.cfg.nightLevel }
+    readonly property var toggles: togglesObj
     property bool settingsLoaded: false
     readonly property int wallIndex: cfg.wallIdx[cfg.theme] || 1
     readonly property string wallpaperSource: Quickshell.shellPath("wallpapers/" + cfg.theme + "/" + wallIndex + ".jpg")
@@ -245,26 +290,144 @@ ShellRoot {
     }
 
     // ---- Control Center layout ---------------------------------------------
-    readonly property var ccAll: ["wifi", "bluetooth", "audio", "quiet", "night", "volume", "brightness", "media", "notifications"]
-    readonly property var ccLabels: ({ "wifi": ["Wi-Fi", "Network tile with the name of the network"], "bluetooth": ["Bluetooth", "Tile with the connected device"],
+    readonly property var ccAll: ["wifi", "bluetooth", "audio", "quiet", "night", "airplane", "caffeine", "game", "mic", "screenshot", "wallpaper", "theme", "battery", "volume", "micvol", "brightness", "performance", "system", "media", "notifications"]
+    readonly property var ccLabels: ({
+        "wifi": ["Wi-Fi", "Network tile with the name of the network"], "bluetooth": ["Bluetooth", "Tile with the connected device"],
         "audio": ["Audio", "Output device tile; the arrow switches output"], "quiet": ["Quiet", "Do not disturb for notification pop-ups"],
-        "night": ["Night Light", "Warm screen colour (needs hyprsunset, gammastep or wlsunset)"], "volume": ["Volume", "Slider"],
-        "brightness": ["Brightness", "Slider (laptop screens)"], "media": ["Now playing", "Card with the cover, buttons and progress"],
-        "notifications": ["Notifications", "The latest three, with Clear all"] })
-    function ccMove(id, delta) {
-        const o = (cfg.ccOrder && cfg.ccOrder.length > 0 ? cfg.ccOrder : ccAll).slice();
-        const i = o.indexOf(id), j = i + delta;
-        if (i < 0 || j < 0 || j >= o.length) return;
-        o[i] = o[j]; o[j] = id;
-        set("ccOrder", o);
+        "night": ["Night Light", "Warm screen colour for the evening"], "airplane": ["Airplane", "Switch every radio off at once"],
+        "caffeine": ["Keep Awake", "Stop the screen and the computer from going to sleep"], "game": ["Game Mode", "Turn off animations, blur and gaps for speed"],
+        "mic": ["Microphone", "Mute or unmute the microphone"], "screenshot": ["Screenshot", "Pick a region and copy it to the clipboard"],
+        "wallpaper": ["Wallpaper", "Shuffle to another wallpaper of this theme"], "theme": ["Theme", "Switch to the next theme"],
+        "battery": ["Battery", "Charge level and time left"], "volume": ["Volume", "Slider"], "micvol": ["Mic volume", "Microphone input level slider"],
+        "brightness": ["Brightness", "Slider (laptop screens)"], "performance": ["Performance", "Eco, Normal or Performance power mode"],
+        "system": ["System", "Processor, memory and temperature"], "media": ["Now playing", "Card with the cover, buttons and progress"],
+        "notifications": ["Notifications", "The latest ones, with Clear all"] })
+    readonly property var ccFull: {
+        const out = (cfg.ccOrder && cfg.ccOrder.length > 0 ? cfg.ccOrder : ccAll).slice();
+        for (let i = 0; i < ccAll.length; i++) {
+            if (out.indexOf(ccAll[i]) >= 0) continue;
+            let at = out.length;
+            for (let j = i + 1; j < ccAll.length; j++) { const k = out.indexOf(ccAll[j]); if (k >= 0) { at = k; break; } }
+            out.splice(at, 0, ccAll[i]);
+        }
+        return out;
+    }
+    readonly property var ccDefaultHidden: ["airplane", "caffeine", "game", "mic", "micvol", "screenshot", "wallpaper", "theme", "battery", "system"]
+    readonly property var ccGlyphs: ({ "wifi": 0xF05A9, "bluetooth": 0xF00AF, "audio": 0xF057E, "quiet": 0xF009B, "night": 0xF0594, "airplane": 0xF001D,
+        "caffeine": 0xF0176, "game": 0xF0297, "mic": 0xF036C, "screenshot": 0xF0E51, "wallpaper": 0xF0E09, "theme": 0xF03D8, "battery": 0xF0079,
+        "volume": 0xF057E, "micvol": 0xF036C, "brightness": 0xF00E0, "performance": 0xF04C5, "system": 0xF061A, "media": 0xF075A, "notifications": 0xF009A })
+    readonly property var ccMinSize: ({ "volume": [2, 1], "micvol": [2, 1], "brightness": [2, 1], "performance": [2, 1], "system": [3, 2], "media": [3, 2], "notifications": [3, 2] })
+    readonly property var ccWide: ["volume", "micvol", "brightness", "performance"]
+    function ccDefSize(id, cols) {
+        if (id === "media") return [cols, 3];
+        if (id === "notifications" || id === "system") return [cols, 2];
+        if (ccWide.indexOf(id) >= 0) return [cols, 1];
+        return [Math.max(1, Math.floor(cols / 2)), 1];
+    }
+    function ccCompute() {
+        const L = cfg.ccLayout || {};
+        const cols = Math.max(5, Math.min(9, L.cols || 6));
+        const saved = L.items || {};
+        const hidden = cfg.ccHidden || [];
+        const occ = {};
+        const out = {};
+        const mark = it => { for (let j = 0; j < it.h; j++) for (let i = 0; i < it.w; i++) occ[(it.y + j) * 20 + it.x + i] = true; };
+        const free = (x, y, w, h) => {
+            if (x < 0 || x + w > cols) return false;
+            for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) if (occ[(y + j) * 20 + x + i]) return false;
+            return true;
+        };
+        const sized = id => {
+            const d = ccDefSize(id, cols), mn = ccMinSize[id] || [1, 1], sv = saved[id];
+            const w = sv ? sv.w : d[0], h = sv ? sv.h : d[1];
+            return [Math.max(mn[0], Math.min(cols, w)), Math.max(mn[1], Math.min(6, h))];
+        };
+        const ids = ccFull.filter(id => hidden.indexOf(id) < 0);
+        for (const id of ids) {
+            const sv = saved[id];
+            if (!sv) continue;
+            const sz = sized(id), it = { "x": Math.max(0, Math.min(cols - sz[0], sv.x)), "y": Math.max(0, sv.y), "w": sz[0], "h": sz[1] };
+            if (free(it.x, it.y, it.w, it.h)) { out[id] = it; mark(it); }
+        }
+        for (const id of ids) {
+            if (out[id]) continue;
+            const sz = sized(id);
+            let placed = false;
+            for (let y = 0; !placed && y < 60; y++) for (let x = 0; !placed && x + sz[0] <= cols; x++) {
+                if (free(x, y, sz[0], sz[1])) { const it = { "x": x, "y": y, "w": sz[0], "h": sz[1] }; out[id] = it; mark(it); placed = true; }
+            }
+        }
+        return { "cols": cols, "items": out };
+    }
+    readonly property var ccGrid: ccCompute()
+    property var ccHistory: []
+    function ccSnapshot() {
+        const h = ccHistory.slice(-19);
+        h.push({ "layout": JSON.parse(JSON.stringify(cfg.ccLayout || { "cols": 6, "items": {} })), "hidden": (cfg.ccHidden || []).slice() });
+        ccHistory = h;
+    }
+    function ccUndo() {
+        if (ccHistory.length === 0) return;
+        const h = ccHistory.slice(), s = h.pop();
+        ccHistory = h;
+        set("ccLayout", s.layout); set("ccHidden", s.hidden);
+    }
+    function ccCollides(a, b) { return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h; }
+    function ccPlace(id, x, y, w, h) {
+        ccSnapshot();
+        const g = ccGrid, cols = g.cols, mn = ccMinSize[id] || [1, 1];
+        w = Math.max(mn[0], Math.min(cols, w)); h = Math.max(mn[1], Math.min(6, h));
+        x = Math.max(0, Math.min(cols - w, x)); y = Math.max(0, y);
+        const items = {};
+        for (const k in g.items) items[k] = Object.assign({}, g.items[k]);
+        items[id] = { "x": x, "y": y, "w": w, "h": h };
+        const queue = [id];
+        let guard = 0;
+        while (queue.length > 0 && guard++ < 400) {
+            const cid = queue.shift(), cur = items[cid];
+            for (const k in items) {
+                if (k === cid || k === id) continue;
+                if (ccCollides(cur, items[k])) { items[k].y = cur.y + cur.h; queue.push(k); }
+            }
+        }
+        set("ccLayout", { "cols": cols, "items": items });
+    }
+    function ccCompact() {
+        ccSnapshot();
+        const g = ccGrid;
+        const ids = Object.keys(g.items).sort((a, b) => g.items[a].y - g.items[b].y || g.items[a].x - g.items[b].x);
+        const placed = {};
+        for (const id of ids) {
+            const it = Object.assign({}, g.items[id]);
+            while (it.y > 0) {
+                const up = { "x": it.x, "y": it.y - 1, "w": it.w, "h": it.h };
+                if (Object.keys(placed).some(k => ccCollides(up, placed[k]))) break;
+                it.y--;
+            }
+            placed[id] = it;
+        }
+        set("ccLayout", { "cols": g.cols, "items": placed });
+    }
+    function ccSetCols(n) {
+        ccSnapshot();
+        set("ccLayout", { "cols": n, "items": (cfg.ccLayout && cfg.ccLayout.items) || {} });
     }
     function ccToggle(id) {
+        ccSnapshot();
         const h = (cfg.ccHidden || []).slice();
         const i = h.indexOf(id);
-        if (i >= 0) h.splice(i, 1); else h.push(id);
+        if (i >= 0) {
+            h.splice(i, 1);
+            const g = ccGrid, d = ccDefSize(id, g.cols), mn = ccMinSize[id] || [1, 1];
+            let bottom = 0;
+            for (const k in g.items) bottom = Math.max(bottom, g.items[k].y + g.items[k].h);
+            const items = JSON.parse(JSON.stringify(g.items));
+            items[id] = { "x": 0, "y": bottom, "w": Math.max(mn[0], d[0]), "h": Math.max(mn[1], d[1]) };
+            set("ccLayout", { "cols": g.cols, "items": items });
+        } else h.push(id);
         set("ccHidden", h);
     }
-    function ccReset() { set("ccOrder", ccAll.slice()); set("ccHidden", []); }
+    function ccReset() { ccSnapshot(); set("ccOrder", ccAll.slice()); set("ccHidden", ccDefaultHidden.slice()); set("ccLayout", { "cols": 6, "items": {} }); }
 
     // ---- popup menus (Wi-Fi, Bluetooth) ---------------------------------
     property var popup: ({ "kind": "", "screen": "", "rect": {}, "glyph": "", "label": "" })
@@ -548,6 +711,18 @@ ShellRoot {
         function togglePower() { shellRoot.togglePower(); }
         function openMenu(kind: string) { shellRoot.openMenu(kind); }
         function toggleDnd() { notifier.dnd = !notifier.dnd; }
+        function shuffleWallpaper() { shellRoot.shuffleWallpaper(); }
+        function editDesktop(tab: string) { shellRoot.closeSettings(); editorObj.show(tab); }
+        function nextTheme() {
+            const o = themesData.order, i = o.indexOf(cfg.theme);
+            shellRoot.setTheme(o[(i + 1) % o.length]);
+        }
+        function toggle(name: string) {
+            if (name === "night") togglesObj.toggleNight();
+            else if (name === "game") togglesObj.toggleGame();
+            else if (name === "airplane") togglesObj.toggleAirplane();
+            else if (name === "caffeine") togglesObj.toggleCaffeine();
+        }
     }
 
     // Wallpaper (replaces swaybg; crossfades on theme change)
@@ -614,7 +789,7 @@ ShellRoot {
             LockContent {
                 anchors.fill: parent
                 shell: shellRoot
-                shotPath: "file://" + shellRoot.shotDir + "/" + lockSurface.screen.name + ".png"
+                shotPath: "file://" + shellRoot.shotDir + "/" + (lockSurface.screen ? lockSurface.screen.name : "") + ".png"
                 status: shellRoot.authStatus
                 onSubmit: pw => shellRoot.submitPassword(pw)
                 Connections { target: shellRoot; function onAuthFailed() { clear(); shake(); focusInput(); } }

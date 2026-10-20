@@ -9,6 +9,14 @@ change almost everything: themes, wallpapers, the bar, the windows, even your te
 - **Bar styles** (classic, pill, islands, flat, minimal and an Apple-style **dynamic island**: a small clock pill that morphs into the bar on hover, into Wi-Fi/Bluetooth/quick-settings menus on click, and into volume, brightness, workspace, charging and now-playing moments), top or bottom, and a **module picker** (with an option to show module text only on hover):
   workspaces, clock, volume, brightness, network, Bluetooth, quick settings, battery, app launcher button, now playing, notification bell, power menu; Wi-Fi as signal bars and a drawn battery if you like
 - **A Control Center** (pill tiles for Wi-Fi, Bluetooth, audio output, Quiet and Night Light; fat volume and brightness sliders; a now-playing card with blurred cover art; the latest notifications) that you can reorder and trim in Settings, and a **calendar** that opens from the clock. Its sliders open **Sound** (outputs, microphones, per-app volume) and **Display** (brightness, scale, refresh rate). The island can also be shown **in three pieces** (music button, clock, Control Center button) with a moon when Quiet mode is on. Settings has a **search box**
+- **A hover dashboard** on the dynamic island (workspaces with the app icon of each, calendar, music, status), animated workspace
+  indicators (**Bars**, **Scroll** and **Stretch**) and **eight wallpapers per theme**
+- **Desktop and lock-screen widgets**: clock, analog clock, date, greeting, text, countdown, calendar, music, system, battery, notes and pictures,
+  with a full-screen editor (drag, resize, undo, five styles including real frosted glass) and a Customize panel per widget
+- **A Control Center you design**: a grid editor in Settings that shows the real thing (drag, resize, add and remove modules; 5 to 9 columns),
+  with Wi-Fi, Bluetooth, audio, Night Light, Airplane, Keep Awake, Game Mode, microphone, screenshot, theme, wallpaper, battery, system monitor,
+  and Eco / Normal / Performance power modes
+- **Your own shortcuts** for any island menu or quick action, and **updates from GitHub** inside Settings (with a backup you can restore)
 - **Built-in app launcher, power menu and notifications**: pop-ups that glide in, a notification centre with Do not disturb, all themed and frosted with the rest
 - **Wi-Fi and Bluetooth menus** that grow out of the bar button: networks, passwords, devices
 - **Frosted glass** for the bar, its menus and (optionally) other app windows, quick looks (one-click bundles), **your own saved presets**, animation speed
@@ -41,6 +49,13 @@ One line instead of cloning: `curl -fsSL https://raw.githubusercontent.com/veelv
 
 Then press **Super + ,**. Details, every option, a fully manual install and troubleshooting are in
 **[docs/INSTALL.md](docs/INSTALL.md)**.
+
+## Requirements worth knowing
+
+Quickshell, Python 3, ImageMagick and grim are required (the installer gets them). Night Light, Game Mode and the shortcut editor talk to
+Hyprland at runtime and are written for Hyprland's Lua configuration (0.55 and newer); on an older config they quietly do nothing.
+Eco / Normal / Performance need `power-profiles-daemon` (or `tuned-ppd`). `slurp` and `wl-clipboard` enable the screenshot tile,
+`kdialog` or `zenity` let you pick pictures, and `curl` is used for updates.
 
 ## The author's own configs
 

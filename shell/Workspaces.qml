@@ -12,9 +12,17 @@ RowLayout {
     property bool flat: bar ? bar.style === "minimal" : false   // minimal bar: only the active workspace gets a fill
 
     readonly property string wsStyle: cfg.wsStyle
+    readonly property bool animated: ["bars", "scroll", "stretch"].indexOf(cfg.wsStyle) >= 0
+
+    WorkspaceStyle {
+        visible: parent.animated
+        kind: cfg.wsStyle
+        Layout.preferredWidth: implicitWidth; Layout.preferredHeight: implicitHeight
+        Layout.maximumWidth: parent.animated ? implicitWidth : 0
+    }
 
     Repeater {
-        model: cfg.wsCount
+        model: parent.animated ? 0 : cfg.wsCount
 
         Rectangle {
             id: wsButton

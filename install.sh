@@ -218,7 +218,7 @@ fi
 
 # ---------------------------------------------------------------- what is missing
 REQUIRED='quickshell python3 imagemagick grim'
-OPTIONAL='brightnessctl networkmanager bluez chooser pipewire wireplumber upower fontconfig fonts'
+OPTIONAL='brightnessctl networkmanager bluez chooser pipewire wireplumber upower fontconfig fonts curl'
 DESKTOP='kitty rofi fish hyprlock slurp wl-clipboard playerctl cava'
 MISSING=''; PKGS=''; NEED_BUILD=0; NOPKG=''
 add_pkgs() { for p in $1; do case " $PKGS " in *" $p "*) ;; *) PKGS="$PKGS $p" ;; esac; done; }
@@ -357,7 +357,14 @@ run_step "Installing the shell"
 if [ -f "$INSTALL_DIR/shell.qml" ]; then info "updating an existing install (settings, themes and wallpapers are kept)"; fi
 make_dir "$INSTALL_DIR"
 if dry; then info "${C_D}would copy${C_0} $HERE/shell/ -> $INSTALL_DIR/"; else
-    cp -R "$HERE/shell/." "$INSTALL_DIR/" || die "copying the shell failed"
+    # the shell's own files only (an older release also copied a duplicate of the repository into shell/)
+    (cd "$HERE/shell" && tar -cf - --exclude=./docs --exclude=./dotfiles --exclude=./integration --exclude=./lib --exclude=./tests \
+        --exclude=./shell --exclude=./LICENSE --exclude=./README.md --exclude=./get.sh --exclude=./install.sh --exclude=./uninstall.sh \
+        --exclude=__pycache__ .) | (cd "$INSTALL_DIR" && tar -xf -) || die "copying the shell failed"
+    for junk in docs dotfiles integration lib tests shell LICENSE README.md get.sh install.sh uninstall.sh; do rm -rf "$INSTALL_DIR/$junk"; done
+    # remember which version this is, so Settings > Updates can tell when GitHub has a newer one
+    ver=$(git -C "$HERE" rev-parse HEAD 2>/dev/null || true)
+    [ -n "$ver" ] && printf '%s\n' "$ver" > "$INSTALL_DIR/.version"
     chmod +x "$INSTALL_DIR"/scripts/*.py "$INSTALL_DIR"/scripts/*.sh "$INSTALL_DIR"/bin/hearthshell 2>/dev/null
     [ -f "$INSTALL_DIR/custom-themes.json" ] || printf '{}\n' > "$INSTALL_DIR/custom-themes.json"
 fi

@@ -23,7 +23,7 @@ PanelWindow {
     readonly property var mods: shell.cfg.modules
     // the island floats the same distance from the screen edge as windows do from each other and from it
     readonly property real islandGap: Math.max(4, shell.cfg.gapsOut)
-    readonly property real maxMenuH: Math.max(200, Math.min(560, (screen ? screen.height : 900) - 140))
+    readonly property real maxMenuH: Math.max(200, Math.min(760, (screen ? screen.height : 900) - 140))
     property real intro: 0
 
     // the dynamic island lives in its own component; these are set by it
@@ -43,14 +43,14 @@ PanelWindow {
     color: "transparent"
     // The island's window is only as big as the island is about to be (plus a little room): a big transparent window
     // costs the compositor a blur and a redraw of every pixel of it, which held the whole desktop near 30 fps.
-    implicitHeight: island ? (islandRef ? Math.ceil(islandGap + islandRef.bbH + 14) : 64) : shell.cfg.barHeight
+    implicitHeight: island ? (islandRef ? Math.ceil(islandGap + islandRef.winH + 14) : 64) : shell.cfg.barHeight
     implicitWidth: island ? Math.ceil((Math.max(pillW, 400) + 2 * (islandRef ? islandRef.sideMax : 0) + 60) / 40) * 40 : (pill ? pillW : 0)   // fixed while it animates, so nothing slides sideways
     // every style reserves its own strip, so windows tile below the bar instead of sliding under it
     exclusionMode: ExclusionMode.Normal
     exclusiveZone: island ? islandGap + shell.cfg.barHeight : shell.cfg.barHeight
     WlrLayershell.namespace: "quickshell-bar"
     // on demand (not exclusive): a click grants keyboard focus for Esc, while the click-away catcher still receives the pointer
-    WlrLayershell.keyboardFocus: island && islandRef && (islandMenu !== "" || islandRef.hoverHold) ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+    WlrLayershell.keyboardFocus: island && islandMenu !== "" ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
     // Input: the whole window, except on the dynamic island where only the pill itself takes input
     readonly property bool maskIsland: island && islandSurface !== null && islandRef !== null
     // The island's input region is its pill plus a little slack, running out to the screen edge so a flick to the edge finds it
@@ -124,7 +124,7 @@ PanelWindow {
         property bool shown: true
         visible: opacity > 0.01
         opacity: shown ? win.bgAlpha * win.intro : 0
-        color: main.bg
+        color: main.barBg
         radius: win.radius
         border.color: main.border
         border.width: 1

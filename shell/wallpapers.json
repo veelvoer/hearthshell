@@ -25,6 +25,26 @@
         "source": "dharmx",
         "path": "nature/a_building_in_the_woods.jpg",
         "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "nature/a_forest_with_moss_and_trees.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "fogsmoke/a_foggy_forest_with_trees_01.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "fogsmoke/a_forest_of_trees_with_fog.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "fogsmoke/fog_in_the_forest_with_trees_and_fog.jpg",
+        "mode": "posterize"
       }
     ],
     "pink": [
@@ -46,6 +66,26 @@
       {
         "source": "dharmx",
         "path": "nature/a_forest_of_trees_with_fog.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "cherry/a_branch_with_pink_flowers.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "cherry/a_branch_with_pink_flowers_01.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "cherry/a_close_up_of_a_branch_with_pink_flowers.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "cherry/a_tree_with_pink_flowers.jpg",
         "mode": "posterize"
       }
     ],
@@ -69,6 +109,26 @@
         "source": "dharmx",
         "path": "gruvbox/a_body_of_water_with_buildings_in_the_background.jpg",
         "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "nature/a_sand_dunes_in_the_desert.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "nature/a_large_rocks_in_a_desert.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "nature/a_river_running_through_a_rocky_canyon.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "nature/a_stairs_leading_to_a_rocky_canyon_with_Flume_Gorge_in_the_background.jpg",
+        "mode": "posterize"
       }
     ],
     "green": [
@@ -90,6 +150,26 @@
       {
         "source": "dharmx",
         "path": "fogsmoke/a_foggy_forest_with_trees.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "nature/a_group_of_green_leaves.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "nature/a_group_of_trees_with_green_leaves.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "nature/plants_leaves_in_the_water.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "flowers/a_blue_flower_with_green_leaves.jpg",
         "mode": "posterize"
       }
     ],
@@ -113,6 +193,26 @@
         "source": "dharmx",
         "path": "cold/a_mountain_with_clouds_in_the_sky.jpg",
         "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "nord/a_large_waterfall_with_snow_and_ice.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "mountain/a_snowy_mountain_tops_with_blue_sky.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "mountain/a_snowy_mountain_with_a_lake_in_the_middle.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "nord/a_lake_with_mountains_and_trees.jpg",
+        "mode": "posterize"
       }
     ],
     "teal": [
@@ -134,6 +234,26 @@
       {
         "source": "dharmx",
         "path": "calm/a_beach_with_trees_on_the_side.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "aerial/a_rocky_beach_with_trees_and_water.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "nature/a_beach_with_waves_and_cliffs.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "nature/a_beach_with_waves_and_rocks.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "nature/a_rocky_beach_with_water_in_the_background.jpg",
         "mode": "posterize"
       }
     ],
@@ -157,6 +277,26 @@
         "source": "dharmx",
         "path": "calm/a_house_on_stilts_on_a_lake.jpg",
         "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "gruvbox/a_record_player_on_a_table.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "gruvbox/a_dark_alleyway_with_a_brick_building_and_a_window.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "gruvbox/a_cup_of_coffee_on_a_table.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "gruvbox/a_spiral_staircase_with_a_black_railing.jpg",
+        "mode": "posterize"
       }
     ],
     "nord": [
@@ -178,6 +318,26 @@
       {
         "source": "dharmx",
         "path": "calm/a_road_leading_to_mountains.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "cold/a_mountain_with_snow_and_trees.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "cold/a_mountain_with_snow_on_it.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "cold/a_snow_covered_mountain_top.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "cold/a_snowy_mountain_with_dark_clouds.jpg",
         "mode": "posterize"
       }
     ],
@@ -201,6 +361,26 @@
         "source": "dharmx",
         "path": "architecture/a_street_with_buildings_in_the_background.png",
         "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "flowers/a_close_up_of_purple_flowers_01.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "flowers/a_group_of_purple_flowers.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "flowers/a_purple_flower_on_a_plant.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "flowers/a_purple_flowers_growing_out_of_lily_pads_in_a_pond.jpg",
+        "mode": "posterize"
       }
     ],
     "tokyo": [
@@ -222,6 +402,26 @@
       {
         "source": "dharmx",
         "path": "cold/a_music_stand_with_a_book_on_it.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "architecture/a_city_at_night_with_many_tall_buildings.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "architecture/a_city_skyline_at_night.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "architecture/a_city_skyline_with_a_tall_building.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "outrun/a_city_at_night_with_a_fence_and_buildings.jpg",
         "mode": "posterize"
       }
     ],
@@ -245,6 +445,26 @@
         "source": "dharmx",
         "path": "flowers/a_group_of_pink_flowers.jpeg",
         "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "flowers/a_close_up_of_a_bush_with_pink_flowers.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "flowers/a_close_up_of_a_tree_with_pink_flowers.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "flowers/a_close_up_of_a_tree_with_pink_flowers_01.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "flowers/a_group_of_pink_flowers_on_a_bush.jpg",
+        "mode": "posterize"
       }
     ],
     "dracula": [
@@ -267,6 +487,26 @@
         "source": "dharmx",
         "path": "architecture/people_walking_on_a_platform.jpg",
         "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "flowers/a_bouquet_of_flowers_in_a_dark_room.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "flowers/a_bouquet_of_flowers_in_a_vase.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "flowers/a_bouquet_of_flowers_on_a_black_background.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "flowers/a_group_of_flowers_on_a_black_background.jpg",
+        "mode": "posterize"
       }
     ],
     "kanagawa": [
@@ -288,6 +528,26 @@
       {
         "source": "dharmx",
         "path": "cold/a_snowy_mountain_with_clouds_above.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "aerial/a_rocky_shore_with_waves_crashing_on_it.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "nature/waves_crashing_waves_on_the_ocean.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "nature/a_rocky_shore_with_waves_crashing_on_rocks.jpg",
+        "mode": "posterize"
+      },
+      {
+        "source": "dharmx",
+        "path": "calm/a_boat_on_the_water.jpg",
         "mode": "posterize"
       }
     ]

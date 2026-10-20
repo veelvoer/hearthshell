@@ -25,16 +25,25 @@ PanelWindow {
         "system kitty fish rofi gtk hyprlock firefox yazi dolphin cava micro lodica terminal lock screen",
         "control center tiles wifi bluetooth audio quiet night light volume brightness media order",
         "notifications popups quiet do not disturb timeout daemon mako dunst",
+        "shortcuts keys keybind hotkey bind control center theme wallpaper calendar launcher power lock super alt",
+        "desktop home lock screen widgets clock calendar media notes system customize edit layout wallpaper",
+        "updates update version github upgrade new release check restore backup",
         "about shortcuts reset defaults keys"]
     property string query: ""
-    readonly property var pageIcons: [0xF03D8, 0xF0A1F, 0xF0572, 0xF003B, 0xF05B1, 0xF037D, 0xF05CC, 0xF0493, 0xF0570, 0xF009A, 0xF02FD]
+    // the sidebar groups the pages; page numbers stay as they are, only the order they are shown in changes
+    readonly property var navOrder: [0, 1, 6, 2, 3, 8, 9, 11, 4, 5, 7, 10, 12, 13]
+    readonly property var navGroups: [{ "label": "Look", "from": 0 }, { "label": "Shell", "from": 3 }, { "label": "System", "from": 8 }, { "label": "App", "from": 12 }]
+    function groupOf(pos) { let g = 0; for (let i = 0; i < navGroups.length; i++) if (navGroups[i].from <= pos) g = i; return g; }
+    function navY(page) { const pos = navOrder.indexOf(page); return 84 + pos * 34 + groupOf(pos) * 26; }
+    function navStep(d) { const n = navOrder.length; return navOrder[(navOrder.indexOf(page) + d + n) % n]; }
+    readonly property var pageIcons: [0xF03D8, 0xF0A1F, 0xF0572, 0xF003B, 0xF05B1, 0xF037D, 0xF05CC, 0xF0493, 0xF0570, 0xF009A, 0xF030C, 0xF0379, 0xF06B0, 0xF02FD]
     onWantedChanged: if (!wanted) { query = ""; search.text = ""; }
     function matches(i) {
         const q = query.trim().toLowerCase();
         return q === "" || pages[i].toLowerCase().indexOf(q) >= 0 || pageWords[i].indexOf(q) >= 0;
     }
     function firstMatch() { for (let i = 0; i < pages.length; i++) if (matches(i)) return i; return -1; }
-    readonly property var pages: ["Appearance", "Creator", "Bar", "Modules", "Windows", "Input", "Glass", "System", "Control Center", "Notifications", "About"]
+    readonly property var pages: ["Appearance", "Creator", "Bar & Island", "Modules", "Windows", "Input", "Glass", "System", "Control Center", "Notifications", "Shortcuts", "Desktop", "Updates", "About"]
     property bool typing: false
     property bool accentPicker: false
     property string presetName: ""
@@ -88,18 +97,18 @@ PanelWindow {
         Keys.onEscapePressed: { if (win.typing) { keyScope.forceActiveFocus(); } else { win.shell.closeSettings(); } }
         Keys.onPressed: ev => {
             if (win.typing) return;
-            if (ev.key === Qt.Key_Down || ev.key === Qt.Key_Tab) { win.page = (win.page + 1) % win.pages.length; ev.accepted = true; }
-            else if (ev.key === Qt.Key_Up || ev.key === Qt.Key_Backtab) { win.page = (win.page + win.pages.length - 1) % win.pages.length; ev.accepted = true; }
+            if (ev.key === Qt.Key_Down || ev.key === Qt.Key_Tab) { win.page = win.navStep(1); ev.accepted = true; }
+            else if (ev.key === Qt.Key_Up || ev.key === Qt.Key_Backtab) { win.page = win.navStep(-1); ev.accepted = true; }
             else if (ev.key === Qt.Key_Slash || (ev.key === Qt.Key_F && (ev.modifiers & Qt.ControlModifier))) { search.focusInput(); ev.accepted = true; }
         }
 
         Rectangle {
             id: panel
-            width: Math.min(1000, parent.width - 60)
-            height: Math.min(780, parent.height - win.barZone - 40)
+            width: Math.min(880, parent.width - 60)
+            height: Math.min(700, parent.height - win.barZone - 40)
             x: (parent.width - width) / 2
             y: (win.barBottom ? 0 : win.barZone) + (parent.height - win.barZone - height) / 2
-            radius: 24; color: Qt.rgba(main.page.r, main.page.g, main.page.b, main.panelAlpha)
+            radius: 24; color: Qt.rgba(main.panelBase.r, main.panelBase.g, main.panelBase.b, main.panelAlpha)
             Behavior on color { ColorAnimation { duration: main.ms(260) } }
             border.width: 1; border.color: main.line
             opacity: win.wanted ? 1 : 0
@@ -113,43 +122,47 @@ PanelWindow {
             // ---------------- sidebar ----------------
             Item {
                 id: nav
-                x: 0; y: 0; width: 220; height: parent.height
-                Text {
-                    x: 28; y: 30; text: "Settings"; color: main.text
-                    font { family: main.serif; pixelSize: 26 }
-                }
+                x: 0; y: 0; width: 210; height: parent.height
                 HInput {
                     id: search
-                    x: 20; y: 70; width: nav.width - 40; height: 34
-                    placeholder: "Search settings  ( / )"
+                    x: 14; y: 14; width: nav.width - 28; height: 34
+                    placeholder: "Search Settings"
                     onEdited: v => { win.query = v; const m = win.firstMatch(); if (m >= 0 && !win.matches(win.page)) win.page = m; }
                     onSubmitted: v => { const m = win.firstMatch(); if (m >= 0) win.page = m; }
                     onTypingChanged: win.typing = typing
                 }
                 Rectangle {   // sliding selection pill
-                    x: 14; width: nav.width - 28; height: 40; radius: 12
-                    y: 122 + win.page * 44
-                    color: main.card; border.width: 1; border.color: main.line
+                    x: 14; width: nav.width - 28; height: 34; radius: 12
+                    y: win.navY(win.page) - 1
+                    color: main.card
                     Behavior on y { NumberAnimation { duration: main.ms(340); easing.type: Easing.BezierSpline; easing.bezierCurve: win.ease } }
-                    Rectangle { x: 0; width: 3; height: 18; radius: 2; anchors.verticalCenter: parent.verticalCenter; color: main.accent }
+                }
+                Repeater {
+                    model: win.navGroups
+                    Text {
+                        required property var modelData
+                        x: 26; y: win.navY(win.navOrder[modelData.from]) - 22
+                        text: modelData.label.toUpperCase(); color: main.muted
+                        font { family: main.font; pixelSize: 10; weight: 700; letterSpacing: 1.2 }
+                    }
                 }
                 Repeater {
                     model: win.pages
                     Item {
                         required property int index
                         required property string modelData
-                        x: 14; y: 122 + index * 44; width: nav.width - 28; height: 40
+                        x: 14; y: win.navY(index); width: nav.width - 28; height: 32
                         opacity: win.matches(index) ? 1 : 0.28
                         Behavior on opacity { NumberAnimation { duration: main.ms(180) } }
                         IconTile {
-                            x: 8; anchors.verticalCenter: parent.verticalCenter; size: 26
+                            x: 8; anchors.verticalCenter: parent.verticalCenter; size: 26; round: true; filled: win.page === index
                             glyph: String.fromCodePoint(win.pageIcons[index])
-                            tint: win.page === index ? main.accent : main.muted
+                            tint: win.page === index ? main.tone(index) : main.text
                             Behavior on tint { ColorAnimation { duration: main.ms(180) } }
                         }
                         Text {
                             x: 44; anchors.verticalCenter: parent.verticalCenter; text: modelData
-                            color: win.page === index ? main.accent : (hover.containsMouse ? main.text : main.muted)
+                            color: win.page === index || hover.containsMouse ? main.text : Qt.rgba(main.text.r, main.text.g, main.text.b, 0.82)
                             Behavior on color { ColorAnimation { duration: main.ms(180) } }
                             font { family: main.font; pixelSize: 14; weight: 600 }
                         }
@@ -161,13 +174,30 @@ PanelWindow {
                     text: "Esc to close"; color: main.muted; font { family: main.font; pixelSize: 12 }
                 }
             }
-            Rectangle { x: nav.width; y: 20; width: 1; height: parent.height - 40; color: main.line }
+            Rectangle {
+                x: nav.width; y: 16; width: 1; height: parent.height - 32
+                gradient: Gradient {
+                    GradientStop { position: 0; color: "transparent" }
+                    GradientStop { position: 0.12; color: main.line }
+                    GradientStop { position: 0.88; color: main.line }
+                    GradientStop { position: 1; color: "transparent" }
+                }
+            }
 
             // ---------------- pages ----------------
             Item {
                 id: content
                 x: nav.width + 1; width: parent.width - x; height: parent.height
-                clip: true
+
+                // soft edges where scrolled content meets the header and the bottom of the panel
+                Rectangle {
+                    z: 8; x: 0; y: 50; width: parent.width; height: 16
+                    gradient: Gradient { GradientStop { position: 0; color: Qt.rgba(main.panelBase.r, main.panelBase.g, main.panelBase.b, main.panelAlpha) } GradientStop { position: 1; color: Qt.rgba(main.panelBase.r, main.panelBase.g, main.panelBase.b, 0) } }
+                }
+                Rectangle {
+                    z: 8; x: 0; width: parent.width; height: 26; anchors.bottom: parent.bottom; anchors.bottomMargin: 14
+                    gradient: Gradient { GradientStop { position: 0; color: Qt.rgba(main.panelBase.r, main.panelBase.g, main.panelBase.b, 0) } GradientStop { position: 1; color: Qt.rgba(main.panelBase.r, main.panelBase.g, main.panelBase.b, main.panelAlpha) } }
+                }
 
                 component Page: Flickable {
                     id: pg
@@ -176,7 +206,8 @@ PanelWindow {
                     property string sub: ""
                     default property alias items: stack.data
                     readonly property bool current: win.page === idx
-                    anchors.fill: parent
+                    anchors { left: parent.left; right: parent.right; bottom: parent.bottom; top: parent.top; topMargin: 50; bottomMargin: 14 }
+                    clip: true
                     contentWidth: width; contentHeight: stack.y + stack.height + 32
                     boundsBehavior: Flickable.StopAtBounds
                     interactive: contentHeight > height
@@ -188,9 +219,29 @@ PanelWindow {
                         Behavior on x { NumberAnimation { duration: main.ms(420); easing.type: Easing.BezierSpline; easing.bezierCurve: win.ease } }
                     }
                     Behavior on opacity { NumberAnimation { duration: main.ms(240); easing.type: Easing.OutCubic } }
-                    Text { x: 32; y: 30; text: pg.heading; color: main.text; font { family: main.serif; pixelSize: 28 } }
-                    Text { x: 32; y: 70; text: pg.sub; color: Qt.lighter(main.muted, 1.25); font { family: main.font; pixelSize: 13 } }
-                    Column { id: stack; x: 32; y: 108; width: pg.width - 64; spacing: 14 }
+                    Item {
+                        x: 32; y: 4; width: pg.width - 64; height: 56
+                        IconTile { x: 2; anchors.verticalCenter: parent.verticalCenter; size: 40; round: true; tint: main.tone(pg.idx); glyph: String.fromCodePoint(win.pageIcons[pg.idx]) }
+                        Text { x: 56; y: 8; text: pg.heading; color: main.text; font { family: main.font; pixelSize: 17; weight: 700 } }
+                        Text { x: 56; y: 32; width: parent.width - 56; elide: Text.ElideRight; text: pg.sub; color: main.muted; font { family: main.font; pixelSize: 12 } }
+                    }
+                    Column { id: stack; x: 32; y: 76; width: pg.width - 64; spacing: 12 }
+                }
+
+                Row {
+                    z: 10; x: 32; y: 14; spacing: 8
+                    Repeater {
+                        model: [{ "t": "‹", "d": -1 }, { "t": "›", "d": 1 }]
+                        delegate: Rectangle {
+                            required property var modelData
+                            readonly property bool can: win.navOrder.indexOf(win.page) + modelData.d >= 0 && win.navOrder.indexOf(win.page) + modelData.d < win.navOrder.length
+                            width: 26; height: 26; radius: 13
+                            color: nm.containsMouse && can ? Qt.rgba(main.text.r, main.text.g, main.text.b, 0.16) : main.card
+                            opacity: can ? 1 : 0.4
+                            Text { anchors.centerIn: parent; anchors.verticalCenterOffset: -1; text: modelData.t; color: main.text; font { family: main.font; pixelSize: 16; weight: 600 } }
+                            MouseArea { id: nm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: if (can) win.page = win.navOrder[win.navOrder.indexOf(win.page) + modelData.d] }
+                        }
+                    }
                 }
 
                 // ===== Appearance =====
@@ -216,7 +267,7 @@ PanelWindow {
                         }
                     }
                     HCard {
-                        active: win.page === 0 && win.wanted; order: 1; title: "Quick looks"
+                        active: win.page === 0 && win.wanted; order: 1; title: "Quick looks"; collapsible: true
                         Column {
                             width: parent.width; spacing: 10
                             Flow {
@@ -239,7 +290,7 @@ PanelWindow {
                         }
                     }
                     HCard {
-                        active: win.page === 0 && win.wanted; order: 2; title: "My presets"
+                        active: win.page === 0 && win.wanted; order: 2; title: "My presets"; collapsible: true
                         Column {
                             width: parent.width; spacing: 12
                             Text {
@@ -307,6 +358,8 @@ PanelWindow {
                                     onPicked: c => win.put("accent", String(c))
                                 }
                             }
+                            HRow { label: "Color burst"; desc: "A different palette colour for each surface instead of one accent"
+                                HToggle { checked: win.cfg.colorBurst; onToggled: v => win.put("colorBurst", v) } }
                             Text { text: "Font"; color: main.text; font { family: main.font; pixelSize: 14; weight: 600 } }
                             FontChips { width: parent.width; value: win.cfg.font; onPicked: f => win.put("font", f) }
                             HRow {
@@ -318,6 +371,14 @@ PanelWindow {
                                     onPicked: i => win.put("motion", keys[i])
                                 }
                             }
+                        }
+                    }
+                    HCard {
+                        active: win.page === 0 && win.wanted; order: 3; title: "Colours of the shell"
+                        Column {
+                            width: parent.width; spacing: 0
+                            ColorOverride { label: "Bar and island"; value: win.cfg.barColor; themeColor: main.bg; onPicked: c => win.put("barColor", c) }
+                            ColorOverride { label: "Settings and menus"; value: win.cfg.panelColor; themeColor: main.page; onPicked: c => win.put("panelColor", c) }
                         }
                     }
                     HCard {
@@ -517,7 +578,7 @@ PanelWindow {
 
                 // ===== Bar =====
                 Page {
-                    idx: 2; heading: "Bar"; sub: "Pick a layout, then fine-tune it."
+                    idx: 2; heading: "Bar & Island"; sub: "Pick a layout, then fine-tune it."
                     HCard {
                         active: win.page === 2 && win.wanted; order: 0; title: "Layout"
                         Column {
@@ -564,12 +625,8 @@ PanelWindow {
                                 from: 0; to: 15; step: 1; decimals: 0; unit: " px"; value: win.cfg.barRadius; onMoved: v => win.put("barRadius", v) }
                             HSliderRow { label: "Island bounce"; desc: "How springy the dynamic island is when it changes shape"
                                 from: 0; to: 1; step: 0.05; value: win.cfg.motionBounce; onMoved: v => win.put("motionBounce", v) }
-                            HRow { label: "24-hour clock"; desc: "Use 14:30 instead of 2:30 PM"
-                                HToggle { checked: win.cfg.clock24; onToggled: v => win.put("clock24", v) } }
-                            HRow { label: "Show seconds"; desc: "Tick every second in the bar"
-                                HToggle { checked: win.cfg.clockSeconds; onToggled: v => win.put("clockSeconds", v) } }
-                            HRow { label: "Week starts on Monday"; desc: "In the calendar that opens when you click the clock"
-                                HToggle { checked: win.cfg.weekMonday; onToggled: v => win.put("weekMonday", v) } }
+                            HRow { label: "Hover dashboard"; desc: "Dynamic island: hovering opens the workspaces, calendar, media and status panel"
+                                HToggle { checked: win.cfg.islandPanel; onToggled: v => win.put("islandPanel", v) } }
                             HAdvanced {
                                 title: "More bar options"
                                 HSliderRow { label: "Bar height"; desc: "Thickness of the bar"
@@ -591,8 +648,8 @@ PanelWindow {
                             HRow { label: "Drawn icons"; desc: "Wi-Fi as signal bars and a drawn battery instead of font icons"
                                     HToggle { checked: win.cfg.drawnIcons; onToggled: v => win.put("drawnIcons", v) } }
                                 HRow { label: "Workspace style"; desc: "How the workspace indicators look"
-                                    HSegment { readonly property var keys: ["pills", "dots", "numbers"]
-                                        options: ["Pills", "Dots", "Numbers"]; segWidth: 72
+                                    HSegment { readonly property var keys: ["pills", "dots", "numbers", "bars", "scroll", "stretch"]
+                                        options: ["Pills", "Dots", "Numbers", "Bars", "Scroll", "Stretch"]; segWidth: 62
                                         current: Math.max(0, keys.indexOf(win.cfg.wsStyle)); onPicked: i => win.put("wsStyle", keys[i]) } }
                                 HSliderRow { label: "Workspaces shown"; desc: "How many workspaces appear"
                                     from: 3; to: 10; step: 1; decimals: 0; value: win.cfg.wsCount; onMoved: v => win.put("wsCount", v) }
@@ -604,7 +661,29 @@ PanelWindow {
                         }
                     }
                     HCard {
-                        active: win.page === 2 && win.wanted; order: 2; title: "Session"
+                        active: win.page === 2 && win.wanted; order: 2; title: "Island size"; collapsible: true
+                        Column {
+                            width: parent.width; spacing: 0
+                            HSliderRow { label: "Collapsed width"; desc: "Smallest width of the resting island. It always stays wide enough for its content (0 = automatic)"
+                                from: 0; to: 320; step: 2; decimals: 0; unit: " px"; value: win.cfg.islandCollapsedW; onMoved: v => win.put("islandCollapsedW", v) }
+                            HSliderRow { label: "Expanded height"; desc: "Height of the hover dashboard"
+                                from: 150; to: 260; step: 2; decimals: 0; unit: " px"; value: win.cfg.islandPanelH; onMoved: v => win.put("islandPanelH", v) }
+                        }
+                    }
+                    HCard {
+                        active: win.page === 2 && win.wanted; order: 3; title: "Clock and calendar"; collapsible: true
+                        Column {
+                            width: parent.width; spacing: 0
+                            HRow { label: "24-hour clock"; desc: "Use 14:30 instead of 2:30 PM"
+                                HToggle { checked: win.cfg.clock24; onToggled: v => win.put("clock24", v) } }
+                            HRow { label: "Show seconds"; desc: "Tick every second in the bar"
+                                HToggle { checked: win.cfg.clockSeconds; onToggled: v => win.put("clockSeconds", v) } }
+                            HRow { label: "Week starts on Monday"; desc: "In the calendar that opens when you click the clock"
+                                HToggle { checked: win.cfg.weekMonday; onToggled: v => win.put("weekMonday", v) } }
+                        }
+                    }
+                    HCard {
+                        active: win.page === 2 && win.wanted; order: 4; title: "Session"; collapsible: true
                         HRow {
                             label: "Lock screen"; desc: "Morphing clock lock, same as Super + N"
                             HButton { label: "Lock now"; primary: true; onClicked: { win.shell.closeSettings(); lockDelay.restart(); } }
@@ -651,7 +730,7 @@ PanelWindow {
                         }
                     }
                     HCard {
-                        active: win.page === 3 && win.wanted; order: 1; title: "Text next to icons"
+                        active: win.page === 3 && win.wanted; order: 1; title: "Text next to icons"; collapsible: true
                         Column {
                             width: parent.width; spacing: 2
                             HRow { label: "Show text"; desc: "Always, or only while the pointer is over a module"
@@ -671,7 +750,7 @@ PanelWindow {
                         }
                     }
                     HCard {
-                        active: win.page === 3 && win.wanted; order: 2; title: "Good to know"
+                        active: win.page === 3 && win.wanted; order: 2; title: "Good to know"; collapsible: true
                         Column {
                             width: parent.width; spacing: 10
                             Text { width: parent.width; wrapMode: Text.WordWrap; color: main.muted
@@ -768,7 +847,7 @@ PanelWindow {
                         }
                     }
                     HCard {
-                        active: win.page === 6 && win.wanted; order: 1; title: "Frosted app windows"
+                        active: win.page === 6 && win.wanted; order: 1; title: "Frosted app windows"; collapsible: true
                         Column {
                             width: parent.width; spacing: 2
                             HRow { label: "Frost other apps"; desc: "Makes the windows of the groups below see-through with the blurred backdrop"
@@ -786,7 +865,7 @@ PanelWindow {
                         }
                     }
                     HCard {
-                        active: win.page === 6 && win.wanted; order: 2; title: "Tuning"
+                        active: win.page === 6 && win.wanted; order: 2; title: "Tuning"; collapsible: true
                         Column {
                             width: parent.width; spacing: 4
                             HSliderRow { label: "Glass amount"; desc: "How see-through glass surfaces are"
@@ -821,7 +900,7 @@ PanelWindow {
                         }
                     }
                     HCard {
-                        active: win.page === 7 && win.wanted; order: 1; title: "Terminal"
+                        active: win.page === 7 && win.wanted; order: 1; title: "Terminal"; collapsible: true
                         Column {
                             width: parent.width; spacing: 4
                             HSliderRow { label: "Kitty opacity"; desc: "Transparency of terminal windows"
@@ -842,7 +921,7 @@ PanelWindow {
                         }
                     }
                     HCard {
-                        active: win.page === 7 && win.wanted; order: 2; title: "App launcher"
+                        active: win.page === 7 && win.wanted; order: 2; title: "App launcher"; collapsible: true
                         Column {
                             width: parent.width; spacing: 4
                             HSliderRow { label: "Width"; desc: "Width of the launcher window"
@@ -857,7 +936,7 @@ PanelWindow {
                         }
                     }
                     HCard {
-                        active: win.page === 7 && win.wanted; order: 3; title: "Lock screen"
+                        active: win.page === 7 && win.wanted; order: 3; title: "Lock screen"; collapsible: true
                         Column {
                             width: parent.width; spacing: 4
                             HSliderRow { label: "Clock size"; desc: "Size of the big lock-screen clock"
@@ -872,34 +951,254 @@ PanelWindow {
 
                 // ===== Control Center =====
                 Page {
-                    idx: 8; heading: "Control Center"; sub: "Choose what the Control Center shows and in what order."
-                    HCard {
-                        active: win.page === 8 && win.wanted; order: 0; title: "Tiles and sections"
-                        Column {
-                            width: parent.width; spacing: 2
-                            Repeater {
-                                model: win.cfg.ccOrder && win.cfg.ccOrder.length > 0 ? win.cfg.ccOrder : win.shell.ccAll
-                                Item {
-                                    id: crow
-                                    required property string modelData
-                                    readonly property bool shown: (win.cfg.ccHidden || []).indexOf(modelData) < 0
-                                    readonly property var info: win.shell.ccLabels[modelData] || [modelData, ""]
-                                    width: parent.width; height: 48
-                                    IconTile { x: 2; anchors.verticalCenter: parent.verticalCenter; glyph: main.iconFor(crow.info[0]); tint: crow.shown ? main.accent : main.muted }
-                                    Text {
-                                        x: 46; anchors.verticalCenter: parent.verticalCenter; width: parent.width - 170 - 46; elide: Text.ElideRight
-                                        text: crow.info[0]; color: crow.shown ? main.text : main.muted; font { family: main.font; pixelSize: 14; weight: 600 }
-                                    }
-                                    Row {
-                                        anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter; spacing: 8
-                                        HButton { label: "↑"; padX: 11; onClicked: win.shell.ccMove(crow.modelData, -1) }
-                                        HButton { label: "↓"; padX: 11; onClicked: win.shell.ccMove(crow.modelData, 1) }
-                                        HToggle { checked: crow.shown; onToggled: v => win.shell.ccToggle(crow.modelData) }
+                    idx: 8; heading: "Control Center"; sub: "Arrange it exactly as it will look: drag, resize, add and remove."
+                    Item {
+                        id: ccEditor
+                        width: parent.width
+                        readonly property bool below: width - frame.width - 20 < 200
+                        readonly property var flick: { let p = parent; while (p && p.contentY === undefined) p = p.parent; return p; }
+                        property var activeDrag: null
+                        property real pointerY: 0
+                        height: below ? frame.height + 16 + side.height : Math.max(frame.height, side.height)
+
+                        // while a tile is held near the top or bottom edge, the page scrolls on its own
+                        Timer {
+                            interval: 16; repeat: true; running: ccEditor.activeDrag !== null
+                            onTriggered: {
+                                const f = ccEditor.flick;
+                                if (!f) return;
+                                const edge = 70, top = ccEditor.pointerY, bottom = f.height - ccEditor.pointerY;
+                                const d = top < edge ? -16 * (edge - top) / edge : (bottom < edge ? 16 * (edge - bottom) / edge : 0);
+                                if (d === 0) return;
+                                const y = Math.max(0, Math.min(f.contentHeight - f.height, f.contentY + d));
+                                if (y === f.contentY) return;
+                                f.contentY = y;
+                                ccEditor.activeDrag.update();
+                            }
+                        }
+
+                        Rectangle {
+                            id: frame
+                            width: popup.wantedWidth; height: popup.wantedHeight
+                            radius: 28; color: main.bg; border.width: 1; border.color: main.border
+                            opacity: win.page === 8 && win.wanted ? 1 : 0
+                            Behavior on opacity { NumberAnimation { duration: main.ms(300) } }
+                            QuickPopup {
+                                id: popup
+                                anchors.fill: parent
+                                editing: true
+                                active: win.page === 8 && win.wanted
+                                shell: win.shell
+                            }
+                            Text {
+                                x: 18; y: 14; text: String.fromCodePoint(0xF0570); color: main.accent
+                                font { family: "JetBrainsMono Nerd Font Propo"; pixelSize: 22 }
+                            }
+                            Item {
+                                id: overlay
+                                x: popup.gridOrigin.x; y: popup.gridOrigin.y
+                                width: popup.gridItem.width; height: popup.gridItem.implicitHeight
+                                readonly property real cw: popup.gridItem.cellW
+                                readonly property real rh: popup.rowH
+                                readonly property real gap: popup.cellGap
+                                readonly property int cols: popup.layout.cols
+                                function cellX(g) { return g * (cw + gap); }
+                                function cellY(g) { return g * (rh + gap); }
+                                function shapeRadius(h) { return h <= 70 ? h / 2 : 30; }
+
+                                Rectangle {
+                                    id: ghost
+                                    visible: false; z: 1; radius: overlay.shapeRadius(height)
+                                    color: Qt.rgba(main.accent.r, main.accent.g, main.accent.b, 0.14)
+                                    border.width: 2; border.color: main.accent
+                                    Behavior on x { NumberAnimation { duration: main.ms(90); easing.type: Easing.OutCubic } }
+                                    Behavior on y { NumberAnimation { duration: main.ms(90); easing.type: Easing.OutCubic } }
+                                }
+                                Repeater {
+                                    model: popup.sections
+                                    delegate: Item {
+                                        id: mod
+                                        required property string modelData
+                                        readonly property var it: popup.layout.items[modelData]
+                                        readonly property var mn: win.shell.ccMinSize[modelData] || [1, 1]
+                                        property int pw: it ? it.w : 1
+                                        property int ph: it ? it.h : 1
+                                        property bool moving: false
+                                        property real px: 0
+                                        property real py: 0
+                                        readonly property bool hot: hh.hovered || moving || rz.pressed
+                                        function bindPos() {
+                                            x = Qt.binding(() => mod.it ? overlay.cellX(mod.it.x) : 0);
+                                            y = Qt.binding(() => mod.it ? overlay.cellY(mod.it.y) : 0);
+                                        }
+                                        Component.onCompleted: bindPos()
+                                        width: pw * overlay.cw + (pw - 1) * overlay.gap
+                                        height: ph * overlay.rh + (ph - 1) * overlay.gap
+                                        z: moving || rz.pressed ? 5 : 2
+                                        Behavior on width { enabled: !rz.pressed; NumberAnimation { duration: main.ms(160); easing.type: Easing.OutCubic } }
+                                        Behavior on height { enabled: !rz.pressed; NumberAnimation { duration: main.ms(160); easing.type: Easing.OutCubic } }
+                                        HoverHandler { id: hh }
+
+                                        Rectangle {
+                                            anchors.fill: parent; radius: overlay.shapeRadius(height)
+                                            color: mod.moving ? Qt.rgba(main.accent.r, main.accent.g, main.accent.b, 0.30) : "transparent"
+                                            border.width: mod.hot ? 2 : 0; border.color: main.accent
+                                            Behavior on color { ColorAnimation { duration: main.ms(120) } }
+                                        }
+                                        MouseArea {
+                                            id: mv
+                                            anchors.fill: parent; preventStealing: true
+                                            cursorShape: pressed ? Qt.ClosedHandCursor : Qt.OpenHandCursor
+                                            property point off
+                                            property int gx: 0
+                                            property int gy: 0
+                                            function update() {
+                                                const p = overlay.mapFromItem(ccEditor.flick, mod.px, mod.py);
+                                                mod.moving = true;
+                                                mod.x = Math.max(0, Math.min(overlay.width - mod.width, p.x - off.x));
+                                                mod.y = Math.max(0, Math.min(overlay.height - mod.height, p.y - off.y));
+                                                gx = Math.max(0, Math.min(overlay.cols - mod.pw, Math.round(mod.x / (overlay.cw + overlay.gap))));
+                                                gy = Math.max(0, Math.round(mod.y / (overlay.rh + overlay.gap)));
+                                                ghost.x = overlay.cellX(gx); ghost.y = overlay.cellY(gy);
+                                                ghost.width = mod.width; ghost.height = mod.height;
+                                                ghost.visible = true;
+                                            }
+                                            function finish() {
+                                                ccEditor.activeDrag = null;
+                                                ghost.visible = false;
+                                                if (!mod.moving) return;
+                                                mod.moving = false;
+                                                const moved = gx !== mod.it.x || gy !== mod.it.y;
+                                                mod.bindPos();
+                                                if (moved) win.shell.ccPlace(mod.modelData, gx, gy, mod.pw, mod.ph);
+                                            }
+                                            onPressed: m => {
+                                                const p = mapToItem(overlay, m.x, m.y);
+                                                off = Qt.point(p.x - mod.x, p.y - mod.y);
+                                                gx = mod.it.x; gy = mod.it.y;
+                                            }
+                                            onPositionChanged: m => {
+                                                if (!pressed) return;
+                                                const f = mapToItem(ccEditor.flick, m.x, m.y);
+                                                mod.px = f.x; mod.py = f.y;
+                                                ccEditor.pointerY = f.y;
+                                                ccEditor.activeDrag = mv;
+                                                update();
+                                            }
+                                            onReleased: finish()
+                                            onCanceled: finish()
+                                        }
+                                        Rectangle {
+                                            visible: mod.hot && !mod.moving
+                                            width: 20; height: 20; radius: 10; x: parent.width - width - 2; y: 2; z: 3
+                                            color: xm.containsMouse ? main.red : Qt.rgba(main.bg.r, main.bg.g, main.bg.b, 0.88)
+                                            border.width: 1; border.color: main.border
+                                            Text { anchors.centerIn: parent; anchors.verticalCenterOffset: -1; text: "×"; color: main.text; font { pixelSize: 14; weight: 700 } }
+                                            MouseArea { id: xm; anchors.fill: parent; anchors.margins: -3; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: win.shell.ccToggle(mod.modelData) }
+                                        }
+                                        Rectangle {
+                                            visible: mod.hot
+                                            width: 20; height: 20; radius: 10; x: parent.width - width - 2; y: parent.height - height - 2; z: 3
+                                            color: main.accent
+                                            Text { anchors.centerIn: parent; text: "↘"; color: main.onAccent; font { pixelSize: 12; weight: 700 } }
+                                            MouseArea {
+                                                id: rz
+                                                anchors.fill: parent; anchors.margins: -5; preventStealing: true; cursorShape: Qt.SizeFDiagCursor
+                                                property point start
+                                                property int sw: 1
+                                                property int sh: 1
+                                                function update() {
+                                                    const p = overlay.mapFromItem(ccEditor.flick, mod.px, mod.py);
+                                                    mod.pw = Math.max(mod.mn[0], Math.min(overlay.cols - mod.it.x, sw + Math.round((p.x - start.x) / (overlay.cw + overlay.gap))));
+                                                    mod.ph = Math.max(mod.mn[1], Math.min(6, sh + Math.round((p.y - start.y) / (overlay.rh + overlay.gap))));
+                                                    ghost.x = mod.x; ghost.y = mod.y; ghost.width = mod.width; ghost.height = mod.height; ghost.visible = true;
+                                                }
+                                                function finish() {
+                                                    ccEditor.activeDrag = null;
+                                                    ghost.visible = false;
+                                                    if (mod.pw !== mod.it.w || mod.ph !== mod.it.h) win.shell.ccPlace(mod.modelData, mod.it.x, mod.it.y, mod.pw, mod.ph);
+                                                }
+                                                onPressed: m => { start = mapToItem(overlay, m.x, m.y); sw = mod.pw; sh = mod.ph; }
+                                                onPositionChanged: m => {
+                                                    if (!pressed) return;
+                                                    const f = mapToItem(ccEditor.flick, m.x, m.y);
+                                                    mod.px = f.x; mod.py = f.y;
+                                                    ccEditor.pointerY = f.y;
+                                                    ccEditor.activeDrag = rz;
+                                                    update();
+                                                }
+                                                onReleased: finish()
+                                                onCanceled: finish()
+                                            }
+                                        }
                                     }
                                 }
                             }
-                            HRow { label: "Start over"; desc: "Show everything in the original order"
-                                HButton { label: "Reset"; onClicked: win.shell.ccReset() } }
+                        }
+
+                        Column {
+                            id: side
+                            x: ccEditor.below ? 0 : frame.width + 20; y: ccEditor.below ? frame.height + 16 : 0
+                            width: ccEditor.below ? ccEditor.width : ccEditor.width - frame.width - 20; spacing: 14
+                            HCard {
+                                active: win.page === 8 && win.wanted; order: 0; title: "Grid"
+                                Column {
+                                    width: parent.width; spacing: 10
+                                    Text { text: "Columns"; color: main.text; font { family: main.font; pixelSize: 13; weight: 500 } }
+                                    HSegment {
+                                        options: ["5", "6", "7", "8", "9"]; segWidth: (parent.width - 6) / 5
+                                        current: win.shell.ccGrid.cols - 5
+                                        onPicked: i => win.shell.ccSetCols(i + 5)
+                                    }
+                                    Row { spacing: 6
+                                        HButton { label: "Tidy"; padX: 10; onClicked: win.shell.ccCompact() }
+                                        HButton { label: "Undo"; padX: 10; onClicked: win.shell.ccUndo() }
+                                        HButton { label: "Reset"; padX: 10; onClicked: win.shell.ccReset() } }
+                                    Text { width: parent.width; wrapMode: Text.WordWrap; color: main.muted; font { family: main.font; pixelSize: 11 }
+                                        text: "Drag a module to move it. Pull its corner to resize it. Click × to take it off." }
+                                }
+                            }
+                            HCard {
+                                id: addCard
+                                readonly property var offIds: win.shell.ccFull.filter(i => (win.cfg.ccHidden || []).indexOf(i) >= 0)
+                                active: win.page === 8 && win.wanted; order: 1; title: "Add to the Control Center"
+                                Column {
+                                    width: parent.width; spacing: 0
+                                    Text { visible: addCard.offIds.length === 0; width: parent.width; height: 30; wrapMode: Text.WordWrap
+                                        text: "Everything is on the grid."; color: main.muted; font { family: main.font; pixelSize: 12 } }
+                                    Repeater {
+                                        model: addCard.offIds
+                                        delegate: Item {
+                                            id: addRow
+                                            required property string modelData
+                                            readonly property var info: win.shell.ccLabels[modelData] || [modelData, ""]
+                                            width: parent.width; height: 44
+                                            Rectangle { anchors.fill: parent; radius: 12; color: Qt.rgba(main.text.r, main.text.g, main.text.b, am.containsMouse ? 0.08 : 0)
+                                                Behavior on color { ColorAnimation { duration: main.ms(120) } } }
+                                            IconTile { x: 4; anchors.verticalCenter: parent.verticalCenter; size: 28; round: true; glyph: String.fromCodePoint(win.shell.ccGlyphs[addRow.modelData]) }
+                                            Column {
+                                                x: 42; anchors.verticalCenter: parent.verticalCenter; width: parent.width - 42 - 30; spacing: 1
+                                                Text { width: parent.width; elide: Text.ElideRight; text: addRow.info[0]; color: main.text; font { family: main.font; pixelSize: 12; weight: 600 } }
+                                                Text { width: parent.width; elide: Text.ElideRight; text: addRow.info[1]; color: main.muted; font { family: main.font; pixelSize: 10 } }
+                                            }
+                                            Text { anchors { right: parent.right; rightMargin: 8; verticalCenter: parent.verticalCenter } text: "+"; color: am.containsMouse ? main.accent : main.muted; font { pixelSize: 20; weight: 600 } }
+                                            MouseArea { id: am; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: win.shell.ccToggle(addRow.modelData) }
+                                        }
+                                    }
+                                }
+                            }
+                            HCard {
+                                active: win.page === 8 && win.wanted; order: 2; title: "Night Light"; collapsible: true
+                                Column {
+                                    width: parent.width; spacing: 10
+                                    Text { text: "Warmth"; color: main.text; font { family: main.font; pixelSize: 13; weight: 500 } }
+                                    HSegment {
+                                        options: ["Soft", "Warm", "Deep"]; segWidth: (parent.width - 6) / 3
+                                        current: Math.max(0, Math.min(2, win.cfg.nightLevel - 1))
+                                        onPicked: i => win.put("nightLevel", i + 1)
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -921,11 +1220,280 @@ PanelWindow {
                     }
                 }
 
+                // ===== Shortcuts =====
+                Page {
+                    id: scPage
+                    idx: 10; heading: "Shortcuts"; sub: "Open any part of the island with a key combination."
+                    property string recording: ""
+                    property string notice: ""
+                    readonly property var mgr: win.shell.shortcuts
+                    readonly property var groups: ["Island menus", "Shell", "Quick actions"]
+                    readonly property var shifted: ({ "33": "1", "64": "2", "35": "3", "36": "4", "37": "5", "94": "6", "38": "7", "42": "8", "40": "9", "41": "0" })
+
+                    function pretty(c) {
+                        return c.split("+").map(p => p.trim()).map(p => ({ "SUPER": "Super", "CTRL": "Ctrl", "ALT": "Alt", "SHIFT": "Shift",
+                            "comma": ",", "period": ".", "slash": "/", "minus": "-", "equal": "=", "semicolon": ";", "apostrophe": "'" })[p] || p).join(" + ");
+                    }
+                    function keyName(ev) {
+                        const k = ev.key;
+                        if (k >= Qt.Key_F1 && k <= Qt.Key_F24) return "F" + (k - Qt.Key_F1 + 1);
+                        if ((k >= Qt.Key_A && k <= Qt.Key_Z) || (k >= Qt.Key_0 && k <= Qt.Key_9)) return String.fromCharCode(k);
+                        if (shifted[String(k)]) return shifted[String(k)];
+                        const t = {};
+                        t[Qt.Key_Space] = "Space"; t[Qt.Key_Return] = "Return"; t[Qt.Key_Enter] = "Return"; t[Qt.Key_Tab] = "Tab";
+                        t[Qt.Key_Comma] = "comma"; t[Qt.Key_Period] = "period"; t[Qt.Key_Slash] = "slash"; t[Qt.Key_Backslash] = "backslash";
+                        t[Qt.Key_Minus] = "minus"; t[Qt.Key_Equal] = "equal"; t[Qt.Key_Semicolon] = "semicolon"; t[Qt.Key_Apostrophe] = "apostrophe";
+                        t[Qt.Key_BracketLeft] = "bracketleft"; t[Qt.Key_BracketRight] = "bracketright"; t[Qt.Key_QuoteLeft] = "grave";
+                        t[Qt.Key_Left] = "Left"; t[Qt.Key_Right] = "Right"; t[Qt.Key_Up] = "Up"; t[Qt.Key_Down] = "Down";
+                        t[Qt.Key_Home] = "Home"; t[Qt.Key_End] = "End"; t[Qt.Key_PageUp] = "Prior"; t[Qt.Key_PageDown] = "Next";
+                        t[Qt.Key_Print] = "Print"; t[Qt.Key_Insert] = "Insert";
+                        return t[k] || "";
+                    }
+                    function start(id) {
+                        notice = "";
+                        recording = id;
+                        win.typing = true;
+                        mgr.beginCapture();
+                        capture.forceActiveFocus();
+                    }
+                    function stop() {
+                        if (recording === "") return;
+                        recording = "";
+                        win.typing = false;
+                        mgr.endCapture();
+                        keyScope.forceActiveFocus();
+                    }
+                    function clear(id) {
+                        const m = Object.assign({}, win.cfg.shortcuts || {});
+                        delete m[id];
+                        win.put("shortcuts", m);
+                    }
+                    onCurrentChanged: if (!current) stop()
+                    Connections { target: win; function onWantedChanged() { if (!win.wanted) scPage.stop(); } }
+                    Connections {
+                        target: scPage.mgr
+                        function onConflict(id, why) { scPage.notice = why + ". Try another combination."; scPage.stop(); }
+                        function onAssigned(id) { scPage.notice = ""; scPage.stop(); }
+                    }
+                    Item {
+                        id: capture
+                        width: 1; height: 1
+                        Keys.onPressed: ev => {
+                            if (scPage.recording === "") return;
+                            ev.accepted = true;
+                            const k = ev.key;
+                            if ([Qt.Key_Shift, Qt.Key_Control, Qt.Key_Alt, Qt.Key_Meta, Qt.Key_Super_L, Qt.Key_Super_R, Qt.Key_AltGr, Qt.Key_CapsLock].indexOf(k) >= 0) return;
+                            const m = ev.modifiers;
+                            if (k === Qt.Key_Escape && !m) { scPage.stop(); return; }
+                            if ((k === Qt.Key_Backspace || k === Qt.Key_Delete) && !m) { const id = scPage.recording; scPage.stop(); scPage.clear(id); return; }
+                            const name = scPage.keyName(ev);
+                            if (name === "") { scPage.notice = "That key cannot be used."; return; }
+                            const parts = [];
+                            if (m & Qt.MetaModifier) parts.push("SUPER");
+                            if (m & Qt.ControlModifier) parts.push("CTRL");
+                            if (m & Qt.AltModifier) parts.push("ALT");
+                            if (m & Qt.ShiftModifier) parts.push("SHIFT");
+                            if (parts.length === 0 && !/^F\d+$/.test(name) && name !== "Print") { scPage.notice = "Hold Super, Ctrl or Alt as well, so normal typing keeps working."; return; }
+                            scPage.notice = "";
+                            scPage.mgr.tryAssign(scPage.recording, parts.concat([name]).join(" + "));
+                        }
+                    }
+                    Rectangle {
+                        visible: scPage.notice !== ""
+                        width: parent.width; height: visible ? noteText.implicitHeight + 20 : 0; radius: 14
+                        color: Qt.rgba(main.red.r, main.red.g, main.red.b, 0.14); border.width: 1; border.color: Qt.rgba(main.red.r, main.red.g, main.red.b, 0.5)
+                        Text { id: noteText; x: 14; y: 10; width: parent.width - 28; wrapMode: Text.WordWrap; text: scPage.notice; color: main.text; font { family: main.font; pixelSize: 12 } }
+                    }
+                    Repeater {
+                        model: scPage.groups
+                        delegate: HCard {
+                            id: grp
+                            required property string modelData
+                            required property int index
+                            active: win.page === 10 && win.wanted; order: index; title: modelData
+                            Column {
+                                width: parent.width; spacing: 0
+                                Repeater {
+                                    model: win.shell.shortcutActions.filter(a => a.group === grp.modelData)
+                                    delegate: HRow {
+                                        id: srow
+                                        required property var modelData
+                                        readonly property string combo: (win.cfg.shortcuts || {})[modelData.id] || ""
+                                        readonly property bool rec: scPage.recording === modelData.id
+                                        label: modelData.label; desc: modelData.desc
+                                        Row {
+                                            spacing: 8
+                                            Rectangle {
+                                                visible: srow.combo !== "" && !srow.rec
+                                                width: 24; height: 24; radius: 12; anchors.verticalCenter: parent.verticalCenter
+                                                color: xm.containsMouse ? Qt.rgba(main.red.r, main.red.g, main.red.b, 0.3) : Qt.rgba(main.text.r, main.text.g, main.text.b, 0.08)
+                                                Text { anchors.centerIn: parent; anchors.verticalCenterOffset: -1; text: "×"; color: main.text; font { pixelSize: 15; weight: 600 } }
+                                                MouseArea { id: xm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: scPage.clear(srow.modelData.id) }
+                                            }
+                                            Rectangle {
+                                                width: Math.max(104, chipText.implicitWidth + 28); height: 30; radius: 15; anchors.verticalCenter: parent.verticalCenter
+                                                color: srow.rec ? Qt.rgba(main.accent.r, main.accent.g, main.accent.b, 0.2) : (cm.containsMouse ? main.line : "transparent")
+                                                border.width: 1; border.color: srow.rec ? main.accent : main.line
+                                                Behavior on color { ColorAnimation { duration: main.ms(140) } }
+                                                Text {
+                                                    id: chipText; anchors.centerIn: parent
+                                                    text: srow.rec ? "Press keys…" : (srow.combo !== "" ? scPage.pretty(srow.combo) : "Not set")
+                                                    color: srow.rec ? main.accent : (srow.combo !== "" ? main.text : main.muted)
+                                                    font { family: main.font; pixelSize: 12; weight: 600 }
+                                                }
+                                                MouseArea { id: cm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                                                    onClicked: srow.rec ? scPage.stop() : scPage.start(srow.modelData.id) }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // ===== Desktop =====
+                Page {
+                    id: dtPage
+                    idx: 11; heading: "Desktop"; sub: "Put widgets on your desktop and your lock screen."
+                    readonly property int homeCount: (win.cfg.homeWidgets || []).length
+                    readonly property int lockCount: (win.cfg.lockWidgets || []).length
+                    function edit(tab) { win.shell.closeSettings(); win.shell.editor.show(tab); }
+                    HCard {
+                        active: win.page === 11 && win.wanted; order: 0; title: "Customize"
+                        Column {
+                            width: parent.width; spacing: 0
+                            HRow { label: "Desktop"; desc: "Full-screen view of your desktop: drag widgets around, resize them, add or remove them"
+                                Row { spacing: 10
+                                    Text { anchors.verticalCenter: parent.verticalCenter; text: dtPage.homeCount + (dtPage.homeCount === 1 ? " widget" : " widgets"); color: main.muted; font { family: main.font; pixelSize: 12 } }
+                                    HButton { label: "Edit desktop"; primary: true; onClicked: dtPage.edit("home") } } }
+                            HRow { label: "Lock screen"; desc: "The same for the lock screen. The clock and the password field keep their place"
+                                Row { spacing: 10
+                                    Text { anchors.verticalCenter: parent.verticalCenter; text: dtPage.lockCount + (dtPage.lockCount === 1 ? " widget" : " widgets"); color: main.muted; font { family: main.font; pixelSize: 12 } }
+                                    HButton { label: "Edit lock screen"; primary: true; onClicked: dtPage.edit("lock") } } }
+                        }
+                    }
+                    HCard {
+                        active: win.page === 11 && win.wanted; order: 1; title: "Show"
+                        Column {
+                            width: parent.width; spacing: 0
+                            HRow { label: "Widgets on the desktop"; desc: "Hide them all without losing your arrangement"
+                                HToggle { checked: win.cfg.homeEnabled; onToggled: v => win.put("homeEnabled", v) } }
+                            HRow { label: "Widgets on the lock screen"; desc: "Hide them all without losing your arrangement"
+                                HToggle { checked: win.cfg.lockWidgetsEnabled; onToggled: v => win.put("lockWidgetsEnabled", v) } }
+                        }
+                    }
+                    HCard {
+                        active: win.page === 11 && win.wanted; order: 2; title: "New widgets"; collapsible: true
+                        Column {
+                            width: parent.width; spacing: 0
+                            HRow { label: "Style"; desc: "How a widget looks when you add it. You can change each one afterwards"
+                                HSegment {
+                                    readonly property var keys: ["auto", "plain", "card", "glass", "solid", "outline"]
+                                    options: ["Auto", "Plain", "Card", "Glass", "Solid", "Outline"]; segWidth: 54
+                                    current: Math.max(0, keys.indexOf(win.cfg.widgetStyle)); onPicked: i => win.put("widgetStyle", keys[i]) } }
+                            HSliderRow { label: "Roundness"; desc: "Corner radius of new widgets"
+                                from: 0; to: 48; step: 1; decimals: 0; unit: " px"; value: win.cfg.widgetRadius; onMoved: v => win.put("widgetRadius", v) }
+                        }
+                    }
+                    HCard {
+                        active: win.page === 11 && win.wanted; order: 3; title: "Lock screen"; collapsible: true
+                        Column {
+                            width: parent.width; spacing: 0
+                            HRow { label: "Date above the clock"; desc: "The day and date above the lock screen clock"
+                                HToggle { checked: win.cfg.lockDate; onToggled: v => win.put("lockDate", v) } }
+                            HSliderRow { label: "Clock size"; desc: "Size of the big clock"
+                                from: 60; to: 160; step: 2; decimals: 0; unit: " px"; value: win.cfg.lockClockSize; onMoved: v => win.put("lockClockSize", v) }
+                            HSliderRow { label: "Clock height"; desc: "How high the clock and the password field sit on the screen"
+                                from: 0.25; to: 0.55; step: 0.01; decimals: 2; value: win.cfg.lockClockY; onMoved: v => win.put("lockClockY", v) }
+                            HSliderRow { label: "Blur"; desc: "How much your desktop is blurred behind the lock screen"
+                                from: 0; to: 1.5; step: 0.05; decimals: 2; value: win.cfg.lockBlur; onMoved: v => win.put("lockBlur", v) }
+                            HSliderRow { label: "Dim"; desc: "Darken the lock screen"
+                                from: 0; to: 0.6; step: 0.02; decimals: 2; value: win.cfg.lockDim; onMoved: v => win.put("lockDim", v) }
+                        }
+                    }
+                    HCard {
+                        active: win.page === 11 && win.wanted; order: 4; title: "Start over"; collapsible: true
+                        Column {
+                            width: parent.width; spacing: 0
+                            HRow { label: "Remove desktop widgets"; desc: "Take every widget off the desktop"
+                                HButton { label: "Remove all"; onClicked: win.put("homeWidgets", []) } }
+                            HRow { label: "Remove lock screen widgets"; desc: "Take every widget off the lock screen"
+                                HButton { label: "Remove all"; onClicked: win.put("lockWidgets", []) } }
+                        }
+                    }
+                }
+
+                // ===== Updates =====
+                Page {
+                    id: updPage
+                    idx: 12; heading: "Updates"; sub: "Check GitHub for a newer version and install it from here."
+                    readonly property var up: win.shell.updater
+                    readonly property bool wide: up.phase === "available" || up.phase === "current"
+                    onCurrentChanged: if (current && win.wanted) up.checkIfStale()
+                    HCard {
+                        active: win.page === 12 && win.wanted; order: 0; title: "Version"
+                        Column {
+                            width: parent.width; spacing: 0
+                            HRow { label: "Installed"
+                                Text { text: updPage.up.installed !== "" ? updPage.up.short(updPage.up.installed) : "unknown"; color: main.muted; font { family: "monospace"; pixelSize: 13 } } }
+                            HRow { label: "Latest on GitHub"
+                                Text { text: updPage.up.latest !== "" ? updPage.up.short(updPage.up.latest) : "-"; color: main.muted; font { family: "monospace"; pixelSize: 13 } } }
+                            HRow { label: "Status"
+                                Text {
+                                    readonly property string p: updPage.up.phase
+                                    text: p === "checking" ? "Checking…" : p === "updating" ? "Working…" : p === "current" ? "You are up to date"
+                                        : p === "available" ? (updPage.up.behind < 0 ? "A version is available" : updPage.up.behind + (updPage.up.behind === 1 ? " update available" : " updates available"))
+                                        : p === "updated" ? "Updated. The shell reloads by itself." : p === "restored" ? "Backup restored."
+                                        : p === "error" ? "Something went wrong" : "Not checked yet"
+                                    color: p === "available" ? main.accent : (p === "error" ? main.red : main.muted)
+                                    font { family: main.font; pixelSize: 13; weight: 600 }
+                                } }
+                            HRow { label: "Check or install"
+                                Row { spacing: 8
+                                    HButton { label: updPage.up.phase === "checking" ? "Checking…" : "Check for updates"; opacity: updPage.up.busy ? 0.5 : 1; onClicked: updPage.up.check() }
+                                    HButton { label: updPage.up.phase === "updating" ? "Updating…" : "Update now"; primary: true
+                                        visible: updPage.up.phase === "available"; opacity: updPage.up.busy ? 0.5 : 1; onClicked: updPage.up.update() } } }
+                            Text { visible: updPage.up.phase === "error" || updPage.up.phase === "updated"; width: parent.width; wrapMode: Text.WordWrap; topPadding: 6; bottomPadding: 4
+                                text: updPage.up.message; color: updPage.up.phase === "error" ? main.red : main.muted; font { family: main.font; pixelSize: 12 } }
+                        }
+                    }
+                    HCard {
+                        active: win.page === 12 && win.wanted; order: 1
+                        title: updPage.up.phase === "available" && updPage.up.behind !== 0 ? "What is new" : "Latest changes"
+                        visible: updPage.up.commits.length > 0
+                        Column {
+                            width: parent.width; spacing: 0
+                            Repeater {
+                                model: updPage.up.phase === "available" && updPage.up.behind > 0 ? updPage.up.commits.slice(0, Math.min(updPage.up.behind, 8)) : updPage.up.commits.slice(0, 6)
+                                delegate: Item {
+                                    required property var modelData
+                                    width: parent.width; height: 40
+                                    Text { x: 2; width: parent.width - 100; anchors.verticalCenter: parent.verticalCenter; elide: Text.ElideRight
+                                        text: modelData.msg; color: main.text; font { family: main.font; pixelSize: 13; weight: 500 } }
+                                    Text { anchors { right: parent.right; verticalCenter: parent.verticalCenter }
+                                        text: updPage.up.ago(modelData.date); color: main.muted; font { family: main.font; pixelSize: 12 } }
+                                }
+                            }
+                        }
+                    }
+                    HCard {
+                        active: win.page === 12 && win.wanted; order: 2; title: "Safety"; collapsible: true
+                        Column {
+                            width: parent.width; spacing: 0
+                            Text { width: parent.width; wrapMode: Text.WordWrap; bottomPadding: 8; color: main.muted; font { family: main.font; pixelSize: 12 }
+                                text: "Your settings, presets, custom themes and wallpapers are never touched. A backup of the current shell is saved before every update." }
+                            HRow { label: "Undo the last update"; desc: "Put the backup made before the last update back"
+                                HButton { label: "Restore backup"; opacity: updPage.up.busy ? 0.5 : 1; onClicked: updPage.up.restore() } }
+                        }
+                    }
+                }
+
                 // ===== About =====
                 Page {
-                    idx: 10; heading: "About"; sub: "Shortcuts and housekeeping."
+                    idx: 13; heading: "About"; sub: "Shortcuts and housekeeping."
                     HCard {
-                        active: win.page === 10 && win.wanted; order: 0; title: "Shortcuts"
+                        active: win.page === 13 && win.wanted; order: 0; title: "Built-in shortcuts"
                         Column {
                             width: parent.width; spacing: 2
                             Repeater {
@@ -946,7 +1514,7 @@ PanelWindow {
                         }
                     }
                     HCard {
-                        active: win.page === 10 && win.wanted; order: 1; title: "Housekeeping"
+                        active: win.page === 13 && win.wanted; order: 1; title: "Housekeeping"; collapsible: true
                         HRow {
                             label: "Reset to defaults"; desc: "Restore Everforest and the original layout"
                             HButton { label: "Reset"; onClicked: win.shell.resetSettings() }

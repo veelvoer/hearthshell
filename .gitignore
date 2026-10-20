@@ -6,3 +6,4 @@ shell/wallpapers/*/
 __pycache__/
 *.pyc
 shell/presets.json
+shell/.version

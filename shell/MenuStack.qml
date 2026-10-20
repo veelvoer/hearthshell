@@ -13,19 +13,20 @@ Item {
     signal requestClose()
     readonly property var item: menu === "network" ? net.item : menu === "bluetooth" ? bt.item : menu === "quick" ? quick.item
         : menu === "notifications" ? notif.item : menu === "calendar" ? cal.item : menu === "media" ? media.item
-        : menu === "sound" ? sound.item : menu === "display" ? display.item : null
+        : menu === "sound" ? sound.item : menu === "display" ? display.item : menu === "theme" ? theme.item : menu === "wallpaper" ? wall.item : null
     readonly property bool typing: !!item && !!item.typing
     readonly property real wantedHeight: item ? item.wantedHeight : 0
+    readonly property real wantedWidth: item && item.wantedWidth ? item.wantedWidth : 360
 
     function glyphFor(k) {
         const cp = n => String.fromCodePoint(n);
         return k === "network" ? cp(0xF05A9) : k === "bluetooth" ? cp(0xF00AF) : k === "quick" ? cp(0xF0570)
             : k === "notifications" ? cp(0xF009A) : k === "calendar" ? cp(0xF00ED) : k === "media" ? cp(0xF075A)
-            : k === "sound" ? cp(0xF057E) : k === "display" ? cp(0xF00E0) : "";
+            : k === "sound" ? cp(0xF057E) : k === "display" ? cp(0xF00E0) : k === "theme" ? cp(0xF03D8) : k === "wallpaper" ? cp(0xF0E09) : "";
     }
     function titleFor(k) {
         return ({ "network": "Wi-Fi", "bluetooth": "Bluetooth", "quick": "Control Center", "notifications": "Notifications",
-                  "calendar": "Calendar", "media": "Now playing", "sound": "Sound", "display": "Display" })[k] || "";
+                  "calendar": "Calendar", "media": "Now playing", "sound": "Sound", "display": "Display", "theme": "Theme", "wallpaper": "Wallpaper" })[k] || "";
     }
 
     // A menu is built the first time it is opened (the two used most are built up front) and stays; the rest cost nothing.
@@ -54,6 +55,10 @@ Item {
         sourceComponent: MediaPopup { active: st.menu === "media"; settled: active && st.settled; shell: st.shell } }
     Slot { id: sound; kind: "sound"
         sourceComponent: SoundPopup { active: st.menu === "sound"; settled: active && st.settled; shell: st.shell } }
+    Slot { id: theme; kind: "theme"
+        sourceComponent: ThemePopup { active: st.menu === "theme"; settled: active && st.settled; shell: st.shell } }
+    Slot { id: wall; kind: "wallpaper"
+        sourceComponent: WallpaperPopup { active: st.menu === "wallpaper"; settled: active && st.settled; shell: st.shell } }
     Slot { id: display; kind: "display"
         sourceComponent: DisplayPopup { active: st.menu === "display"; settled: active && st.settled; shell: st.shell } }
 }

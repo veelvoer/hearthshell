@@ -18,7 +18,11 @@ PanelWindow {
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.namespace: "quickshell-popup"
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
-    visible: notifier.toasts.length > 0 || stack.height > 1
+    property bool lingering: false
+    readonly property int count: notifier.toasts.length
+    onCountChanged: { if (count > 0) { lingering = true; lingerTimer.stop(); } else lingerTimer.restart(); }
+    Timer { id: lingerTimer; interval: 700; onTriggered: win.lingering = false }
+    visible: count > 0 || lingering
     mask: Region { item: stack }
 
     Column {
@@ -84,12 +88,12 @@ PanelWindow {
                             id: col
                             width: parent.width - 50; spacing: 2
                             Text {
-                                width: parent.width; elide: Text.ElideRight; text: toast.n.summary
+                                width: parent.width; elide: Text.ElideRight; maximumLineCount: 1; textFormat: Text.PlainText; text: String(toast.n.summary || "").replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim()
                                 color: main.text; font { family: main.font; pixelSize: 14; weight: 600 }
                             }
                             Text {
                                 visible: text !== ""; width: parent.width; maximumLineCount: 3; wrapMode: Text.Wrap; elide: Text.ElideRight
-                                text: toast.n.body; color: main.muted; font { family: main.font; pixelSize: 12 }
+                                textFormat: Text.PlainText; text: String(toast.n.body || "").replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim(); color: main.muted; font { family: main.font; pixelSize: 12 }
                             }
                             Text {
                                 text: toast.n.appName; color: main.muted; opacity: 0.7

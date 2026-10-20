@@ -11,6 +11,7 @@ Item {
     property string glyph: ""
     property string valueText: ""
     property bool showChevron: false
+    property color tone: main.accent
     signal moved(real value)
     signal chevronClicked()
     readonly property bool pressed: area.pressed
@@ -28,7 +29,7 @@ Item {
         id: fill
         height: parent.height; radius: height / 2
         width: Math.max(height, root.frac * root.width)
-        color: main.accent
+        color: root.tone
         Behavior on width { enabled: !root.pressed; NumberAnimation { duration: main.ms(220); easing.type: Easing.OutCubic } }
         Text {
             anchors { left: parent.left; leftMargin: 18; verticalCenter: parent.verticalCenter }

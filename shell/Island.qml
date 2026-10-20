@@ -37,7 +37,8 @@ Item {
     property bool armed: false
     property bool menuSettled: false
     readonly property string mode: menu !== "" ? "menu"
-        : (shell.settingsOpen || (!split && hoverHold)) ? "bar"
+        : (shell.settingsOpen && !idleRich) ? "bar"
+        : (!split && hoverHold) ? (shell.cfg.islandPanel ? "panel" : "bar")
         : activity !== "" ? "activity" : "idle"
     readonly property real base: shell.cfg.barHeight
     readonly property real pad: bar.pad
@@ -50,7 +51,13 @@ Item {
     readonly property real side: hasC ? Math.max(leftW, rightW) : 0
     readonly property real pillW: hasC ? side * 2 + centerW + bar.gap * 2 + pad * 2
                                        : leftW + rightW + ((leftW > 0 && rightW > 0) ? bar.gap * 2 : 0) + pad * 2
-    readonly property real collapsedW: Math.max(centerW + 28, 64) + (!!player && player.isPlaying ? 26 : 0)
+    readonly property bool idleRich: !split && shell.cfg.islandPanel
+    // the resting island: the clock in the middle, the workspace indicator on the left and the status on the right, with room around the clock
+    readonly property bool wsAnimated: ["bars", "scroll", "stretch"].indexOf(shell.cfg.wsStyle) >= 0
+    readonly property real idleWsW: wsAnimated ? 5 * (shell.cfg.wsStyle === "scroll" ? 20 : 18) * 0.85 : 44
+    readonly property real idleSide: Math.max(idleWsW + 14, 66) + 22
+    readonly property real contentW: (idleRich ? centerW + 2 * idleSide : Math.max(centerW + 28, 64)) + (!!player && player.isPlaying ? 26 : 0)
+    readonly property real collapsedW: Math.max(contentW, shell.cfg.islandCollapsedW)
 
     function openMenu(kind, glyph, from) {
         if (menu === kind) { closeMenu(); return; }
@@ -83,7 +90,6 @@ Item {
     Binding { target: isl.bar; property: "islandMenu"; value: isl.menu }
 
     // ---------------------------------------------------------------- what makes the island react
-    Connections { target: Hyprland; function onFocusedWorkspaceChanged() { isl.peek("workspace"); } }
     PwObjectTracker { objects: [Pipewire.defaultAudioSink] }
     readonly property var sink: Pipewire.defaultAudioSink
     readonly property bool soundReady: !!sink && sink.ready && !!sink.audio
@@ -115,15 +121,16 @@ Item {
         function onIsPlayingChanged() { if (isl.player) isl.peek("media"); } }
 
     // ---------------------------------------------------------------- the shape
-    property var lastH: ({ "network": 380, "bluetooth": 300, "quick": 430, "notifications": 300, "calendar": 440, "media": 330, "sound": 360, "display": 300 })
+    property var lastH: ({ "network": 380, "bluetooth": 300, "quick": 430, "notifications": 300, "calendar": 440, "media": 330, "sound": 360, "display": 300, "theme": 440, "wallpaper": 380 })
     readonly property var menuItem: stack.item
     readonly property real menuH: menu === "" ? 0 : Math.min(bar.maxMenuH, menuItem ? menuItem.wantedHeight : lastH[menu])
     onMenuHChanged: if (menu !== "" && menuItem) lastH[menu] = menuH
     readonly property real transientW: activity === "volume" || activity === "brightness" ? 250
         : activity === "workspace" ? wsPane.implicitWidth + 40
         : activity === "battery" ? 200 : activity === "media" ? 330 : 0
-    readonly property real targetW: mode === "menu" ? 360 : mode === "bar" ? pillW : mode === "activity" ? transientW : collapsedW
-    readonly property real targetH: mode === "menu" ? menuH : mode === "bar" ? base : mode === "activity" ? base + 14 : base - (split ? 2 : 6)
+    readonly property real menuW: menuItem && menuItem.wantedWidth ? menuItem.wantedWidth : 360
+    readonly property real targetW: mode === "menu" ? menuW : mode === "panel" ? 660 : mode === "bar" ? pillW : mode === "activity" ? transientW : collapsedW
+    readonly property real targetH: mode === "menu" ? menuH : mode === "panel" ? shell.cfg.islandPanelH : mode === "bar" ? base : mode === "activity" ? base + 14 : base - (split ? 2 : 6)
 
     // a little overshoot on every size change, like a spring
     readonly property var spring: [0.34, 1.2, 0.64, 1, 1, 1]
@@ -152,8 +159,8 @@ Item {
         }
         x: (parent.width - width) / 2
         y: isl.atBottom ? parent.height - height - bar.islandGap : bar.islandGap
-        radius: Math.min(height / 2, bar.radius + (isl.mode === "menu" || isl.mode === "activity" ? 7 : 0))
-        color: main.bg
+        radius: Math.min(height / 2, bar.radius + (isl.mode === "panel" ? 14 : isl.mode === "menu" || isl.mode === "activity" ? 7 : 0))
+        color: main.barBg
         border.color: main.border
         border.width: 1
         // menus are nearly opaque so text behind them never makes them hard to read
@@ -181,6 +188,9 @@ Item {
     onTargetWChanged: { bbW = Math.max(bbW, targetW); bbShrink.restart(); }
     onTargetHChanged: { bbH = Math.max(bbH, targetH); bbShrink.restart(); }
     Timer { id: bbShrink; interval: 900; onTriggered: { isl.bbW = isl.targetW; isl.bbH = isl.targetH; } }
+    // The bar window never changes height: every resize of a layer window can drop a frame and make the island blink.
+    // It is as tall as the tallest menu; what you can click is limited by the input mask, so the empty part never gets in the way.
+    readonly property real winH: split ? Math.max(base, bar.maxMenuH) : bar.maxMenuH
     readonly property real extL: (width - bbW) / 2 - sideExtra
     readonly property real extR: width - extL
     readonly property real pieceY: atBottom ? surface.y + surface.height - pieceH : surface.y
@@ -208,7 +218,7 @@ Item {
         Rectangle {
             id: disc
             anchors.fill: parent; radius: width / 2
-            color: main.bg; border.width: 1; border.color: pc.lit ? main.accent : main.border
+            color: main.barBg; border.width: 1; border.color: pc.lit ? main.accent : main.border
             opacity: bar.bgAlpha
         }
         Item { id: inner; anchors.fill: parent }
@@ -276,6 +286,43 @@ Item {
                 opacity: Math.max(0, Math.min(1, (surface.width - isl.collapsedW) / Math.max(1, isl.pillW - isl.collapsedW) * 1.6 - 0.6))
                 enabled: isl.mode === "bar"
             }
+            Item {
+                id: idleDots
+                visible: opacity > 0.01
+                opacity: isl.idleRich && isl.mode === "idle" ? 1 : 0
+                Behavior on opacity { NumberAnimation { duration: main.ms(200) } }
+                x: 14; anchors.verticalCenter: parent.verticalCenter
+                width: fancy.visible ? fancy.width : plain.width; height: parent.height
+                readonly property bool animated: ["bars", "scroll", "stretch"].indexOf(shell.cfg.wsStyle) >= 0
+                WorkspaceStyle { id: fancy; visible: parent.animated; kind: shell.cfg.wsStyle; slots: 5; unit: 0.85; anchors.verticalCenter: parent.verticalCenter }
+                Row {
+                    id: plain
+                    visible: !parent.animated; spacing: 4; anchors.verticalCenter: parent.verticalCenter
+                    Repeater {
+                        model: 5
+                        delegate: Rectangle {
+                            required property int index
+                            readonly property var ws: Hyprland.workspaces.values.find(w => w.id === index + 1)
+                            readonly property bool cur: !!Hyprland.focusedWorkspace && Hyprland.focusedWorkspace.id === index + 1
+                            width: cur ? 12 : 5; height: 5; radius: 2.5
+                            anchors.verticalCenter: parent.verticalCenter
+                            color: cur ? main.accent : (ws ? main.text : main.line)
+                            opacity: cur || ws ? 1 : 0.7
+                            Behavior on width { NumberAnimation { duration: main.ms(180); easing.type: Easing.OutCubic } }
+                        }
+                    }
+                }
+            }
+            Row {
+                id: idleStatus
+                visible: opacity > 0.01
+                opacity: isl.idleRich && isl.mode === "idle" ? 1 : 0
+                Behavior on opacity { NumberAnimation { duration: main.ms(200) } }
+                anchors { right: parent.right; rightMargin: 16; verticalCenter: parent.verticalCenter }
+                spacing: 8
+                SignalBars { anchors.verticalCenter: parent.verticalCenter; size: 12; level: isl.wifiLevel; off: !Networking.wifiEnabled; tint: main.accent }
+                BatteryIcon { visible: isl.hasBattery; anchors.verticalCenter: parent.verticalCenter; size: 14; level: isl.level; charging: isl.charging; tint: main.accent }
+            }
             EqBars {
                 visible: isl.mode === "idle" && !!isl.player && isl.player.isPlaying
                 running: visible
@@ -295,6 +342,13 @@ Item {
                 opacity: zl.opacity
                 enabled: isl.mode === "bar"
             }
+        }
+
+        // ---- hover dashboard
+        IslandPane {
+            anchors.fill: parent
+            on: isl.mode === "panel"
+            HoverPanel { width: 660; height: isl.shell.cfg.islandPanelH; x: (parent.width - width) / 2; isl: isl; active: isl.mode === "panel" }
         }
 
         // ---- volume
@@ -417,13 +471,13 @@ Item {
             }
             Text {
                 x: 18; y: 14; text: isl.menuGlyph; color: main.accent
-                visible: isl.menuFrom === ""
+                visible: isl.menuFrom === "" && isl.menu !== "calendar"
                 font { family: "JetBrainsMono Nerd Font Propo"; pixelSize: 22 }
             }
             BackButton { x: 10; y: 9; visible: isl.menuFrom !== ""; onClicked: isl.goBack() }
             MenuStack {
                 id: stack
-                width: 360; height: parent.height
+                width: isl.menuW; height: parent.height
                 menu: isl.menu; settled: isl.menuSettled; shell: isl.shell; from: isl.menuFrom
                 onRequestMenu: k => isl.openMenu(k, stack.glyphFor(k), isl.menu)
                 onRequestClose: isl.closeMenu()

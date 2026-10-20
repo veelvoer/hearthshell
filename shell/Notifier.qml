@@ -15,7 +15,8 @@ Item {
         if (root.dnd && n.urgency !== NotificationUrgency.Critical) return;
         root.toasts = [n].concat(root.toasts.filter(t => t !== n)).slice(0, 4);
     }
-    function removeHistory(h) { root.history = root.history.filter(x => x !== h); }
+    property int nextUid: 1
+    function removeHistory(h) { root.history = root.history.filter(x => x.uid !== h.uid); }
     function hide(n) { root.toasts = root.toasts.filter(t => t !== n); }
     function clearAll() {
         root.toasts = [];
@@ -35,7 +36,7 @@ Item {
             persistenceSupported: true
             onNotification: n => {
                 n.tracked = true;
-                root.history = [{ "appName": n.appName, "appIcon": n.appIcon, "summary": n.summary, "body": n.body,
+                root.history = [{ "uid": root.nextUid++, "appName": n.appName, "appIcon": n.appIcon, "summary": n.summary, "body": n.body,
                                   "image": n.image, "urgency": n.urgency }].concat(root.history).slice(0, 40);
                 root.show(n);
             }
