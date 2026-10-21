@@ -18,7 +18,7 @@ Item {
         for (const w of Hyprland.workspaces.values) h = Math.max(h, w.id);
         return h;
     }
-    implicitWidth: shown * step
+    implicitWidth: kind === "stretch" ? shown * step : Math.min(slots, total) * step
     implicitHeight: Math.round((main.barPx + 9) * unit)
     clip: true
 
@@ -36,8 +36,11 @@ Item {
     function has(i) { return !!Hyprland.workspaces.values.find(w => w.id === i + 1); }
     function go(i) { Hyprland.dispatch("hl.dsp.focus({ workspace = " + (i + 1) + " })"); }
     function near(i) { return Math.max(0, 1 - Math.abs(i - pos)); }
+    // The visible window slides along the line but never past its ends, so workspace 1 sits at the left edge and the last one at the right.
+    readonly property real half: (slots - 1) / 2
+    readonly property real centre: total <= slots ? (total - 1) / 2 : Math.max(half, Math.min(total - 1 - half, pos))
     // edge fade for the carousels
-    function fade(i) { return Math.max(0, Math.min(1, slots / 2 - Math.abs(i - pos))); }
+    function fade(i) { return Math.max(0, Math.min(1, slots / 2 + 0.2 - Math.abs(i - centre))); }
 
     // ------------------------------------------------------------ bars + scroll
     Repeater {
@@ -48,7 +51,7 @@ Item {
             readonly property int abs: index
             readonly property int ws: index
             readonly property real near: root.near(abs)
-            x: root.width / 2 + (abs - root.pos) * root.step - root.step / 2
+            x: root.width / 2 + (abs - root.centre) * root.step - root.step / 2
             width: root.step; height: root.height
             opacity: root.fade(abs) * (root.has(ws) || near > 0.3 ? 1 : 0.5)
             visible: opacity > 0.01

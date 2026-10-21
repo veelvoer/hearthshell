@@ -24,7 +24,13 @@ Item {
 
     HoverHandler {
         id: rootHover
-        onHoveredChanged: { if (hovered) { isl.hoverHold = true; holdTimer.stop(); } else holdTimer.restart(); }
+        onHoveredChanged: {
+            if (hovered) {
+                holdTimer.stop();
+                if (isl.hoverHold) return;
+                if (shell.cfg.islandOpenOn === "hover") { if (shell.cfg.islandHoverDelay > 0) openTimer.restart(); else isl.hoverHold = true; }
+            } else { openTimer.stop(); holdTimer.restart(); }
+        }
     }
 
     // ---------------------------------------------------------------- state
@@ -33,6 +39,9 @@ Item {
     property string menuFrom: ""                    // "quick" when Wi-Fi / Bluetooth was opened from the quick settings menu
     property string activity: ""                   // volume | brightness | workspace | battery | media | ""
     property bool hoverHold: false
+    readonly property bool clickMode: shell.cfg.islandOpenOn === "click"
+    function openPanel() { holdTimer.stop(); hoverHold = true; }
+    Timer { id: openTimer; interval: shell.cfg.islandHoverDelay; onTriggered: if (rootHover.hovered) isl.hoverHold = true }
     readonly property bool split: shell.cfg.islandSplit     // three separate pieces instead of one pill that grows into the bar
     property bool armed: false
     property bool menuSettled: false
@@ -54,8 +63,10 @@ Item {
     readonly property bool idleRich: !split && shell.cfg.islandPanel
     // the resting island: the clock in the middle, the workspace indicator on the left and the status on the right, with room around the clock
     readonly property bool wsAnimated: ["bars", "scroll", "stretch"].indexOf(shell.cfg.wsStyle) >= 0
+    readonly property bool showWs: shell.cfg.islandShowWs
+    readonly property bool showStatus: shell.cfg.islandShowStatus
     readonly property real idleWsW: wsAnimated ? 5 * (shell.cfg.wsStyle === "scroll" ? 20 : 18) * 0.85 : 44
-    readonly property real idleSide: Math.max(idleWsW + 14, 66) + 22
+    readonly property real idleSide: Math.max(showWs ? Math.max(idleWsW + 14, 66) : 0, showStatus ? 66 : 0, 0) + 22
     readonly property real contentW: (idleRich ? centerW + 2 * idleSide : Math.max(centerW + 28, 64)) + (!!player && player.isPlaying ? 26 : 0)
     readonly property real collapsedW: Math.max(contentW, shell.cfg.islandCollapsedW)
 
@@ -74,6 +85,8 @@ Item {
     function goBack() { if (menuFrom !== "") { const k = menuFrom; openMenu(k, stack.glyphFor(k), ""); } else closeMenu(); }
     function peek(kind) {
         if (!armed || menu !== "") return;
+        if ((kind === "volume" || kind === "brightness") && !shell.cfg.islandPeekLevels) return;
+        if (kind === "media" && !shell.cfg.islandPeekMedia) return;
         activity = kind;
         peekTimer.restart();
     }
@@ -129,7 +142,8 @@ Item {
         : activity === "workspace" ? wsPane.implicitWidth + 40
         : activity === "battery" ? 200 : activity === "media" ? 330 : 0
     readonly property real menuW: menuItem && menuItem.wantedWidth ? menuItem.wantedWidth : 360
-    readonly property real targetW: mode === "menu" ? menuW : mode === "panel" ? 660 : mode === "bar" ? pillW : mode === "activity" ? transientW : collapsedW
+    readonly property real panelW: 660 - (shell.cfg.islandPanelLeft ? 0 : 180) - (shell.cfg.islandPanelRight ? 0 : 180)
+    readonly property real targetW: mode === "menu" ? menuW : mode === "panel" ? panelW : mode === "bar" ? pillW : mode === "activity" ? transientW : collapsedW
     readonly property real targetH: mode === "menu" ? menuH : mode === "panel" ? shell.cfg.islandPanelH : mode === "bar" ? base : mode === "activity" ? base + 14 : base - (split ? 2 : 6)
 
     // a little overshoot on every size change, like a spring
@@ -162,7 +176,7 @@ Item {
         radius: Math.min(height / 2, bar.radius + (isl.mode === "panel" ? 14 : isl.mode === "menu" || isl.mode === "activity" ? 7 : 0))
         color: main.barBg
         border.color: main.border
-        border.width: 1
+        border.width: shell.cfg.islandBorder ? 1 : 0
         // menus are nearly opaque so text behind them never makes them hard to read
         opacity: Math.max(bar.bgAlpha, isl.mode === "menu" && !shell.cfg.glassBar ? 0.97 : 0) * bar.intro
         Behavior on opacity { NumberAnimation { duration: main.ms(260) } }
@@ -170,7 +184,7 @@ Item {
     }
     SoftShadow {
         z: -1
-        visible: !shell.cfg.glassBar                      // frosted glass has no drop shadow
+        visible: !shell.cfg.glassBar && shell.cfg.islandShadow                      // frosted glass has no drop shadow
         x: surface.x; y: surface.y; width: surface.width; height: surface.height
         radius: surface.radius; opacity: bar.intro
     }
@@ -289,7 +303,7 @@ Item {
             Item {
                 id: idleDots
                 visible: opacity > 0.01
-                opacity: isl.idleRich && isl.mode === "idle" ? 1 : 0
+                opacity: isl.idleRich && isl.showWs && isl.mode === "idle" ? 1 : 0
                 Behavior on opacity { NumberAnimation { duration: main.ms(200) } }
                 x: 14; anchors.verticalCenter: parent.verticalCenter
                 width: fancy.visible ? fancy.width : plain.width; height: parent.height
@@ -316,7 +330,7 @@ Item {
             Row {
                 id: idleStatus
                 visible: opacity > 0.01
-                opacity: isl.idleRich && isl.mode === "idle" ? 1 : 0
+                opacity: isl.idleRich && isl.showStatus && isl.mode === "idle" ? 1 : 0
                 Behavior on opacity { NumberAnimation { duration: main.ms(200) } }
                 anchors { right: parent.right; rightMargin: 16; verticalCenter: parent.verticalCenter }
                 spacing: 8
@@ -324,7 +338,7 @@ Item {
                 BatteryIcon { visible: isl.hasBattery; anchors.verticalCenter: parent.verticalCenter; size: 14; level: isl.level; charging: isl.charging; tint: main.accent }
             }
             EqBars {
-                visible: isl.mode === "idle" && !!isl.player && isl.player.isPlaying
+                visible: isl.mode === "idle" && shell.cfg.islandShowEq && !!isl.player && isl.player.isPlaying
                 running: visible
                 size: 13
                 anchors.verticalCenter: parent.verticalCenter
@@ -348,7 +362,7 @@ Item {
         IslandPane {
             anchors.fill: parent
             on: isl.mode === "panel"
-            HoverPanel { width: 660; height: isl.shell.cfg.islandPanelH; x: (parent.width - width) / 2; isl: isl; active: isl.mode === "panel" }
+            HoverPanel { width: isl.panelW; height: isl.shell.cfg.islandPanelH; x: (parent.width - width) / 2; isl: isl; active: isl.mode === "panel" }
         }
 
         // ---- volume
@@ -494,7 +508,13 @@ Item {
         anchors { top: true; bottom: true; left: true; right: true }
         exclusionMode: ExclusionMode.Ignore
         WlrLayershell.namespace: "quickshell-island-catcher"
-        WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+        // Esc closes the open menu. This window appears exactly when a menu opens, so it is the one that gets the keyboard;
+        // the Wi-Fi menu has a password field, so there the bar itself keeps the keyboard instead.
+        WlrLayershell.keyboardFocus: isl.menu !== "" && isl.menu !== "network" ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+        FocusScope {
+            anchors.fill: parent; focus: true
+            Keys.onEscapePressed: isl.goBack()
+        }
         mask: Region {
             x: 0; y: 0; width: catcher.width; height: catcher.height
             Region {

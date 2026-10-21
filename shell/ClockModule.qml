@@ -14,6 +14,10 @@ Item {
     MouseArea {
         anchors.fill: parent; anchors.margins: -2
         cursorShape: Qt.PointingHandCursor
-        onClicked: if (bar) bar.openPopup("calendar", root, String.fromCodePoint(0xF00ED), "")
+        onClicked: {
+            if (!bar) return;
+            if (bar.island && bar.islandRef && bar.islandRef.clickMode && !bar.islandRef.hoverHold) bar.islandRef.openPanel();
+            else bar.openPopup("calendar", root, String.fromCodePoint(0xF00ED), "");
+        }
     }
 }

@@ -154,7 +154,11 @@ ShellRoot {
         "termOpacity": 0.92, "blurSize": 6,
         "barStyle": "classic", "barPos": "top",
         "glassBar": false, "glassPanel": false, "glassLauncher": false, "glassTerminal": false, "glassAmount": 0.4,
+<<<<<<< /home/voer/.config/quickshell/shell.qml
+        "drawnIcons": false, "islandSplit": false, "islandPanel": true, "colorBurst": false, "islandOpenOn": "hover", "islandHoverDelay": 0, "islandGap": 0, "islandBorder": true, "islandShadow": true, "islandShowWs": true, "islandShowStatus": true, "islandShowEq": true, "islandPanelLeft": true, "islandPanelRight": true, "islandPeekLevels": true, "islandPeekMedia": true, "barColor": "", "panelColor": "", "islandCollapsedW": 0, "islandPanelH": 172, "ccLayout": { "cols": 6, "items": {} }, "nightLevel": 2, "shortcuts": {}, "shortcutsApplied": [], "homeEnabled": true, "homeWidgets": [], "lockWidgetsEnabled": true, "lockWidgets": [], "widgetNotes": {}, "widgetStyle": "auto", "widgetRadius": 26, "lockClockY": 0.4, "lockDim": 0, "notifTimeout": 6, "weekMonday": true, "ccOrder": ["wifi", "bluetooth", "audio", "quiet", "night", "volume", "brightness", "media", "notifications"], "ccHidden": ["airplane", "caffeine", "game", "mic", "micvol", "screenshot", "wallpaper", "theme", "battery", "system"], "motionBounce": 0.5, "notifications": true, "glassWindows": false, "glassBrowsers": true, "glassFiles": true, "glassEditors": true, "glassChat": true, "glassOther": true,
+=======
         "drawnIcons": false, "islandSplit": false, "islandPanel": true, "colorBurst": false, "barColor": "", "panelColor": "", "islandCollapsedW": 0, "islandPanelH": 172, "ccLayout": { "cols": 6, "items": {} }, "nightLevel": 2, "shortcuts": {}, "shortcutsApplied": [], "homeEnabled": true, "homeWidgets": [], "lockWidgetsEnabled": true, "lockWidgets": [], "widgetNotes": {}, "widgetStyle": "auto", "widgetRadius": 26, "lockClockY": 0.4, "lockDim": 0, "notifTimeout": 6, "weekMonday": true, "ccOrder": ["wifi", "bluetooth", "audio", "quiet", "night", "volume", "brightness", "media", "notifications"], "ccHidden": ["airplane", "caffeine", "game", "mic", "micvol", "screenshot", "wallpaper", "theme", "battery", "system"], "motionBounce": 0.5, "notifications": true, "glassWindows": false, "glassBrowsers": true, "glassFiles": true, "glassEditors": true, "glassChat": true, "glassOther": true,
+>>>>>>> /tmp/repo_head_shell.qml
         "userWalls": {},
         "font": "Inter", "motion": "normal", "accent": "", "wallFit": "fill",
         "barHeight": 30, "barGap": 4, "barSide": 10, "barFont": 13, "modSpacing": 0, "iconMode": "accent",
@@ -223,6 +227,28 @@ ShellRoot {
         n[id] = text;
         set("widgetNotes", n);
     }
+<<<<<<< /home/voer/.config/quickshell/shell.qml
+    // what this computer has, so Settings only offers what can work here
+    property var caps: ({ "kitty": true, "rofi": true, "fish": true, "hyprlock": true, "battery": true, "backlight": true, "touchpad": true, "bluetooth": true, "wifi": true })
+    Process {
+        id: capsProbe
+        running: true
+        command: ["sh", "-c", "for t in kitty rofi fish hyprlock; do command -v $t >/dev/null 2>&1 && echo $t=1 || echo $t=0; done; " +
+            "ls /sys/class/power_supply/BAT* >/dev/null 2>&1 && echo battery=1 || echo battery=0; " +
+            "[ -n \"$(ls /sys/class/backlight 2>/dev/null)\" ] && echo backlight=1 || echo backlight=0; " +
+            "grep -qi touchpad /proc/bus/input/devices 2>/dev/null && echo touchpad=1 || echo touchpad=0; " +
+            "[ -n \"$(ls /sys/class/bluetooth 2>/dev/null)\" ] && echo bluetooth=1 || echo bluetooth=0; " +
+            "ls /sys/class/net/*/wireless >/dev/null 2>&1 && echo wifi=1 || echo wifi=0"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const c = {};
+                for (const l of text.trim().split("\n")) { const p = l.split("="); if (p.length === 2) c[p[0]] = p[1] === "1"; }
+                shellRoot.caps = Object.assign({}, shellRoot.caps, c);
+            }
+        }
+    }
+=======
+>>>>>>> /tmp/repo_head_shell.qml
     SystemStats { id: statsObj }
     readonly property var stats: statsObj
     DesktopEditor { id: editorObj; shell: shellRoot }

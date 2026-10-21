@@ -9,6 +9,8 @@ Item {
     property string title: ""
     default property alias content: body.data
     property real padding: 12
+    property bool available: true
+    visible: available
     property bool collapsible: false          // secondary cards start folded, so a page shows only what matters first
     property bool expanded: !collapsible
     readonly property real openK: expanded ? 1 : 0

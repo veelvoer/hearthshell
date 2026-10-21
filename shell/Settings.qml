@@ -31,6 +31,11 @@ PanelWindow {
         "about shortcuts reset defaults keys"]
     property string query: ""
     // the sidebar groups the pages; page numbers stay as they are, only the order they are shown in changes
+    // what the current setup is, so a setting that makes no sense here can stay out of sight
+    readonly property bool isIsland: cfg.barStyle === "island"
+    readonly property bool isPill: cfg.barStyle === "pill" || cfg.barStyle === "island"
+    readonly property bool dash: isIsland && cfg.islandPanel && !cfg.islandSplit
+    function hasMod(id) { const m = cfg.modules || ({}); return (m.left || []).indexOf(id) >= 0 || (m.center || []).indexOf(id) >= 0 || (m.right || []).indexOf(id) >= 0; }
     readonly property var navOrder: [0, 1, 6, 2, 3, 8, 9, 11, 4, 5, 7, 10, 12, 13]
     readonly property var navGroups: [{ "label": "Look", "from": 0 }, { "label": "Shell", "from": 3 }, { "label": "System", "from": 8 }, { "label": "App", "from": 12 }]
     function groupOf(pos) { let g = 0; for (let i = 0; i < navGroups.length; i++) if (navGroups[i].from <= pos) g = i; return g; }
@@ -42,6 +47,68 @@ PanelWindow {
         const q = query.trim().toLowerCase();
         return q === "" || pages[i].toLowerCase().indexOf(q) >= 0 || pageWords[i].indexOf(q) >= 0;
     }
+    // ---- searching individual settings: every row registers itself here when it is created
+    property var rowList: []
+    property var results: []
+    property int pendingScroll: 0
+    function registerRow(row, page, pageItem) { rowList.push({ "row": row, "page": page, "pageItem": pageItem }); }
+    function ancestors(row) {
+        const out = []; let p = row.parent;
+        while (p) { out.push(p); if (p.isSettingsPage === true) break; p = p.parent; }
+        return out;
+    }
+    function usable(entry) {
+        try {
+            const r = entry.row;
+            if (!r || r.available === false) return false;
+            for (const a of ancestors(r)) if (a.available === false) return false;
+            return true;
+        } catch (e) { return false; }
+    }
+    function cardTitle(row) { for (const a of ancestors(row)) if (a.title !== undefined && a.collapsible !== undefined) return a.title; return ""; }
+    function runSearch() {
+        const words = query.trim().toLowerCase().split(/\s+/).filter(w => w !== "");
+        if (words.length === 0) { results = []; return; }
+        const out = [];
+        for (let i = 0; i < pages.length; i++) {
+            const hay = pages[i].toLowerCase() + " " + pageWords[i];
+            if (words.every(w => hay.indexOf(w) >= 0)) out.push({ "kind": "page", "page": i, "label": pages[i], "sub": "Page", "desc": "" });
+        }
+        const seen = {};
+        for (const e of rowList) {
+            if (!usable(e)) continue;
+            const r = e.row;
+            const hay = (r.label + " " + r.desc + " " + r.keywords + " " + pages[e.page] + " " + cardTitle(r)).toLowerCase();
+            if (!words.every(w => hay.indexOf(w) >= 0)) continue;
+            const key = e.page + "|" + r.label;
+            if (seen[key]) continue;
+            seen[key] = true;
+            const ct = cardTitle(r);
+            out.push({ "kind": "row", "page": e.page, "label": r.label, "sub": pages[e.page] + (ct !== "" ? "  ›  " + ct : ""), "desc": r.desc, "row": r, "pageItem": e.pageItem });
+        }
+        results = out.slice(0, 40);
+    }
+    onQueryChanged: runSearch()
+    function goTo(res) {
+        query = ""; search.text = "";
+        page = res.page;
+        if (res.kind === "row") {
+            for (const a of ancestors(res.row)) if (a.collapsible === true) a.expanded = true;
+            scrollTarget = res;
+            scrollTimer.restart();
+        }
+    }
+    property var scrollTarget: null
+    Timer { id: scrollTimer; interval: 420
+        onTriggered: {
+            const t = win.scrollTarget; if (!t) return;
+            win.scrollTarget = null;
+            try {
+                const y = t.row.mapToItem(t.pageItem.contentItem, 0, 0).y;
+                t.pageItem.contentY = Math.max(0, Math.min(Math.max(0, t.pageItem.contentHeight - t.pageItem.height), y - 90));
+                t.row.flash();
+            } catch (e) { }
+        } }
     function firstMatch() { for (let i = 0; i < pages.length; i++) if (matches(i)) return i; return -1; }
     readonly property var pages: ["Appearance", "Creator", "Bar & Island", "Modules", "Windows", "Input", "Glass", "System", "Control Center", "Notifications", "Shortcuts", "Desktop", "Updates", "About"]
     property bool typing: false
@@ -126,9 +193,9 @@ PanelWindow {
                 HInput {
                     id: search
                     x: 14; y: 14; width: nav.width - 28; height: 34
-                    placeholder: "Search Settings"
-                    onEdited: v => { win.query = v; const m = win.firstMatch(); if (m >= 0 && !win.matches(win.page)) win.page = m; }
-                    onSubmitted: v => { const m = win.firstMatch(); if (m >= 0) win.page = m; }
+                    placeholder: "Search settings"
+                    onEdited: v => win.query = v
+                    onSubmitted: v => { if (win.results.length > 0) win.goTo(win.results[0]); }
                     onTypingChanged: win.typing = typing
                 }
                 Rectangle {   // sliding selection pill
@@ -152,8 +219,6 @@ PanelWindow {
                         required property int index
                         required property string modelData
                         x: 14; y: win.navY(index); width: nav.width - 28; height: 32
-                        opacity: win.matches(index) ? 1 : 0.28
-                        Behavior on opacity { NumberAnimation { duration: main.ms(180) } }
                         IconTile {
                             x: 8; anchors.verticalCenter: parent.verticalCenter; size: 26; round: true; filled: win.page === index
                             glyph: String.fromCodePoint(win.pageIcons[index])
@@ -189,6 +254,42 @@ PanelWindow {
                 id: content
                 x: nav.width + 1; width: parent.width - x; height: parent.height
 
+                // search results replace the page while you type
+                Rectangle {
+                    id: resultsView
+                    z: 12; x: 0; y: 50; width: parent.width; height: parent.height - 50 - 14
+                    visible: win.query.trim() !== ""
+                    color: Qt.rgba(main.panelBase.r, main.panelBase.g, main.panelBase.b, 1)
+                    Text { visible: win.results.length === 0; x: 32; y: 20; text: "Nothing matches \"" + win.query.trim() + "\""; color: main.muted; font { family: main.font; pixelSize: 14 } }
+                    Flickable {
+                        anchors.fill: parent; anchors.leftMargin: 20; anchors.rightMargin: 20
+                        contentWidth: width; contentHeight: resCol.height + 20; clip: true; boundsBehavior: Flickable.StopAtBounds
+                        Column {
+                            id: resCol; width: parent.width; spacing: 4
+                            Repeater {
+                                model: win.results
+                                delegate: Rectangle {
+                                    id: rr
+                                    required property var modelData
+                                    required property int index
+                                    width: resCol.width; height: rcol.height + 20; radius: 14
+                                    color: rm.containsMouse || index === 0 ? Qt.rgba(main.text.r, main.text.g, main.text.b, 0.07) : "transparent"
+                                    Behavior on color { ColorAnimation { duration: main.ms(120) } }
+                                    IconTile { x: 8; anchors.verticalCenter: parent.verticalCenter; size: 32; round: true
+                                        glyph: String.fromCodePoint(win.pageIcons[rr.modelData.page]); tint: main.tone(rr.modelData.page) }
+                                    Column {
+                                        id: rcol; x: 52; anchors.verticalCenter: parent.verticalCenter; width: parent.width - 52 - 12; spacing: 2
+                                        Text { width: parent.width; elide: Text.ElideRight; text: rr.modelData.label; color: main.text; font { family: main.font; pixelSize: 14; weight: 600 } }
+                                        Text { width: parent.width; elide: Text.ElideRight; text: rr.modelData.sub; color: main.accent; font { family: main.font; pixelSize: 11; weight: 600 } }
+                                        Text { visible: rr.modelData.desc !== ""; width: parent.width; elide: Text.ElideRight; text: rr.modelData.desc; color: main.muted; font { family: main.font; pixelSize: 11 } }
+                                    }
+                                    MouseArea { id: rm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: win.goTo(rr.modelData) }
+                                }
+                            }
+                        }
+                    }
+                }
+
                 // soft edges where scrolled content meets the header and the bottom of the panel
                 Rectangle {
                     z: 8; x: 0; y: 50; width: parent.width; height: 16
@@ -205,6 +306,8 @@ PanelWindow {
                     property string heading: ""
                     property string sub: ""
                     default property alias items: stack.data
+                    readonly property bool isSettingsPage: true
+                    function registerRow(r) { win.registerRow(r, idx, pg); }
                     readonly property bool current: win.page === idx
                     anchors { left: parent.left; right: parent.right; bottom: parent.bottom; top: parent.top; topMargin: 50; bottomMargin: 14 }
                     clip: true
@@ -616,62 +719,108 @@ PanelWindow {
                         }
                     }
                     HCard {
-                        active: win.page === 2 && win.wanted; order: 1; title: "Look"
+                        active: win.page === 2 && win.wanted; order: 1; title: "Look"; available: true
                         Column {
-                            width: parent.width; spacing: 4
+                            width: parent.width; spacing: 0
                             HSliderRow { label: "Bar opacity"; desc: "How see-through the bar background is"
                                 from: 0.35; to: 1; step: 0.01; value: win.cfg.barOpacity; onMoved: v => win.put("barOpacity", v) }
                             HSliderRow { label: "Bar roundness"; desc: "Corner radius of the bar"
                                 from: 0; to: 15; step: 1; decimals: 0; unit: " px"; value: win.cfg.barRadius; onMoved: v => win.put("barRadius", v) }
-                            HSliderRow { label: "Island bounce"; desc: "How springy the dynamic island is when it changes shape"
-                                from: 0; to: 1; step: 0.05; value: win.cfg.motionBounce; onMoved: v => win.put("motionBounce", v) }
-                            HRow { label: "Hover dashboard"; desc: "Dynamic island: hovering opens the workspaces, calendar, media and status panel"
-                                HToggle { checked: win.cfg.islandPanel; onToggled: v => win.put("islandPanel", v) } }
-                            HAdvanced {
-                                title: "More bar options"
-                                HSliderRow { label: "Bar height"; desc: "Thickness of the bar"
-                                    from: 22; to: 44; step: 1; decimals: 0; unit: " px"; value: win.cfg.barHeight; onMoved: v => win.put("barHeight", v) }
-                                HSliderRow { label: "Top gap"; desc: "Space between the bar and the screen edge"
-                                    from: 0; to: 16; step: 1; decimals: 0; unit: " px"; value: win.cfg.barGap; onMoved: v => win.put("barGap", v) }
-                                HSliderRow { label: "Side gap"; desc: "Space at the left and right"
-                                    from: 0; to: 40; step: 1; decimals: 0; unit: " px"; value: win.cfg.barSide; onMoved: v => win.put("barSide", v) }
-                                HSliderRow { label: "Text size"; desc: "Size of bar text and icons"
-                                    from: 11; to: 17; step: 1; decimals: 0; unit: " px"; value: win.cfg.barFont; onMoved: v => win.put("barFont", v) }
-                                HSliderRow { label: "Module spacing"; desc: "Extra room between modules"
-                                    from: 0; to: 16; step: 1; decimals: 0; unit: " px"; value: win.cfg.modSpacing; onMoved: v => win.put("modSpacing", v) }
-                                HRow { label: "Icon colours"; desc: "Accent, plain text, or one colour per module"
-                                    HSegment { readonly property var keys: ["accent", "text", "colour"]
-                                        options: ["Accent", "Text", "Colourful"]; segWidth: 76
-                                        current: Math.max(0, keys.indexOf(win.cfg.iconMode)); onPicked: i => win.put("iconMode", keys[i]) } }
-                                HRow { label: "Island in three pieces"; desc: "Dynamic island style: a round button for music, the clock, and a round button for the Control Center"
-                                HToggle { checked: win.cfg.islandSplit; onToggled: v => win.put("islandSplit", v) } }
-                            HRow { label: "Drawn icons"; desc: "Wi-Fi as signal bars and a drawn battery instead of font icons"
-                                    HToggle { checked: win.cfg.drawnIcons; onToggled: v => win.put("drawnIcons", v) } }
-                                HRow { label: "Workspace style"; desc: "How the workspace indicators look"
-                                    HSegment { readonly property var keys: ["pills", "dots", "numbers", "bars", "scroll", "stretch"]
-                                        options: ["Pills", "Dots", "Numbers", "Bars", "Scroll", "Stretch"]; segWidth: 62
-                                        current: Math.max(0, keys.indexOf(win.cfg.wsStyle)); onPicked: i => win.put("wsStyle", keys[i]) } }
-                                HSliderRow { label: "Workspaces shown"; desc: "How many workspaces appear"
-                                    from: 3; to: 10; step: 1; decimals: 0; value: win.cfg.wsCount; onMoved: v => win.put("wsCount", v) }
-                                HRow { label: "Hide empty workspaces"; desc: "Only show workspaces that are in use"
-                                    HToggle { checked: win.cfg.wsOccupiedOnly; onToggled: v => win.put("wsOccupiedOnly", v) } }
-                                HRow { label: "Date in the clock"; desc: "Show the weekday and date next to the time"
-                                    HToggle { checked: win.cfg.clockDate; onToggled: v => win.put("clockDate", v) } }
-                            }
                         }
                     }
                     HCard {
-                        active: win.page === 2 && win.wanted; order: 2; title: "Island size"; collapsible: true
+                        active: win.page === 2 && win.wanted; order: 2; title: "Dynamic island"; available: win.isIsland
                         Column {
                             width: parent.width; spacing: 0
-                            HSliderRow { label: "Collapsed width"; desc: "Smallest width of the resting island. It always stays wide enough for its content (0 = automatic)"
+                            HRow { label: "Open the island"; desc: "Open the dashboard when you hover over the island, or only when you click it"
+                                HSegment { readonly property var keys: ["hover", "click"]; options: ["On hover", "On click"]; segWidth: 84
+                                    current: Math.max(0, keys.indexOf(win.cfg.islandOpenOn)); onPicked: i => win.put("islandOpenOn", keys[i]) } }
+                            HSliderRow { label: "Hover delay"; available: win.cfg.islandOpenOn === "hover"; desc: "How long to rest on the island before it opens"
+                                from: 0; to: 800; step: 20; decimals: 0; unit: " ms"; value: win.cfg.islandHoverDelay; onMoved: v => win.put("islandHoverDelay", v) }
+                            HRow { label: "Dashboard"; desc: "Opening the island shows the workspaces, calendar, music and status. Off: it grows into the bar"
+                                HToggle { checked: win.cfg.islandPanel; onToggled: v => win.put("islandPanel", v) } }
+                            HRow { label: "Three pieces"; desc: "A round button for music, the clock, and a round button for the Control Center"
+                                HToggle { checked: win.cfg.islandSplit; onToggled: v => win.put("islandSplit", v) } }
+                            HRow { label: "Volume and brightness pop-up"; desc: "The island shows a bar when you change volume or brightness"
+                                HToggle { checked: win.cfg.islandPeekLevels; onToggled: v => win.put("islandPeekLevels", v) } }
+                            HRow { label: "Music pop-up"; desc: "The island shows the song when the track changes"
+                                HToggle { checked: win.cfg.islandPeekMedia; onToggled: v => win.put("islandPeekMedia", v) } }
+                        }
+                    }
+                    HCard {
+                        active: win.page === 2 && win.wanted; order: 3; title: "Resting island"; available: win.isIsland; collapsible: true
+                        Column {
+                            width: parent.width; spacing: 0
+                            HRow { label: "Workspaces on the island"; desc: "The workspace indicator on the left of the clock"
+                                HToggle { checked: win.cfg.islandShowWs; onToggled: v => win.put("islandShowWs", v) } }
+                            HRow { label: "Status on the island"; desc: "Wi-Fi and battery on the right of the clock"
+                                HToggle { checked: win.cfg.islandShowStatus; onToggled: v => win.put("islandShowStatus", v) } }
+                            HRow { label: "Music bars"; desc: "Moving bars next to the clock while music plays"
+                                HToggle { checked: win.cfg.islandShowEq; onToggled: v => win.put("islandShowEq", v) } }
+                            HSliderRow { label: "Minimum width"; desc: "Smallest width of the resting island. It always stays wide enough for its content (0 = automatic)"
                                 from: 0; to: 320; step: 2; decimals: 0; unit: " px"; value: win.cfg.islandCollapsedW; onMoved: v => win.put("islandCollapsedW", v) }
-                            HSliderRow { label: "Expanded height"; desc: "Height of the hover dashboard"
+                        }
+                    }
+                    HCard {
+                        active: win.page === 2 && win.wanted; order: 4; title: "Hover dashboard"; available: win.isIsland && win.dash; collapsible: true
+                        Column {
+                            width: parent.width; spacing: 0
+                            HRow { label: "Workspaces column"; desc: "The active window and your workspaces, on the left"
+                                HToggle { checked: win.cfg.islandPanelLeft; onToggled: v => win.put("islandPanelLeft", v) } }
+                            HRow { label: "Status column"; desc: "Battery, Wi-Fi, Bluetooth and quick switches, on the right"
+                                HToggle { checked: win.cfg.islandPanelRight; onToggled: v => win.put("islandPanelRight", v) } }
+                            HSliderRow { label: "Height"; desc: "How tall the dashboard is"
                                 from: 150; to: 260; step: 2; decimals: 0; unit: " px"; value: win.cfg.islandPanelH; onMoved: v => win.put("islandPanelH", v) }
                         }
                     }
                     HCard {
-                        active: win.page === 2 && win.wanted; order: 3; title: "Clock and calendar"; collapsible: true
+                        active: win.page === 2 && win.wanted; order: 5; title: "Island appearance"; available: win.isIsland; collapsible: true
+                        Column {
+                            width: parent.width; spacing: 0
+                            HRow { label: "Border"; desc: "A thin line around the island"
+                                HToggle { checked: win.cfg.islandBorder; onToggled: v => win.put("islandBorder", v) } }
+                            HRow { label: "Shadow"; available: !win.cfg.glassBar; desc: "A soft shadow under the island"
+                                HToggle { checked: win.cfg.islandShadow; onToggled: v => win.put("islandShadow", v) } }
+                            HSliderRow { label: "Distance from the top"; desc: "Space between the island and the screen edge (0 = follow the outer window gaps)"
+                                from: 0; to: 40; step: 1; decimals: 0; unit: " px"; value: win.cfg.islandGap; onMoved: v => win.put("islandGap", v) }
+                            HSliderRow { label: "Bounce"; desc: "How springy the island is when it changes shape"
+                                from: 0; to: 1; step: 0.05; value: win.cfg.motionBounce; onMoved: v => win.put("motionBounce", v) }
+                        }
+                    }
+                    HCard {
+                        active: win.page === 2 && win.wanted; order: 6; title: "Bar details"; collapsible: true
+                        Column {
+                            width: parent.width; spacing: 0
+                                HSliderRow { label: "Bar height"; desc: "Thickness of the bar"
+                                    from: 22; to: 44; step: 1; decimals: 0; unit: " px"; value: win.cfg.barHeight; onMoved: v => win.put("barHeight", v) }
+                                HSliderRow { label: "Top gap"; available: !win.isIsland; desc: "Space between the bar and the screen edge"
+                                    from: 0; to: 16; step: 1; decimals: 0; unit: " px"; value: win.cfg.barGap; onMoved: v => win.put("barGap", v) }
+                                HSliderRow { label: "Side gap"; available: !win.isPill; desc: "Space at the left and right"
+                                    from: 0; to: 40; step: 1; decimals: 0; unit: " px"; value: win.cfg.barSide; onMoved: v => win.put("barSide", v) }
+                                HSliderRow { label: "Text size"; available: !win.dash; desc: "Size of bar text and icons"
+                                    from: 11; to: 17; step: 1; decimals: 0; unit: " px"; value: win.cfg.barFont; onMoved: v => win.put("barFont", v) }
+                                HSliderRow { label: "Module spacing"; available: !win.dash; desc: "Extra room between modules"
+                                    from: 0; to: 16; step: 1; decimals: 0; unit: " px"; value: win.cfg.modSpacing; onMoved: v => win.put("modSpacing", v) }
+                                HRow { label: "Icon colours"; available: !win.dash; desc: "Accent, plain text, or one colour per module"
+                                    HSegment { readonly property var keys: ["accent", "text", "colour"]
+                                        options: ["Accent", "Text", "Colourful"]; segWidth: 76
+                                        current: Math.max(0, keys.indexOf(win.cfg.iconMode)); onPicked: i => win.put("iconMode", keys[i]) } }
+                            HRow { label: "Drawn icons"; available: true; desc: "Wi-Fi as signal bars and a drawn battery instead of font icons"
+                                    HToggle { checked: win.cfg.drawnIcons; onToggled: v => win.put("drawnIcons", v) } }
+                                HRow { label: "Workspace style"; available: win.hasMod("workspaces") || win.isIsland; desc: "How the workspace indicators look"
+                                    HSegment { readonly property var keys: ["pills", "dots", "numbers", "bars", "scroll", "stretch"]
+                                        options: ["Pills", "Dots", "Numbers", "Bars", "Scroll", "Stretch"]; segWidth: 62
+                                        current: Math.max(0, keys.indexOf(win.cfg.wsStyle)); onPicked: i => win.put("wsStyle", keys[i]) } }
+                                HSliderRow { label: "Workspaces shown"; available: win.hasMod("workspaces") || win.isIsland; desc: "How many workspaces appear"
+                                    from: 3; to: 10; step: 1; decimals: 0; value: win.cfg.wsCount; onMoved: v => win.put("wsCount", v) }
+                                HRow { label: "Hide empty workspaces"; available: (win.hasMod("workspaces") || win.isIsland) && ["pills", "dots", "numbers"].indexOf(win.cfg.wsStyle) >= 0; desc: "Only show workspaces that are in use"
+                                    HToggle { checked: win.cfg.wsOccupiedOnly; onToggled: v => win.put("wsOccupiedOnly", v) } }
+                                HRow { label: "Date in the clock"; available: win.hasMod("clock") && !win.dash; desc: "Show the weekday and date next to the time"
+                                    HToggle { checked: win.cfg.clockDate; onToggled: v => win.put("clockDate", v) } }
+                        }
+                    }
+                    HCard {
+                        active: win.page === 2 && win.wanted; order: 7; title: "Clock and calendar"; collapsible: true
                         Column {
                             width: parent.width; spacing: 0
                             HRow { label: "24-hour clock"; desc: "Use 14:30 instead of 2:30 PM"
@@ -683,7 +832,7 @@ PanelWindow {
                         }
                     }
                     HCard {
-                        active: win.page === 2 && win.wanted; order: 4; title: "Session"; collapsible: true
+                        active: win.page === 2 && win.wanted; order: 8; title: "Session"; collapsible: true
                         HRow {
                             label: "Lock screen"; desc: "Morphing clock lock, same as Super + N"
                             HButton { label: "Lock now"; primary: true; onClicked: { win.shell.closeSettings(); lockDelay.restart(); } }
@@ -733,19 +882,19 @@ PanelWindow {
                         active: win.page === 3 && win.wanted; order: 1; title: "Text next to icons"; collapsible: true
                         Column {
                             width: parent.width; spacing: 2
-                            HRow { label: "Show text"; desc: "Always, or only while the pointer is over a module"
+                            HRow { label: "Show text"; available: win.hasMod("volume") || win.hasMod("network") || win.hasMod("bluetooth") || win.hasMod("battery") || win.hasMod("brightness"); desc: "Always, or only while the pointer is over a module"
                                 HSegment { options: ["Always", "On hover"]; segWidth: 76
                                     current: win.cfg.labelsOnHover ? 1 : 0
                                     onPicked: i => win.put("labelsOnHover", i === 1) } }
-                            HRow { label: "Volume"; desc: "Show the percentage"
+                            HRow { label: "Volume"; available: win.hasMod("volume"); desc: "Show the percentage"
                                 HToggle { checked: win.cfg.labelVolume; onToggled: v => win.put("labelVolume", v) } }
-                            HRow { label: "Brightness"; desc: "Show the percentage"
+                            HRow { label: "Brightness"; available: win.hasMod("brightness") && win.shell.caps.backlight; desc: "Show the percentage"
                                 HToggle { checked: win.cfg.labelBrightness; onToggled: v => win.put("labelBrightness", v) } }
-                            HRow { label: "Network"; desc: "Show the Wi-Fi name"
+                            HRow { label: "Network"; available: win.hasMod("network"); desc: "Show the Wi-Fi name"
                                 HToggle { checked: win.cfg.labelNetwork; onToggled: v => win.put("labelNetwork", v) } }
-                            HRow { label: "Bluetooth"; desc: "Show the connected device"
+                            HRow { label: "Bluetooth"; available: win.hasMod("bluetooth") && win.shell.caps.bluetooth; desc: "Show the connected device"
                                 HToggle { checked: win.cfg.labelBluetooth; onToggled: v => win.put("labelBluetooth", v) } }
-                            HRow { label: "Battery"; desc: "Show the percentage"
+                            HRow { label: "Battery"; available: win.hasMod("battery") && win.shell.caps.battery; desc: "Show the percentage"
                                 HToggle { checked: win.cfg.labelBattery; onToggled: v => win.put("labelBattery", v) } }
                         }
                     }
@@ -791,7 +940,7 @@ PanelWindow {
                                 title: "Shadows and borders"
                                 HRow { label: "Window shadows"; desc: "A soft shadow under every window"
                                     HToggle { checked: win.cfg.shadow; onToggled: v => win.put("shadow", v) } }
-                                HSliderRow { label: "Shadow size"; desc: "How far the shadow reaches"
+                                HSliderRow { label: "Shadow size"; available: win.cfg.shadow; desc: "How far the shadow reaches"
                                     from: 2; to: 30; step: 1; decimals: 0; unit: " px"; value: win.cfg.shadowSize; onMoved: v => win.put("shadowSize", v) }
                                 HRow { label: "Gradient border"; desc: "Blend the accent colours, or use a single colour"
                                     HToggle { checked: win.cfg.gradientBorder; onToggled: v => win.put("gradientBorder", v) } }
@@ -809,9 +958,9 @@ PanelWindow {
                             width: parent.width; spacing: 4
                             HRow { label: "Focus follows mouse"; desc: "Windows take focus when you point at them"
                                 HToggle { checked: win.cfg.followMouse; onToggled: v => win.put("followMouse", v) } }
-                            HRow { label: "Natural scrolling"; desc: "Content moves with your fingers on the touchpad"
+                            HRow { label: "Natural scrolling"; available: win.shell.caps.touchpad; desc: "Content moves with your fingers on the touchpad"
                                 HToggle { checked: win.cfg.naturalScroll; onToggled: v => win.put("naturalScroll", v) } }
-                            HRow { label: "Tap to click"; desc: "Tap the touchpad instead of pressing it"
+                            HRow { label: "Tap to click"; available: win.shell.caps.touchpad; desc: "Tap the touchpad instead of pressing it"
                                 HToggle { checked: win.cfg.tapToClick; onToggled: v => win.put("tapToClick", v) } }
                             HSliderRow { label: "Pointer speed"; desc: "Slower on the left, faster on the right"
                                 from: -1; to: 1; step: 0.1; decimals: 1; value: win.cfg.pointerSpeed; onMoved: v => win.put("pointerSpeed", v) }
@@ -840,9 +989,9 @@ PanelWindow {
                                 HToggle { checked: win.cfg.glassBar; onToggled: v => win.put("glassBar", v) } }
                             HRow { label: "Settings panel"; desc: "This window"
                                 HToggle { checked: win.cfg.glassPanel; onToggled: v => win.put("glassPanel", v) } }
-                            HRow { label: "App launcher"; desc: "Rofi, applied on next open"
+                            HRow { label: "App launcher"; available: win.shell.caps.rofi; desc: "Rofi, applied on next open"
                                 HToggle { checked: win.cfg.glassLauncher; onToggled: v => win.put("glassLauncher", v) } }
-                            HRow { label: "Terminal"; desc: "Kitty windows, reloaded live"
+                            HRow { label: "Terminal"; available: win.shell.caps.kitty; desc: "Kitty windows, reloaded live"
                                 HToggle { checked: win.cfg.glassTerminal; onToggled: v => win.put("glassTerminal", v) } }
                         }
                     }
@@ -852,20 +1001,20 @@ PanelWindow {
                             width: parent.width; spacing: 2
                             HRow { label: "Frost other apps"; desc: "Makes the windows of the groups below see-through with the blurred backdrop"
                                 HToggle { checked: win.cfg.glassWindows; onToggled: v => win.put("glassWindows", v) } }
-                            HRow { label: "Browsers"; desc: "Firefox, Lodica, Chromium, Brave, Zen"
+                            HRow { label: "Browsers"; available: win.cfg.glassWindows; desc: "Firefox, Lodica, Chromium, Brave, Zen"
                                 HToggle { checked: win.cfg.glassBrowsers; onToggled: v => win.put("glassBrowsers", v) } }
-                            HRow { label: "File managers"; desc: "Dolphin, Nautilus, Thunar"
+                            HRow { label: "File managers"; available: win.cfg.glassWindows; desc: "Dolphin, Nautilus, Thunar"
                                 HToggle { checked: win.cfg.glassFiles; onToggled: v => win.put("glassFiles", v) } }
-                            HRow { label: "Editors"; desc: "VS Code, Kate, Gedit, Text Editor"
+                            HRow { label: "Editors"; available: win.cfg.glassWindows; desc: "VS Code, Kate, Gedit, Text Editor"
                                 HToggle { checked: win.cfg.glassEditors; onToggled: v => win.put("glassEditors", v) } }
-                            HRow { label: "Chat and media"; desc: "Discord, Spotify, Telegram, Signal, Hearth"
+                            HRow { label: "Chat and media"; available: win.cfg.glassWindows; desc: "Discord, Spotify, Telegram, Signal, Hearth"
                                 HToggle { checked: win.cfg.glassChat; onToggled: v => win.put("glassChat", v) } }
-                            HRow { label: "Other KDE and GNOME apps"; desc: "Okular, Gwenview, System Settings, Calculator and the like"
+                            HRow { label: "Other KDE and GNOME apps"; available: win.cfg.glassWindows; desc: "Okular, Gwenview, System Settings, Calculator and the like"
                                 HToggle { checked: win.cfg.glassOther; onToggled: v => win.put("glassOther", v) } }
                         }
                     }
                     HCard {
-                        active: win.page === 6 && win.wanted; order: 2; title: "Tuning"; collapsible: true
+                        active: win.page === 6 && win.wanted; order: 2; title: "Tuning"; available: win.cfg.glassBar || win.cfg.glassPanel || win.cfg.glassLauncher || win.cfg.glassTerminal || win.cfg.glassWindows; collapsible: true
                         Column {
                             width: parent.width; spacing: 4
                             HSliderRow { label: "Glass amount"; desc: "How see-through glass surfaces are"
@@ -885,22 +1034,22 @@ PanelWindow {
                         active: win.page === 7 && win.wanted; order: 0; title: "Follow the theme"
                         Column {
                             width: parent.width; spacing: 2
-                            HRow { label: "Kitty"; desc: "Terminal colours, reloaded live"
+                            HRow { label: "Kitty"; available: win.shell.caps.kitty; desc: "Terminal colours, reloaded live"
                                 HToggle { checked: win.cfg.syncKitty; onToggled: v => win.put("syncKitty", v) } }
-                            HRow { label: "Fish"; desc: "Prompt and syntax colours in every open shell"
+                            HRow { label: "Fish"; available: win.shell.caps.fish; desc: "Prompt and syntax colours in every open shell"
                                 HToggle { checked: win.cfg.syncFish; onToggled: v => win.put("syncFish", v) } }
-                            HRow { label: "Rofi"; desc: "App launcher, applied on next open"
+                            HRow { label: "Rofi"; available: win.shell.caps.rofi; desc: "App launcher, applied on next open"
                                 HToggle { checked: win.cfg.syncRofi; onToggled: v => win.put("syncRofi", v) } }
                             HRow { label: "GTK apps"; desc: "Accent and surfaces, applied when an app starts"
                                 HToggle { checked: win.cfg.syncGtk; onToggled: v => win.put("syncGtk", v) } }
                             HRow { label: "Other apps"; desc: "Firefox, Yazi, Lodica, Dolphin and other KDE apps, micro, cava. Restart the app to see it"
                                 HToggle { checked: win.cfg.syncApps; onToggled: v => win.put("syncApps", v) } }
-                            HRow { label: "Hyprlock"; desc: "The Super + Shift + X lock screen"
+                            HRow { label: "Hyprlock"; available: win.shell.caps.hyprlock; desc: "The Super + Shift + X lock screen"
                                 HToggle { checked: win.cfg.syncLock; onToggled: v => win.put("syncLock", v) } }
                         }
                     }
                     HCard {
-                        active: win.page === 7 && win.wanted; order: 1; title: "Terminal"; collapsible: true
+                        active: win.page === 7 && win.wanted; order: 1; title: "Terminal"; available: win.shell.caps.kitty && win.cfg.syncKitty; collapsible: true
                         Column {
                             width: parent.width; spacing: 4
                             HSliderRow { label: "Kitty opacity"; desc: "Transparency of terminal windows"
@@ -916,12 +1065,12 @@ PanelWindow {
                                         options: ["Beam", "Block", "Line"]; segWidth: 66
                                         current: Math.max(0, keys.indexOf(win.cfg.kittyCursor)); onPicked: i => win.put("kittyCursor", keys[i]) } }
                             }
-                            HRow { label: "Apply now"; desc: "Re-write every themed config file"
+                            HRow { label: "Apply now"; available: win.cfg.syncKitty || win.cfg.syncFish || win.cfg.syncRofi || win.cfg.syncGtk || win.cfg.syncApps || win.cfg.syncLock; desc: "Re-write every themed config file"
                                 HButton { label: "Re-apply"; onClicked: win.shell.reapply() } }
                         }
                     }
                     HCard {
-                        active: win.page === 7 && win.wanted; order: 2; title: "App launcher"; collapsible: true
+                        active: win.page === 7 && win.wanted; order: 2; title: "App launcher"; available: win.shell.caps.rofi && win.cfg.syncRofi; collapsible: true
                         Column {
                             width: parent.width; spacing: 4
                             HSliderRow { label: "Width"; desc: "Width of the launcher window"
@@ -933,18 +1082,6 @@ PanelWindow {
                                 HRow { label: "App icons"; desc: "Show an icon next to each app"
                                     HToggle { checked: win.cfg.rofiIcons; onToggled: v => win.put("rofiIcons", v) } }
                             }
-                        }
-                    }
-                    HCard {
-                        active: win.page === 7 && win.wanted; order: 3; title: "Lock screen"; collapsible: true
-                        Column {
-                            width: parent.width; spacing: 4
-                            HSliderRow { label: "Clock size"; desc: "Size of the big lock-screen clock"
-                                from: 64; to: 140; step: 4; decimals: 0; unit: " px"; value: win.cfg.lockClockSize; onMoved: v => win.put("lockClockSize", v) }
-                            HSliderRow { label: "Background blur"; desc: "How blurred the screen behind the lock is"
-                                from: 0; to: 1; step: 0.05; value: win.cfg.lockBlur; onMoved: v => win.put("lockBlur", v) }
-                            HRow { label: "Show the date"; desc: "A line with the day and date above the clock"
-                                HToggle { checked: win.cfg.lockDate; onToggled: v => win.put("lockDate", v) } }
                         }
                     }
                 }
@@ -1212,7 +1349,7 @@ PanelWindow {
                             width: parent.width; spacing: 4
                             HRow { label: "Show notifications"; desc: "Pop-ups and a notification centre. Turn off if mako, dunst or another daemon should handle them (takes effect after a restart)"
                                 HToggle { checked: win.cfg.notifications; onToggled: v => win.put("notifications", v) } }
-                            HSliderRow { label: "Time on screen"; desc: "How long a pop-up stays when the app does not say"
+                            HSliderRow { label: "Time on screen"; available: win.cfg.notifications; desc: "How long a pop-up stays when the app does not say"
                                 from: 3; to: 15; step: 1; decimals: 0; unit: " s"; value: win.cfg.notifTimeout; onMoved: v => win.put("notifTimeout", v) }
                             HRow { label: "Quiet mode"; desc: "Hide pop-ups (critical ones still show). Also on the bell: right click"
                                 HToggle { checked: win.shell.notifier.dnd; onToggled: v => { win.shell.notifier.dnd = v; } } }

@@ -18,6 +18,8 @@ Item {
     readonly property string iconFont: "JetBrainsMono Nerd Font Propo"
     readonly property color faint: Qt.rgba(main.text.r, main.text.g, main.text.b, 0.07)
     readonly property real colGap: 16
+    readonly property bool showLeft: shell.cfg.islandPanelLeft
+    readonly property bool showRight: shell.cfg.islandPanelRight
 
     function cp(n) { return String.fromCodePoint(n); }
 
@@ -35,7 +37,7 @@ Item {
     // ------------------------------------------------------------ left: window + workspaces
     Item {
         id: leftCol
-        x: 20; y: 16; width: 160; height: parent.height - 32
+        x: 20; y: 16; width: root.showLeft ? 160 : 0; height: parent.height - 32; visible: root.showLeft
 
         Row {
             id: winRow
@@ -102,8 +104,8 @@ Item {
     // ------------------------------------------------------------ centre: clock, week, media
     Item {
         id: centre
-        x: leftCol.x + leftCol.width + root.colGap; y: 14
-        width: right.x - x - root.colGap; height: parent.height - 28
+        x: root.showLeft ? leftCol.x + leftCol.width + root.colGap : 20; y: 14
+        width: (root.showRight ? right.x - root.colGap : parent.width - 20) - x; height: parent.height - 28
 
         Item {
             id: clockBox
@@ -241,10 +243,20 @@ Item {
         }
     }
 
+    // the Control Center button stays reachable when the status column is hidden
+    Rectangle {
+        visible: !root.showRight
+        width: 24; height: 24; radius: 12; x: parent.width - width - 14; y: 12
+        color: ccm2.containsMouse ? main.accent : root.faint
+        Behavior on color { ColorAnimation { duration: main.ms(150) } }
+        Text { anchors.centerIn: parent; text: root.cp(0xF0570); color: ccm2.containsMouse ? main.onAccent : main.text; font { family: root.iconFont; pixelSize: 13 } }
+        MouseArea { id: ccm2; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.isl.openMenu("quick", root.cp(0xF0570), "") }
+    }
+
     // ------------------------------------------------------------ right: status
     Item {
         id: right
-        width: 160; x: parent.width - width - 20; y: 16; height: parent.height - 32
+        width: root.showRight ? 160 : 0; x: parent.width - width - 20; y: 16; height: parent.height - 32; visible: root.showRight
 
         Text { text: "Status"; color: main.text; font { family: main.font; pixelSize: 12; weight: 700 } }
         Rectangle {

@@ -22,7 +22,7 @@ PanelWindow {
     readonly property real gap: 12
     readonly property var mods: shell.cfg.modules
     // the island floats the same distance from the screen edge as windows do from each other and from it
-    readonly property real islandGap: Math.max(4, shell.cfg.gapsOut)
+    readonly property real islandGap: shell.cfg.islandGap > 0 ? shell.cfg.islandGap : Math.max(4, shell.cfg.gapsOut)
     readonly property real maxMenuH: Math.max(200, Math.min(760, (screen ? screen.height : 900) - 140))
     property real intro: 0
 
@@ -50,7 +50,7 @@ PanelWindow {
     exclusiveZone: island ? islandGap + shell.cfg.barHeight : shell.cfg.barHeight
     WlrLayershell.namespace: "quickshell-bar"
     // on demand (not exclusive): a click grants keyboard focus for Esc, while the click-away catcher still receives the pointer
-    WlrLayershell.keyboardFocus: island && islandMenu !== "" ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+    WlrLayershell.keyboardFocus: island && islandMenu === "network" ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
     // Input: the whole window, except on the dynamic island where only the pill itself takes input
     readonly property bool maskIsland: island && islandSurface !== null && islandRef !== null
     // The island's input region is its pill plus a little slack, running out to the screen edge so a flick to the edge finds it
