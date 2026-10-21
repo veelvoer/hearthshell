@@ -154,11 +154,7 @@ ShellRoot {
         "termOpacity": 0.92, "blurSize": 6,
         "barStyle": "classic", "barPos": "top",
         "glassBar": false, "glassPanel": false, "glassLauncher": false, "glassTerminal": false, "glassAmount": 0.4,
-<<<<<<< /home/voer/.config/quickshell/shell.qml
         "drawnIcons": false, "islandSplit": false, "islandPanel": true, "colorBurst": false, "islandOpenOn": "hover", "islandHoverDelay": 0, "islandGap": 0, "islandBorder": true, "islandShadow": true, "islandShowWs": true, "islandShowStatus": true, "islandShowEq": true, "islandPanelLeft": true, "islandPanelRight": true, "islandPeekLevels": true, "islandPeekMedia": true, "barColor": "", "panelColor": "", "islandCollapsedW": 0, "islandPanelH": 172, "ccLayout": { "cols": 6, "items": {} }, "nightLevel": 2, "shortcuts": {}, "shortcutsApplied": [], "homeEnabled": true, "homeWidgets": [], "lockWidgetsEnabled": true, "lockWidgets": [], "widgetNotes": {}, "widgetStyle": "auto", "widgetRadius": 26, "lockClockY": 0.4, "lockDim": 0, "notifTimeout": 6, "weekMonday": true, "ccOrder": ["wifi", "bluetooth", "audio", "quiet", "night", "volume", "brightness", "media", "notifications"], "ccHidden": ["airplane", "caffeine", "game", "mic", "micvol", "screenshot", "wallpaper", "theme", "battery", "system"], "motionBounce": 0.5, "notifications": true, "glassWindows": false, "glassBrowsers": true, "glassFiles": true, "glassEditors": true, "glassChat": true, "glassOther": true,
-=======
-        "drawnIcons": false, "islandSplit": false, "islandPanel": true, "colorBurst": false, "barColor": "", "panelColor": "", "islandCollapsedW": 0, "islandPanelH": 172, "ccLayout": { "cols": 6, "items": {} }, "nightLevel": 2, "shortcuts": {}, "shortcutsApplied": [], "homeEnabled": true, "homeWidgets": [], "lockWidgetsEnabled": true, "lockWidgets": [], "widgetNotes": {}, "widgetStyle": "auto", "widgetRadius": 26, "lockClockY": 0.4, "lockDim": 0, "notifTimeout": 6, "weekMonday": true, "ccOrder": ["wifi", "bluetooth", "audio", "quiet", "night", "volume", "brightness", "media", "notifications"], "ccHidden": ["airplane", "caffeine", "game", "mic", "micvol", "screenshot", "wallpaper", "theme", "battery", "system"], "motionBounce": 0.5, "notifications": true, "glassWindows": false, "glassBrowsers": true, "glassFiles": true, "glassEditors": true, "glassChat": true, "glassOther": true,
->>>>>>> /tmp/repo_head_shell.qml
         "userWalls": {},
         "font": "Inter", "motion": "normal", "accent": "", "wallFit": "fill",
         "barHeight": 30, "barGap": 4, "barSide": 10, "barFont": 13, "modSpacing": 0, "iconMode": "accent",
@@ -227,7 +223,6 @@ ShellRoot {
         n[id] = text;
         set("widgetNotes", n);
     }
-<<<<<<< /home/voer/.config/quickshell/shell.qml
     // what this computer has, so Settings only offers what can work here
     property var caps: ({ "kitty": true, "rofi": true, "fish": true, "hyprlock": true, "battery": true, "backlight": true, "touchpad": true, "bluetooth": true, "wifi": true })
     Process {
@@ -247,8 +242,6 @@ ShellRoot {
             }
         }
     }
-=======
->>>>>>> /tmp/repo_head_shell.qml
     SystemStats { id: statsObj }
     readonly property var stats: statsObj
     DesktopEditor { id: editorObj; shell: shellRoot }
