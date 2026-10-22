@@ -16,6 +16,7 @@ change almost everything: themes, wallpapers, the bar, the windows, even your te
 - **A Control Center you design**: a grid editor in Settings that shows the real thing (drag, resize, add and remove modules; 5 to 9 columns),
   with Wi-Fi, Bluetooth, audio, Night Light, Airplane, Keep Awake, Game Mode, microphone, screenshot, theme, wallpaper, battery, system monitor,
   and Eco / Normal / Performance power modes
+- **Hyprland animation presets** (Apple, Smooth, Snappy, Bouncy, Slide, Minimal, Off) with an Advanced mode for speed, motion and curve per animation type, and one global animation speed
 - **Your own shortcuts** for any island menu or quick action, and **updates from GitHub** inside Settings (with a backup you can restore)
 - **Built-in app launcher, power menu and notifications**: pop-ups that glide in, a notification centre with Do not disturb, all themed and frosted with the rest
 - **Wi-Fi and Bluetooth menus** that grow out of the bar button: networks, passwords, devices

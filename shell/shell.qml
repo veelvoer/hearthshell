@@ -135,7 +135,7 @@ ShellRoot {
         src: shellRoot.cfg.accent === "" ? themesData.data[shellRoot.cfg.theme]
              : Object.assign({}, themesData.data[shellRoot.cfg.theme], { "wsa": shellRoot.cfg.accent, "icon": shellRoot.cfg.accent })
         font: shellRoot.cfg.font
-        speed: ({ "off": 40, "relaxed": 0.65, "normal": 1, "snappy": 1.6 })[shellRoot.cfg.motion]
+        speed: ({ "off": 40, "relaxed": 0.65, "normal": 1, "snappy": 1.6 })[shellRoot.cfg.motion] * Math.max(0.1, shellRoot.cfg.animSpeed)
         barPx: shellRoot.cfg.barFont
         iconMode: shellRoot.cfg.iconMode
         burst: shellRoot.cfg.colorBurst
@@ -158,7 +158,7 @@ ShellRoot {
         "userWalls": {},
         "font": "Inter", "motion": "normal", "accent": "", "wallFit": "fill",
         "barHeight": 30, "barGap": 4, "barSide": 10, "barFont": 13, "modSpacing": 0, "iconMode": "accent",
-        "wsStyle": "pills", "wsCount": 9, "wsOccupiedOnly": false, "clockDate": false,
+        "wsStyle": "pills", "wsCount": 9, "wsSlots": 5, "animSpeed": 1, "animPreset": "apple", "animAdvanced": false, "animAdv": {}, "wsOccupiedOnly": false, "clockDate": false,
         "labelVolume": true, "labelNetwork": true, "labelBluetooth": true, "labelBrightness": true, "labelBattery": true, "labelsOnHover": false,
         "shadow": true, "shadowSize": 12, "gradientBorder": true,
         "followMouse": true, "naturalScroll": true, "tapToClick": true, "pointerSpeed": 0, "repeatRate": 25, "repeatDelay": 600,
@@ -171,7 +171,7 @@ ShellRoot {
     // keys that need scripts/apply-theme.py to run when they change
     readonly property var systemKeys: ["theme", "gapsIn", "gapsOut", "rounding", "borderSize", "inactiveOpacity",
         "blur", "blurSize", "termOpacity", "glassBar", "glassPanel", "glassLauncher", "glassTerminal", "glassAmount", "glassWindows", "glassBrowsers", "glassFiles", "glassEditors", "glassChat", "glassOther", "syncKitty", "syncRofi", "syncFish", "syncGtk", "syncLock", "syncApps",
-        "motion", "accent", "shadow", "shadowSize", "gradientBorder", "followMouse", "naturalScroll", "tapToClick",
+        "motion", "animSpeed", "animPreset", "animAdvanced", "animAdv", "accent", "shadow", "shadowSize", "gradientBorder", "followMouse", "naturalScroll", "tapToClick",
         "pointerSpeed", "repeatRate", "repeatDelay", "kittyFont", "kittyPad", "kittyCursor", "rofiWidth", "rofiLines", "rofiIcons"]
     property var cfg: defaults
     property bool settingsOpen: false
@@ -224,6 +224,55 @@ ShellRoot {
         set("widgetNotes", n);
     }
     // what this computer has, so Settings only offers what can work here
+    // ---- Hyprland animations: presets, plus an advanced mode that overrides single values. The result is computed here once.
+    readonly property var animGroups: [
+        { "id": "windows", "label": "Windows", "styles": [["popin 90%", "Pop in"], ["popin 70%", "Deep pop"], ["slide", "Slide"], ["gnomed", "Fold"]] },
+        { "id": "workspaces", "label": "Workspaces", "styles": [["slide", "Slide"], ["slidevert", "Vertical"], ["fade", "Fade"], ["slidefade 20%", "Slide + fade"]] },
+        { "id": "layers", "label": "Menus and panels", "styles": [["popin 93%", "Pop in"], ["slide", "Slide"], ["fade", "Fade"]] },
+        { "id": "fade", "label": "Fading", "styles": [] },
+        { "id": "border", "label": "Borders", "styles": [] } ]
+    readonly property var animCurves: [["spring", "Soft spring"], ["bounce", "Bouncy"], ["ease", "Smooth"], ["snap", "Snappy"], ["soft", "Gentle"], ["linear", "Linear"]]
+    readonly property var animPresets: ({
+        "apple": { "label": "Apple", "desc": "Soft springs, like macOS",
+            "windows": { "speed": 4.5, "style": "popin 90%", "curve": "spring" }, "workspaces": { "speed": 4.8, "style": "slide", "curve": "ease" },
+            "layers": { "speed": 3.8, "style": "popin 93%", "curve": "spring" }, "fade": { "speed": 3, "curve": "ease" }, "border": { "speed": 4.5, "curve": "ease" } },
+        "smooth": { "label": "Smooth", "desc": "Calm and even, nothing bounces",
+            "windows": { "speed": 5.5, "style": "popin 85%", "curve": "ease" }, "workspaces": { "speed": 5.5, "style": "slide", "curve": "ease" },
+            "layers": { "speed": 4.5, "style": "popin 95%", "curve": "ease" }, "fade": { "speed": 4, "curve": "ease" }, "border": { "speed": 5, "curve": "ease" } },
+        "snappy": { "label": "Snappy", "desc": "Short and sharp, for speed",
+            "windows": { "speed": 2.4, "style": "popin 92%", "curve": "snap" }, "workspaces": { "speed": 2.6, "style": "slide", "curve": "snap" },
+            "layers": { "speed": 2.2, "style": "popin 96%", "curve": "snap" }, "fade": { "speed": 2, "curve": "snap" }, "border": { "speed": 2.5, "curve": "snap" } },
+        "bouncy": { "label": "Bouncy", "desc": "Playful, with a little overshoot",
+            "windows": { "speed": 5, "style": "popin 80%", "curve": "bounce" }, "workspaces": { "speed": 5.2, "style": "slidefade 20%", "curve": "bounce" },
+            "layers": { "speed": 4.5, "style": "popin 88%", "curve": "bounce" }, "fade": { "speed": 3.5, "curve": "ease" }, "border": { "speed": 4.5, "curve": "ease" } },
+        "slide": { "label": "Slide", "desc": "Everything glides in from the side",
+            "windows": { "speed": 4, "style": "slide", "curve": "ease" }, "workspaces": { "speed": 4.5, "style": "slide", "curve": "ease" },
+            "layers": { "speed": 3.5, "style": "slide", "curve": "ease" }, "fade": { "speed": 3, "curve": "ease" }, "border": { "speed": 4, "curve": "ease" } },
+        "minimal": { "label": "Minimal", "desc": "Quiet fades, almost no movement",
+            "windows": { "speed": 2.5, "style": "popin 97%", "curve": "soft" }, "workspaces": { "speed": 3, "style": "fade", "curve": "soft" },
+            "layers": { "speed": 2.5, "style": "fade", "curve": "soft" }, "fade": { "speed": 2.5, "curve": "soft" }, "border": { "speed": 3, "curve": "soft" } },
+        "off": { "label": "Off", "desc": "No animations in Hyprland",
+            "windows": { "speed": 1, "style": "popin 100%", "curve": "linear" }, "workspaces": { "speed": 1, "style": "fade", "curve": "linear" },
+            "layers": { "speed": 1, "style": "fade", "curve": "linear" }, "fade": { "speed": 1, "curve": "linear" }, "border": { "speed": 1, "curve": "linear" } } })
+    readonly property var animOrder: ["apple", "smooth", "snappy", "bouncy", "slide", "minimal", "off"]
+    function animValue(group, key) {
+        const adv = cfg.animAdvanced && cfg.animAdv && cfg.animAdv[group] && cfg.animAdv[group][key] !== undefined ? cfg.animAdv[group][key] : undefined;
+        if (adv !== undefined) return adv;
+        const p = animPresets[cfg.animPreset] || animPresets.apple;
+        return p[group][key];
+    }
+    function setAnimAdv(group, key, value) {
+        const a = JSON.parse(JSON.stringify(cfg.animAdv || {}));
+        if (!a[group]) a[group] = {};
+        a[group][key] = value;
+        set("animAdv", a);
+    }
+    readonly property var animSet: {
+        const out = { "enabled": cfg.animPreset !== "off" && cfg.motion !== "off", "speed": Math.max(0.1, cfg.animSpeed) };
+        for (const g of animGroups) { out[g.id] = { "speed": animValue(g.id, "speed"), "curve": animValue(g.id, "curve") }; if (g.styles.length > 0) out[g.id].style = animValue(g.id, "style"); }
+        return out;
+    }
+    property bool islandMenuOpen: false           // a menu is open on the island: pop-ups wait so they do not cover it
     property var caps: ({ "kitty": true, "rofi": true, "fish": true, "hyprlock": true, "battery": true, "backlight": true, "touchpad": true, "bluetooth": true, "wifi": true })
     Process {
         id: capsProbe
@@ -669,7 +718,7 @@ ShellRoot {
         id: applyTimer; interval: 250
         onTriggered: {
             if (!shellRoot.settingsLoaded) return;
-            applier.command = ["python3", Quickshell.shellPath("scripts/apply-theme.py"), shellRoot.cfg.theme, JSON.stringify(shellRoot.cfg)];
+            applier.command = ["python3", Quickshell.shellPath("scripts/apply-theme.py"), shellRoot.cfg.theme, JSON.stringify(Object.assign({}, shellRoot.cfg, { "animSet": shellRoot.animSet }))];
             applier.running = true;
         }
     }
@@ -729,6 +778,7 @@ ShellRoot {
         function toggleLauncher() { shellRoot.toggleLauncher(); }
         function togglePower() { shellRoot.togglePower(); }
         function openMenu(kind: string) { shellRoot.openMenu(kind); }
+        function closeMenus() { const b = bars[focusedMonitorName()]; if (b && b.islandRef) b.islandRef.goBack(); }
         function toggleDnd() { notifier.dnd = !notifier.dnd; }
         function shuffleWallpaper() { shellRoot.shuffleWallpaper(); }
         function editDesktop(tab: string) { shellRoot.closeSettings(); editorObj.show(tab); }

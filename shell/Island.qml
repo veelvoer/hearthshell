@@ -65,7 +65,7 @@ Item {
     readonly property bool wsAnimated: ["bars", "scroll", "stretch"].indexOf(shell.cfg.wsStyle) >= 0
     readonly property bool showWs: shell.cfg.islandShowWs
     readonly property bool showStatus: shell.cfg.islandShowStatus
-    readonly property real idleWsW: wsAnimated ? 5 * (shell.cfg.wsStyle === "scroll" ? 20 : 18) * 0.85 : 44
+    readonly property real idleWsW: wsAnimated ? shell.cfg.wsSlots * (shell.cfg.wsStyle === "scroll" ? 20 : 18) * 0.85 : 44
     readonly property real idleSide: Math.max(showWs ? Math.max(idleWsW + 14, 66) : 0, showStatus ? 66 : 0, 0) + 22
     readonly property real contentW: (idleRich ? centerW + 2 * idleSide : Math.max(centerW + 28, 64)) + (!!player && player.isPlaying ? 26 : 0)
     readonly property real collapsedW: Math.max(contentW, shell.cfg.islandCollapsedW)
@@ -96,10 +96,10 @@ Item {
     Timer { id: holdTimer; interval: 420; onTriggered: isl.hoverHold = false }
     Timer { id: clockTimer; interval: 700; onTriggered: isl.bar.updateClock() }
     onModeChanged: { clockTimer.restart(); shapeChanged(); }
-    onMenuChanged: shapeChanged()
+    onMenuChanged: { shapeChanged(); shell.islandMenuOpen = menu !== ""; }
 
     Component.onCompleted: { bar.islandRef = isl; bar.islandSurface = surface; }
-    Component.onDestruction: { if (bar.islandRef === isl) { bar.islandRef = null; bar.islandSurface = null; bar.islandMenu = ""; } }
+    Component.onDestruction: { if (escBound) setEsc(false); if (bar.islandRef === isl) { bar.islandRef = null; bar.islandSurface = null; bar.islandMenu = ""; } }
     Binding { target: isl.bar; property: "islandMenu"; value: isl.menu }
 
     // ---------------------------------------------------------------- what makes the island react
@@ -205,6 +205,11 @@ Item {
     // The bar window never changes height: every resize of a layer window can drop a frame and make the island blink.
     // It is as tall as the tallest menu; what you can click is limited by the input mask, so the empty part never gets in the way.
     readonly property real winH: split ? Math.max(base, bar.maxMenuH) : bar.maxMenuH
+    // the island's real, current shape (what the pointer can hit follows it, so a click just below a closed island is not "on" it)
+    readonly property real liveL: surface.x - sideExtra
+    readonly property real liveR: surface.x + surface.width + sideExtra
+    readonly property real liveTop: surface.y
+    readonly property real liveBottom: surface.y + surface.height
     readonly property real extL: (width - bbW) / 2 - sideExtra
     readonly property real extR: width - extL
     readonly property real pieceY: atBottom ? surface.y + surface.height - pieceH : surface.y
@@ -308,7 +313,7 @@ Item {
                 x: 14; anchors.verticalCenter: parent.verticalCenter
                 width: fancy.visible ? fancy.width : plain.width; height: parent.height
                 readonly property bool animated: ["bars", "scroll", "stretch"].indexOf(shell.cfg.wsStyle) >= 0
-                WorkspaceStyle { id: fancy; visible: parent.animated; kind: shell.cfg.wsStyle; slots: 5; unit: 0.85; anchors.verticalCenter: parent.verticalCenter }
+                WorkspaceStyle { id: fancy; visible: parent.animated; kind: shell.cfg.wsStyle; unit: 0.85; anchors.verticalCenter: parent.verticalCenter }
                 Row {
                     id: plain
                     visible: !parent.animated; spacing: 4; anchors.verticalCenter: parent.verticalCenter
@@ -508,13 +513,7 @@ Item {
         anchors { top: true; bottom: true; left: true; right: true }
         exclusionMode: ExclusionMode.Ignore
         WlrLayershell.namespace: "quickshell-island-catcher"
-        // Esc closes the open menu. This window appears exactly when a menu opens, so it is the one that gets the keyboard;
-        // the Wi-Fi menu has a password field, so there the bar itself keeps the keyboard instead.
-        WlrLayershell.keyboardFocus: isl.menu !== "" && isl.menu !== "network" ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
-        FocusScope {
-            anchors.fill: parent; focus: true
-            Keys.onEscapePressed: isl.goBack()
-        }
+        WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
         mask: Region {
             x: 0; y: 0; width: catcher.width; height: catcher.height
             Region {
@@ -527,4 +526,18 @@ Item {
         }
         MouseArea { anchors.fill: parent; onClicked: isl.closeMenu() }
     }
+
+    // Esc closes the open menu. A window can't do this: any window holding the keyboard exclusively makes Hyprland send every click to it.
+    // So while a menu is open Esc is a Hyprland key bind that asks the shell to close it, and the bind is removed again afterwards.
+    property bool escBound: false
+    readonly property string escCmd: "qs -p " + Quickshell.shellPath("shell.qml") + " ipc call shell closeMenus || hyprctl eval 'hl.unbind(\"Escape\")'"
+    function setEsc(on) {
+        if (on === escBound) return;
+        escBound = on;
+        escProc.command = ["hyprctl", "eval", on ? 'pcall(hl.unbind, "Escape")\nhl.bind("Escape", hl.dsp.exec_cmd([[' + escCmd + ']]))' : 'pcall(hl.unbind, "Escape")'];
+        escProc.running = false; escProc.running = true;
+    }
+    Process { id: escProc }
+    readonly property bool wantEsc: menu !== "" && menu !== "network"
+    onWantEscChanged: setEsc(wantEsc)
 }

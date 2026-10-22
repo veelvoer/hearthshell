@@ -54,9 +54,9 @@ PanelWindow {
     // Input: the whole window, except on the dynamic island where only the pill itself takes input
     readonly property bool maskIsland: island && islandSurface !== null && islandRef !== null
     // The island's input region is its pill plus a little slack, running out to the screen edge so a flick to the edge finds it
-    readonly property real maskX: maskIsland && islandRef ? Math.max(0, islandRef.extL - 12) : 0
-    readonly property real maskW: maskIsland && islandRef ? Math.min(width - maskX, islandRef.extR - islandRef.extL + 24) : width
-    readonly property real maskBoxH: maskIsland && islandRef ? Math.min(height, islandGap + islandRef.bbH + 10) : height
+    readonly property real maskX: maskIsland && islandRef ? Math.max(0, islandRef.liveL - 10) : 0
+    readonly property real maskW: maskIsland && islandRef ? Math.max(1, Math.min(width - maskX, islandRef.liveR - islandRef.liveL + 20)) : width
+    readonly property real maskBoxH: maskIsland && islandRef ? Math.max(1, Math.min(height, atBottom ? height - islandRef.liveTop + 10 : islandRef.liveBottom + 10)) : height
     readonly property real maskY: maskIsland && atBottom ? height - maskBoxH : 0
     readonly property real maskH: !maskIsland ? height : maskBoxH
     mask: Region { x: win.maskX; y: win.maskY; width: win.maskW; height: win.maskH }

@@ -28,7 +28,8 @@ PanelWindow {
         "shortcuts keys keybind hotkey bind control center theme wallpaper calendar launcher power lock super alt",
         "desktop home lock screen widgets clock calendar media notes system customize edit layout wallpaper",
         "updates update version github upgrade new release check restore backup",
-        "about shortcuts reset defaults keys"]
+        "about shortcuts reset defaults keys",
+        "animations animation speed fast slow preset windows workspaces fade spring bounce curve smooth snappy motion hyprland advanced"]
     property string query: ""
     // the sidebar groups the pages; page numbers stay as they are, only the order they are shown in changes
     // what the current setup is, so a setting that makes no sense here can stay out of sight
@@ -36,12 +37,12 @@ PanelWindow {
     readonly property bool isPill: cfg.barStyle === "pill" || cfg.barStyle === "island"
     readonly property bool dash: isIsland && cfg.islandPanel && !cfg.islandSplit
     function hasMod(id) { const m = cfg.modules || ({}); return (m.left || []).indexOf(id) >= 0 || (m.center || []).indexOf(id) >= 0 || (m.right || []).indexOf(id) >= 0; }
-    readonly property var navOrder: [0, 1, 6, 2, 3, 8, 9, 11, 4, 5, 7, 10, 12, 13]
-    readonly property var navGroups: [{ "label": "Look", "from": 0 }, { "label": "Shell", "from": 3 }, { "label": "System", "from": 8 }, { "label": "App", "from": 12 }]
+    readonly property var navOrder: [0, 1, 6, 14, 2, 3, 8, 9, 11, 4, 5, 7, 10, 12, 13]
+    readonly property var navGroups: [{ "label": "Look", "from": 0 }, { "label": "Shell", "from": 4 }, { "label": "System", "from": 9 }, { "label": "App", "from": 13 }]
     function groupOf(pos) { let g = 0; for (let i = 0; i < navGroups.length; i++) if (navGroups[i].from <= pos) g = i; return g; }
-    function navY(page) { const pos = navOrder.indexOf(page); return 84 + pos * 34 + groupOf(pos) * 26; }
+    function navY(page) { const pos = navOrder.indexOf(page); return 82 + pos * 31 + groupOf(pos) * 22; }
     function navStep(d) { const n = navOrder.length; return navOrder[(navOrder.indexOf(page) + d + n) % n]; }
-    readonly property var pageIcons: [0xF03D8, 0xF0A1F, 0xF0572, 0xF003B, 0xF05B1, 0xF037D, 0xF05CC, 0xF0493, 0xF0570, 0xF009A, 0xF030C, 0xF0379, 0xF06B0, 0xF02FD]
+    readonly property var pageIcons: [0xF03D8, 0xF0A1F, 0xF0572, 0xF003B, 0xF05B1, 0xF037D, 0xF05CC, 0xF0493, 0xF0570, 0xF009A, 0xF030C, 0xF0379, 0xF06B0, 0xF02FD, 0xF093A]
     onWantedChanged: if (!wanted) { query = ""; search.text = ""; }
     function matches(i) {
         const q = query.trim().toLowerCase();
@@ -110,7 +111,7 @@ PanelWindow {
             } catch (e) { }
         } }
     function firstMatch() { for (let i = 0; i < pages.length; i++) if (matches(i)) return i; return -1; }
-    readonly property var pages: ["Appearance", "Creator", "Bar & Island", "Modules", "Windows", "Input", "Glass", "System", "Control Center", "Notifications", "Shortcuts", "Desktop", "Updates", "About"]
+    readonly property var pages: ["Appearance", "Creator", "Bar & Island", "Modules", "Windows", "Input", "Glass", "System", "Control Center", "Notifications", "Shortcuts", "Desktop", "Updates", "About", "Animations"]
     property bool typing: false
     property bool accentPicker: false
     property string presetName: ""
@@ -199,7 +200,7 @@ PanelWindow {
                     onTypingChanged: win.typing = typing
                 }
                 Rectangle {   // sliding selection pill
-                    x: 14; width: nav.width - 28; height: 34; radius: 12
+                    x: 14; width: nav.width - 28; height: 30; radius: 11
                     y: win.navY(win.page) - 1
                     color: main.card
                     Behavior on y { NumberAnimation { duration: main.ms(340); easing.type: Easing.BezierSpline; easing.bezierCurve: win.ease } }
@@ -208,7 +209,7 @@ PanelWindow {
                     model: win.navGroups
                     Text {
                         required property var modelData
-                        x: 26; y: win.navY(win.navOrder[modelData.from]) - 22
+                        x: 26; y: win.navY(win.navOrder[modelData.from]) - 19
                         text: modelData.label.toUpperCase(); color: main.muted
                         font { family: main.font; pixelSize: 10; weight: 700; letterSpacing: 1.2 }
                     }
@@ -218,15 +219,15 @@ PanelWindow {
                     Item {
                         required property int index
                         required property string modelData
-                        x: 14; y: win.navY(index); width: nav.width - 28; height: 32
+                        x: 14; y: win.navY(index); width: nav.width - 28; height: 29
                         IconTile {
-                            x: 8; anchors.verticalCenter: parent.verticalCenter; size: 26; round: true; filled: win.page === index
+                            x: 8; anchors.verticalCenter: parent.verticalCenter; size: 24; round: true; filled: win.page === index
                             glyph: String.fromCodePoint(win.pageIcons[index])
                             tint: win.page === index ? main.tone(index) : main.text
                             Behavior on tint { ColorAnimation { duration: main.ms(180) } }
                         }
                         Text {
-                            x: 44; anchors.verticalCenter: parent.verticalCenter; text: modelData
+                            x: 42; anchors.verticalCenter: parent.verticalCenter; text: modelData
                             color: win.page === index || hover.containsMouse ? main.text : Qt.rgba(main.text.r, main.text.g, main.text.b, 0.82)
                             Behavior on color { ColorAnimation { duration: main.ms(180) } }
                             font { family: main.font; pixelSize: 14; weight: 600 }
@@ -465,15 +466,6 @@ PanelWindow {
                                 HToggle { checked: win.cfg.colorBurst; onToggled: v => win.put("colorBurst", v) } }
                             Text { text: "Font"; color: main.text; font { family: main.font; pixelSize: 14; weight: 600 } }
                             FontChips { width: parent.width; value: win.cfg.font; onPicked: f => win.put("font", f) }
-                            HRow {
-                                label: "Animations"; desc: "Speed of every animation. Off also switches off window animations."
-                                HSegment {
-                                    readonly property var keys: ["off", "relaxed", "normal", "snappy"]
-                                    options: ["Off", "Relaxed", "Normal", "Snappy"]; segWidth: 68
-                                    current: Math.max(0, keys.indexOf(win.cfg.motion))
-                                    onPicked: i => win.put("motion", keys[i])
-                                }
-                            }
                         }
                     }
                     HCard {
@@ -811,8 +803,10 @@ PanelWindow {
                                     HSegment { readonly property var keys: ["pills", "dots", "numbers", "bars", "scroll", "stretch"]
                                         options: ["Pills", "Dots", "Numbers", "Bars", "Scroll", "Stretch"]; segWidth: 62
                                         current: Math.max(0, keys.indexOf(win.cfg.wsStyle)); onPicked: i => win.put("wsStyle", keys[i]) } }
-                                HSliderRow { label: "Workspaces shown"; available: win.hasMod("workspaces") || win.isIsland; desc: "How many workspaces appear"
+                                HSliderRow { label: "Workspaces shown"; available: (win.hasMod("workspaces") || win.isIsland) && ["pills", "dots", "numbers", "stretch"].indexOf(win.cfg.wsStyle) >= 0; desc: "How many workspaces appear"
                                     from: 3; to: 10; step: 1; decimals: 0; value: win.cfg.wsCount; onMoved: v => win.put("wsCount", v) }
+                                HSliderRow { label: "Visible at once"; available: (win.hasMod("workspaces") || win.isIsland) && ["bars", "scroll"].indexOf(win.cfg.wsStyle) >= 0; desc: "How many marks of the endless line you see at a time"
+                                    from: 3; to: 13; step: 2; decimals: 0; value: win.cfg.wsSlots; onMoved: v => win.put("wsSlots", v) }
                                 HRow { label: "Hide empty workspaces"; available: (win.hasMod("workspaces") || win.isIsland) && ["pills", "dots", "numbers"].indexOf(win.cfg.wsStyle) >= 0; desc: "Only show workspaces that are in use"
                                     HToggle { checked: win.cfg.wsOccupiedOnly; onToggled: v => win.put("wsOccupiedOnly", v) } }
                                 HRow { label: "Date in the clock"; available: win.hasMod("clock") && !win.dash; desc: "Show the weekday and date next to the time"
@@ -1622,6 +1616,98 @@ PanelWindow {
                                 text: "Your settings, presets, custom themes and wallpapers are never touched. A backup of the current shell is saved before every update." }
                             HRow { label: "Undo the last update"; desc: "Put the backup made before the last update back"
                                 HButton { label: "Restore backup"; opacity: updPage.up.busy ? 0.5 : 1; onClicked: updPage.up.restore() } }
+                        }
+                    }
+                }
+
+                // ===== Animations =====
+                Page {
+                    id: anPage
+                    idx: 14; heading: "Animations"; sub: "How fast and how soft everything moves."
+                    HCard {
+                        active: win.page === 14 && win.wanted; order: 0; title: "Speed"
+                        Column {
+                            width: parent.width; spacing: 0
+                            HRow { label: "Animations"; keywords: "off motion"
+                                HSegment {
+                                    readonly property var keys: ["off", "relaxed", "normal", "snappy"]
+                                    options: ["Off", "Relaxed", "Normal", "Snappy"]; segWidth: 68
+                                    current: Math.max(0, keys.indexOf(win.cfg.motion))
+                                    onPicked: i => win.put("motion", keys[i])
+                                } }
+                            HSliderRow { label: "Animation speed"; available: win.cfg.motion !== "off"; keywords: "faster slower global"
+                                desc: "Speeds up or slows down every animation: the shell, and Hyprland's windows and workspaces"
+                                from: 0.3; to: 3; step: 0.05; decimals: 2; unit: "×"; value: win.cfg.animSpeed; onMoved: v => win.put("animSpeed", v) }
+                        }
+                    }
+                    HCard {
+                        active: win.page === 14 && win.wanted; order: 1; title: "Hyprland animations"; available: win.cfg.motion !== "off"
+                        Column {
+                            width: parent.width; spacing: 12
+                            Flow {
+                                width: parent.width; spacing: 8
+                                Repeater {
+                                    model: win.shell.animOrder
+                                    delegate: Rectangle {
+                                        id: pc
+                                        required property string modelData
+                                        readonly property bool sel: win.cfg.animPreset === modelData
+                                        width: (parent.width - 16) / 3; height: 62; radius: 16
+                                        color: sel ? Qt.rgba(main.accent.r, main.accent.g, main.accent.b, 0.2) : (pm.containsMouse ? Qt.rgba(main.text.r, main.text.g, main.text.b, 0.09) : Qt.rgba(main.text.r, main.text.g, main.text.b, 0.05))
+                                        border.width: sel ? 2 : 0; border.color: main.accent
+                                        Behavior on color { ColorAnimation { duration: main.ms(140) } }
+                                        Text { x: 14; y: 11; text: win.shell.animPresets[pc.modelData].label; color: pc.sel ? main.accent : main.text; font { family: main.font; pixelSize: 13; weight: 700 } }
+                                        Text { x: 14; y: 33; width: parent.width - 24; elide: Text.ElideRight; text: win.shell.animPresets[pc.modelData].desc; color: main.muted; font { family: main.font; pixelSize: 10 } }
+                                        MouseArea { id: pm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: win.put("animPreset", pc.modelData) }
+                                    }
+                                }
+                            }
+                            HRow { label: "Advanced"; keywords: "detail curve speed style per"
+                                desc: "Tune each kind of animation on its own: speed, motion and curve"
+                                HToggle { checked: win.cfg.animAdvanced; onToggled: v => win.put("animAdvanced", v) } }
+                        }
+                    }
+                    Repeater {
+                        model: win.shell.animGroups
+                        delegate: HCard {
+                            id: agrp
+                            required property var modelData
+                            required property int index
+                            available: win.cfg.animAdvanced && win.cfg.motion !== "off"
+                            active: win.page === 14 && win.wanted; order: 2 + index; title: modelData.label; collapsible: true
+                            Column {
+                                width: parent.width; spacing: 0
+                                HSliderRow { label: modelData.label + " speed"; keywords: "duration"
+                                    desc: "Lower is quicker"
+                                    from: 0.5; to: 12; step: 0.1; decimals: 1; value: win.shell.animValue(agrp.modelData.id, "speed")
+                                    onMoved: v => win.shell.setAnimAdv(agrp.modelData.id, "speed", v) }
+                                HRow { label: modelData.label + " motion"; available: agrp.modelData.styles.length > 0; keywords: "style"
+                                    Flow { width: 300; spacing: 6
+                                        Repeater {
+                                            model: agrp.modelData.styles
+                                            delegate: HButton { required property var modelData; label: modelData[1]; padX: 12
+                                                primary: win.shell.animValue(agrp.modelData.id, "style") === modelData[0]
+                                                onClicked: win.shell.setAnimAdv(agrp.modelData.id, "style", modelData[0]) }
+                                        } } 
+                                    height: agrp.modelData.styles.length > 3 ? 84 : 48 }
+                                HRow { label: modelData.label + " curve"; keywords: "spring bounce ease"
+                                    Flow { width: 300; spacing: 6
+                                        Repeater {
+                                            model: win.shell.animCurves
+                                            delegate: HButton { required property var modelData; label: modelData[1]; padX: 12
+                                                primary: win.shell.animValue(agrp.modelData.id, "curve") === modelData[0]
+                                                onClicked: win.shell.setAnimAdv(agrp.modelData.id, "curve", modelData[0]) }
+                                        } }
+                                    height: 84 }
+                            }
+                        }
+                    }
+                    HCard {
+                        active: win.page === 14 && win.wanted; order: 8; title: "Start over"; collapsible: true; available: win.cfg.animAdvanced
+                        Column {
+                            width: parent.width; spacing: 0
+                            HRow { label: "Reset the details"; desc: "Forget your advanced changes and go back to the chosen preset"
+                                HButton { label: "Reset"; onClicked: win.put("animAdv", {}) } }
                         }
                     }
                 }

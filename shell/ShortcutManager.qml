@@ -13,7 +13,7 @@ Item {
 
     readonly property string sig: JSON.stringify(shell.cfg.shortcuts || {})
     onSigChanged: debounce.restart()
-    Component.onCompleted: { run(["hyprctl", "dispatch", 'hl.dsp.submap("reset")']); debounce.restart(); startup.start(); }
+    Component.onCompleted: { run(["hyprctl", "eval", "pcall(hl.unbind, \"Escape\")"]); run(["hyprctl", "dispatch", 'hl.dsp.submap("reset")']); debounce.restart(); startup.start(); }
     // Hyprland forgets binds made at runtime whenever its config reloads, and the shell can start before Hyprland is ready
     Connections { target: Hyprland; function onRawEvent(ev) { if (ev.name === "configreloaded") debounce.restart(); } }
     Timer { id: startup; interval: 4000; repeat: true; property int n: 0; function start() { n = 0; running = true; }

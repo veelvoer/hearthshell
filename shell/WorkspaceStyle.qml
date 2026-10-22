@@ -6,7 +6,7 @@ import QtQuick
 Item {
     id: root
     property string kind: "bars"            // bars | scroll | stretch
-    property int slots: 5                   // how many entries are visible at once
+    property int slots: cfg.wsSlots         // how many entries are visible at once
     property real unit: 1                   // overall size
     // the line starts at workspace 1 and grows with the workspaces that exist (Hyprland makes new ones as you scroll)
     readonly property int total: Math.max(1, cfg.wsCount, highest, active + 1)
@@ -18,7 +18,7 @@ Item {
         for (const w of Hyprland.workspaces.values) h = Math.max(h, w.id);
         return h;
     }
-    implicitWidth: kind === "stretch" ? shown * step : Math.min(slots, total) * step
+    implicitWidth: kind === "stretch" ? shown * step : slots * step
     implicitHeight: Math.round((main.barPx + 9) * unit)
     clip: true
 
@@ -38,13 +38,15 @@ Item {
     function near(i) { return Math.max(0, 1 - Math.abs(i - pos)); }
     // The visible window slides along the line but never past its ends, so workspace 1 sits at the left edge and the last one at the right.
     readonly property real half: (slots - 1) / 2
-    readonly property real centre: total <= slots ? (total - 1) / 2 : Math.max(half, Math.min(total - 1 - half, pos))
+    // endless to the right (Hyprland makes a workspace as soon as you go there), with workspace 1 as the left end
+    readonly property int lineCount: Math.max(cfg.wsCount, highest, active + 1) + slots
+    readonly property real centre: Math.max(half, pos)
     // edge fade for the carousels
     function fade(i) { return Math.max(0, Math.min(1, slots / 2 + 0.2 - Math.abs(i - centre))); }
 
     // ------------------------------------------------------------ bars + scroll
     Repeater {
-        model: root.kind === "stretch" ? 0 : root.total
+        model: root.kind === "stretch" ? 0 : root.lineCount
         delegate: Item {
             id: cell
             required property int index

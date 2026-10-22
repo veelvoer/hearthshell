@@ -19,10 +19,10 @@ PanelWindow {
     WlrLayershell.namespace: "quickshell-popup"
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
     property bool lingering: false
-    readonly property int count: notifier.toasts.length
+    readonly property int count: notifier.toastCount
     onCountChanged: { if (count > 0) { lingering = true; lingerTimer.stop(); } else lingerTimer.restart(); }
     Timer { id: lingerTimer; interval: 700; onTriggered: win.lingering = false }
-    visible: count > 0 || lingering
+    visible: (count > 0 || lingering) && !shell.islandMenuOpen
     mask: Region { item: stack }
 
     Column {
@@ -34,11 +34,11 @@ PanelWindow {
         move: Transition { NumberAnimation { properties: "y"; duration: main.ms(380); easing.type: Easing.BezierSpline; easing.bezierCurve: [0.22, 1, 0.36, 1, 1, 1] } }
 
         Repeater {
-            model: win.notifier.toasts
+            model: win.notifier.toastModel
             delegate: Item {
                 id: toast
-                required property var modelData
-                readonly property var n: modelData
+                required property int tk
+                readonly property var n: win.notifier.byKey[tk]
                 readonly property bool critical: n.urgency === NotificationUrgency.Critical
                 width: stack.width
                 height: card.height
