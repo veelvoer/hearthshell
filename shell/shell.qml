@@ -135,7 +135,9 @@ ShellRoot {
         src: shellRoot.cfg.accent === "" ? themesData.data[shellRoot.cfg.theme]
              : Object.assign({}, themesData.data[shellRoot.cfg.theme], { "wsa": shellRoot.cfg.accent, "icon": shellRoot.cfg.accent })
         font: shellRoot.cfg.font
-        speed: ({ "off": 40, "relaxed": 0.65, "normal": 1, "snappy": 1.6 })[shellRoot.cfg.motion] * Math.max(0.1, shellRoot.cfg.animSpeed)
+        speed: ({ "off": 40, "relaxed": 0.65, "normal": 1, "snappy": 1.6 })[shellRoot.cfg.motion] * Math.max(0.1, shellRoot.cfg.animSpeed) * shellRoot.shellStyles[shellRoot.cfg.shellAnim].speed
+        bounce: shellRoot.shellStyles[shellRoot.cfg.shellAnim].bounce
+        popCurve: shellRoot.shellStyles[shellRoot.cfg.shellAnim].pop
         barPx: shellRoot.cfg.barFont
         iconMode: shellRoot.cfg.iconMode
         burst: shellRoot.cfg.colorBurst
@@ -154,11 +156,11 @@ ShellRoot {
         "termOpacity": 0.92, "blurSize": 6,
         "barStyle": "classic", "barPos": "top",
         "glassBar": false, "glassPanel": false, "glassLauncher": false, "glassTerminal": false, "glassAmount": 0.4,
-        "drawnIcons": false, "islandSplit": false, "islandPanel": true, "colorBurst": false, "islandOpenOn": "hover", "islandHoverDelay": 0, "islandGap": 0, "islandBorder": true, "islandShadow": true, "islandShowWs": true, "islandShowStatus": true, "islandShowEq": true, "islandPanelLeft": true, "islandPanelRight": true, "islandPeekLevels": true, "islandPeekMedia": true, "barColor": "", "panelColor": "", "islandCollapsedW": 0, "islandPanelH": 172, "ccLayout": { "cols": 6, "items": {} }, "nightLevel": 2, "shortcuts": {}, "shortcutsApplied": [], "homeEnabled": true, "homeWidgets": [], "lockWidgetsEnabled": true, "lockWidgets": [], "widgetNotes": {}, "widgetStyle": "auto", "widgetRadius": 26, "lockClockY": 0.4, "lockDim": 0, "notifTimeout": 6, "weekMonday": true, "ccOrder": ["wifi", "bluetooth", "audio", "quiet", "night", "volume", "brightness", "media", "notifications"], "ccHidden": ["airplane", "caffeine", "game", "mic", "micvol", "screenshot", "wallpaper", "theme", "battery", "system"], "motionBounce": 0.5, "notifications": true, "glassWindows": false, "glassBrowsers": true, "glassFiles": true, "glassEditors": true, "glassChat": true, "glassOther": true,
+        "drawnIcons": false, "islandSplit": false, "islandPanel": true, "colorBurst": false, "menus": {}, "shellAnim": "spring", "settingsAnim": "pop", "islandOpenOn": "hover", "islandResting": "modules", "islandHoverDelay": 0, "islandGap": 0, "islandBorder": true, "islandShadow": true, "islandShowWs": true, "islandShowStatus": true, "islandShowEq": true, "islandPanelLeft": true, "islandPanelRight": true, "islandPeekLevels": true, "islandPeekMedia": true, "barColor": "", "panelColor": "", "islandCollapsedW": 0, "islandPanelH": 172, "ccLayout": { "cols": 6, "items": {} }, "nightLevel": 2, "shortcuts": {}, "shortcutsApplied": [], "homeEnabled": true, "homeWidgets": [], "lockWidgetsEnabled": true, "lockWidgets": [], "widgetNotes": {}, "widgetStyle": "auto", "widgetRadius": 26, "lockClockY": 0.4, "lockDim": 0, "notifTimeout": 6, "weekMonday": true, "ccOrder": ["wifi", "bluetooth", "audio", "quiet", "night", "volume", "brightness", "media", "notifications"], "ccHidden": ["airplane", "caffeine", "game", "mic", "micvol", "screenshot", "wallpaper", "theme", "battery", "system"], "motionBounce": 0.5, "notifications": true, "glassWindows": false, "glassBrowsers": true, "glassFiles": true, "glassEditors": true, "glassChat": true, "glassOther": true,
         "userWalls": {},
         "font": "Inter", "motion": "normal", "accent": "", "wallFit": "fill",
         "barHeight": 30, "barGap": 4, "barSide": 10, "barFont": 13, "modSpacing": 0, "iconMode": "accent",
-        "wsStyle": "pills", "wsCount": 9, "wsSlots": 5, "animSpeed": 1, "animPreset": "apple", "animAdvanced": false, "animAdv": {}, "wsOccupiedOnly": false, "clockDate": false,
+        "wsStyle": "pills", "wsCount": 9, "animSpeed": 1, "animPreset": "apple", "animAdvanced": false, "animAdv": {}, "wsOccupiedOnly": false, "clockDate": false,
         "labelVolume": true, "labelNetwork": true, "labelBluetooth": true, "labelBrightness": true, "labelBattery": true, "labelsOnHover": false,
         "shadow": true, "shadowSize": 12, "gradientBorder": true,
         "followMouse": true, "naturalScroll": true, "tapToClick": true, "pointerSpeed": 0, "repeatRate": 25, "repeatDelay": 600,
@@ -224,6 +226,75 @@ ShellRoot {
         set("widgetNotes", n);
     }
     // what this computer has, so Settings only offers what can work here
+    // ---- the menus on the island (Wi-Fi, Sound, ...): what each shows, in what order, and how it looks. The Control Center has its own grid.
+    readonly property var menuDefs: ({
+        "network": { "label": "Wi-Fi", "glyph": 0xF05A9,
+            "sections": [["ethernet", "Ethernet"], ["networks", "Networks"]],
+            "options": [] },
+        "bluetooth": { "label": "Bluetooth", "glyph": 0xF00AF, "sections": [], "options": [] },
+        "sound": { "label": "Sound", "glyph": 0xF057E,
+            "sections": [["volume", "Volume"], ["output", "Outputs"], ["input", "Inputs"], ["apps", "Apps"]],
+            "options": [] },
+        "display": { "label": "Display", "glyph": 0xF0379,
+            "sections": [["brightness", "Brightness"], ["screens", "Screens"]],
+            "options": [{ "key": "scale", "label": "Scaling buttons", "kind": "toggle", "def": true },
+                        { "key": "refresh", "label": "Refresh rate buttons", "kind": "toggle", "def": true }] },
+        "notifications": { "label": "Notifications", "glyph": 0xF009A, "sections": [],
+            "options": [{ "key": "quietButton", "label": "Quiet button", "kind": "toggle", "def": true },
+                        { "key": "clearButton", "label": "Clear button", "kind": "toggle", "def": true },
+                        { "key": "rows", "label": "Notifications shown", "kind": "stepper", "min": 2, "max": 8, "def": 5 }] },
+        "calendar": { "label": "Calendar", "glyph": 0xF00ED, "sections": [],
+            "options": [{ "key": "weekNumbers", "label": "Week numbers", "kind": "toggle", "def": false },
+                        { "key": "otherMonths", "label": "Days of other months", "kind": "toggle", "def": true }] },
+        "media": { "label": "Now playing", "glyph": 0xF075A, "sections": [], "options": [] },
+        "theme": { "label": "Theme", "glyph": 0xF03D8, "sections": [],
+            "options": [{ "key": "columns", "label": "Columns", "kind": "stepper", "min": 1, "max": 3, "def": 2 }] },
+        "wallpaper": { "label": "Wallpaper", "glyph": 0xF0E09, "sections": [],
+            "options": [{ "key": "columns", "label": "Columns", "kind": "stepper", "min": 1, "max": 3, "def": 2 },
+                        { "key": "buttons", "label": "Shuffle and add buttons", "kind": "toggle", "def": true }] }
+    })
+    readonly property var menuWidths: [[320, "Narrow"], [360, "Normal"], [440, "Wide"]]
+    readonly property var menuKinds: ["network", "bluetooth", "sound", "display", "notifications", "calendar", "media", "theme", "wallpaper"]
+    function menuEntry(kind) { return (cfg.menus && cfg.menus[kind]) || {}; }
+    function menuWidth(kind) { const w = menuEntry(kind).width; return w === 320 || w === 440 ? w : 360; }
+    function menuOrder(kind) {
+        const d = (menuDefs[kind] ? menuDefs[kind].sections : []).map(x => x[0]);
+        const saved = (menuEntry(kind).order || []).filter(x => d.indexOf(x) >= 0);
+        return saved.concat(d.filter(x => saved.indexOf(x) < 0));
+    }
+    function menuSectionOn(kind, id) { return (menuEntry(kind).hidden || []).indexOf(id) < 0; }
+    function menuOpt(kind, key) {
+        const o = menuEntry(kind).opts;
+        if (o && o[key] !== undefined) return o[key];
+        const defs = menuDefs[kind] ? menuDefs[kind].options : [];
+        for (const d of defs) if (d.key === key) return d.def;
+        return undefined;
+    }
+    function setMenuEntry(kind, patch) {
+        const m = JSON.parse(JSON.stringify(cfg.menus || {}));
+        m[kind] = Object.assign({}, m[kind] || {}, patch);
+        set("menus", m);
+    }
+    function setMenuOpt(kind, key, value) { const o = Object.assign({}, menuEntry(kind).opts || {}); o[key] = value; setMenuEntry(kind, { "opts": o }); }
+    function toggleMenuSection(kind, id) {
+        const h = (menuEntry(kind).hidden || []).slice(), i = h.indexOf(id);
+        if (i >= 0) h.splice(i, 1); else h.push(id);
+        setMenuEntry(kind, { "hidden": h });
+    }
+    function moveMenuSection(kind, id, delta) {
+        const o = menuOrder(kind), i = o.indexOf(id), j = i + delta;
+        if (i < 0 || j < 0 || j >= o.length) return;
+        o[i] = o[j]; o[j] = id;
+        setMenuEntry(kind, { "order": o });
+    }
+    function resetMenu(kind) { const m = JSON.parse(JSON.stringify(cfg.menus || {})); delete m[kind]; set("menus", m); }
+    // ---- how the shell itself moves: the island, its menus and pop-ups
+    readonly property var shellStyles: ({
+        "spring": { "label": "Spring", "desc": "Soft overshoot, like iOS", "bounce": 0.7, "speed": 1, "pop": [0.34, 1.3, 0.64, 1, 1, 1] },
+        "smooth": { "label": "Smooth", "desc": "Calm, nothing overshoots", "bounce": 0, "speed": 1, "pop": [0.2, 0.8, 0.2, 1, 1, 1] },
+        "snappy": { "label": "Snappy", "desc": "Quick and direct", "bounce": 0.15, "speed": 1.5, "pop": [0.25, 1.05, 0.5, 1, 1, 1] },
+        "bouncy": { "label": "Bouncy", "desc": "Playful, with a lot of overshoot", "bounce": 1, "speed": 0.9, "pop": [0.34, 1.6, 0.64, 1, 1, 1] } })
+    readonly property var shellStyleOrder: ["spring", "smooth", "snappy", "bouncy"]
     // ---- Hyprland animations: presets, plus an advanced mode that overrides single values. The result is computed here once.
     readonly property var animGroups: [
         { "id": "windows", "label": "Windows", "styles": [["popin 90%", "Pop in"], ["popin 70%", "Deep pop"], ["slide", "Slide"], ["gnomed", "Fold"]] },
@@ -340,10 +411,24 @@ ShellRoot {
         return "";
     }
     // place a module in a zone (or "" to hide it)
+    // one switch for the text beside the module icons: always, only on hover, or never
+    readonly property string labelMode: !(cfg.labelVolume || cfg.labelNetwork || cfg.labelBluetooth || cfg.labelBrightness || cfg.labelBattery) ? "never" : (cfg.labelsOnHover ? "hover" : "always")
+    function setLabelMode(mode) {
+        const on = mode !== "never";
+        for (const k of ["labelVolume", "labelNetwork", "labelBluetooth", "labelBrightness", "labelBattery"]) set(k, on);
+        set("labelsOnHover", mode === "hover");
+    }
     function setModuleZone(id, zone) {
         const m = { "left": cfg.modules.left.slice(), "center": cfg.modules.center.slice(), "right": cfg.modules.right.slice() };
         for (const z of ["left", "center", "right"]) m[z] = m[z].filter(x => x !== id);
         if (zone !== "") m[zone].push(id);
+        set("modules", m);
+    }
+    // put a module into a zone at an exact position (index < 0 = at the end); history lets the editor undo
+    function placeModule(id, zone, index) {
+        const m = { "left": cfg.modules.left.slice(), "center": cfg.modules.center.slice(), "right": cfg.modules.right.slice() };
+        for (const z of ["left", "center", "right"]) m[z] = m[z].filter(x => x !== id);
+        if (zone !== "") { if (index < 0 || index > m[zone].length) m[zone].push(id); else m[zone].splice(index, 0, id); }
         set("modules", m);
     }
     function moveModule(id, delta) {
@@ -673,7 +758,7 @@ ShellRoot {
 
     // ---- saved presets: the whole look and layout under a name (presets.json) ----------------
     property var presetList: []
-    readonly property var presetSkip: ["userWalls", "wallIdx"]    // tied to files on this machine
+    readonly property var presetSkip: ["userWalls", "wallIdx", "shortcutsApplied"]    // tied to files on this machine
     FileView {
         id: presetStore
         path: Quickshell.shellPath("presets.json")

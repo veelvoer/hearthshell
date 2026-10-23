@@ -13,7 +13,9 @@ Item {
     signal requestClose()
     readonly property var nf: shell ? shell.notifier : null
     readonly property var items: nf ? nf.history : []
-    readonly property real wantedHeight: 62 + Math.max(110, Math.min(380, list.contentHeight)) + 16
+    readonly property real wantedWidth: shell ? shell.menuWidth("notifications") : 360
+    readonly property int rowLimit: root.shell ? root.shell.menuOpt("notifications", "rows") : 5
+    readonly property real wantedHeight: 62 + Math.max(110, Math.min(rowLimit * 76, list.contentHeight)) + 16
 
     Text {
         x: 54; y: 15; text: "Notifications"; color: main.text
@@ -22,7 +24,8 @@ Item {
     // Do not disturb
     Rectangle {
         id: dnd
-        anchors { right: clear.left; rightMargin: 8; top: parent.top; topMargin: 12 }
+        visible: !root.shell || root.shell.menuOpt("notifications", "quietButton")
+        anchors { right: clear.visible ? clear.left : parent.right; rightMargin: clear.visible ? 8 : 14; top: parent.top; topMargin: 12 }
         height: 30; width: dndRow.width + 22; radius: 15
         color: root.nf && root.nf.dnd ? Qt.rgba(main.accent.r, main.accent.g, main.accent.b, 0.25) : (dm.containsMouse ? main.card : Qt.rgba(main.text.r, main.text.g, main.text.b, 0.08))
         Behavior on color { ColorAnimation { duration: main.ms(150) } }
@@ -36,6 +39,7 @@ Item {
     }
     Rectangle {
         id: clear
+        visible: !root.shell || root.shell.menuOpt("notifications", "clearButton")
         anchors { right: parent.right; rightMargin: 14; top: parent.top; topMargin: 12 }
         height: 30; width: clearText.implicitWidth + 22; radius: 15
         opacity: root.items.length > 0 ? 1 : 0.4
@@ -46,7 +50,7 @@ Item {
 
     ListView {
         id: list
-        x: 12; y: 56; width: parent.width - 24; height: Math.max(110, Math.min(380, contentHeight))
+        x: 12; y: 56; width: parent.width - 24; height: Math.max(110, Math.min(root.rowLimit * 76, contentHeight))
         model: root.items; clip: true; spacing: 8
         add: Transition { NumberAnimation { property: "opacity"; from: 0; to: 1; duration: main.ms(260) } }
         remove: Transition { NumberAnimation { property: "opacity"; to: 0; duration: main.ms(180) } }

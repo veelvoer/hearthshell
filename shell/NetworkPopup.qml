@@ -8,12 +8,14 @@ Item {
     id: root
     property bool active: false             // this menu is the open one
     property bool settled: false            // the morph has finished: safe to do heavier work
+    property var shell: null
     property var expanded: null
     property bool typing: false
 
     readonly property var wifi: Networking.devices.values.find(d => d.type === DeviceType.Wifi)
     readonly property var wired: Networking.devices.values.find(d => d.type === DeviceType.Wired)
     property var nets: []
+    readonly property real wantedWidth: shell ? shell.menuWidth("network") : 360
     readonly property real wantedHeight: 64 + body.implicitHeight + 16
 
     function resort() {
@@ -56,59 +58,64 @@ Item {
         boundsBehavior: Flickable.StopAtBounds
         interactive: contentHeight > height
 
-        Column {
+        MenuColumn {
             id: body
+            shell: root.shell; menu: "network"
             x: 12; width: parent.width - 24; spacing: 6
-
-            // ethernet
-            Item {
-                visible: !!root.wired
-                width: parent.width; height: visible ? 54 : 0
-                Rectangle { anchors.fill: parent; radius: 14; color: main.card
-                    border.width: 1; border.color: root.wired && root.wired.connected ? Qt.rgba(main.accent.r, main.accent.g, main.accent.b, 0.5) : main.line }
-                Text { x: 16; anchors.verticalCenter: parent.verticalCenter; text: String.fromCodePoint(0xF0200)
-                    color: root.wired && root.wired.connected ? main.accent : main.muted
-                    font { family: "JetBrainsMono Nerd Font Propo"; pixelSize: 20 } }
-                Column {
-                    x: 52; anchors.verticalCenter: parent.verticalCenter; spacing: 1
-                    Text { text: "Ethernet"; color: main.text; font { family: main.font; pixelSize: 14; weight: 600 } }
-                    Text {
-                        color: main.muted; font { family: main.font; pixelSize: 12 }
-                        text: !root.wired ? "" : root.wired.connected
-                              ? "Connected" + (root.wired.linkSpeed > 0 ? "  ·  " + root.wired.linkSpeed + " Mb/s" : "")
-                              : (root.wired.hasLink === false ? "Cable unplugged" : "Not connected")
+            MenuSection {
+                shell: root.shell; menu: "network"; section: "ethernet"; want: !!root.wired; spacing: 6
+                Item {
+                    visible: !!root.wired
+                    width: parent.width; height: visible ? 54 : 0
+                    Rectangle { anchors.fill: parent; radius: 14; color: main.card
+                        border.width: 1; border.color: root.wired && root.wired.connected ? Qt.rgba(main.accent.r, main.accent.g, main.accent.b, 0.5) : main.line }
+                    Text { x: 16; anchors.verticalCenter: parent.verticalCenter; text: String.fromCodePoint(0xF0200)
+                        color: root.wired && root.wired.connected ? main.accent : main.muted
+                        font { family: "JetBrainsMono Nerd Font Propo"; pixelSize: 20 } }
+                    Column {
+                        x: 52; anchors.verticalCenter: parent.verticalCenter; spacing: 1
+                        Text { text: "Ethernet"; color: main.text; font { family: main.font; pixelSize: 14; weight: 600 } }
+                        Text {
+                            color: main.muted; font { family: main.font; pixelSize: 12 }
+                            text: !root.wired ? "" : root.wired.connected
+                                  ? "Connected" + (root.wired.linkSpeed > 0 ? "  ·  " + root.wired.linkSpeed + " Mb/s" : "")
+                                  : (root.wired.hasLink === false ? "Cable unplugged" : "Not connected")
+                        }
                     }
                 }
-            }
 
-            Text {
-                visible: !!root.wifi && Networking.wifiEnabled
-                text: "NETWORKS"; color: main.muted; leftPadding: 6; topPadding: 4
-                font { family: main.font; pixelSize: 11; weight: 700; letterSpacing: 1.2 }
             }
-            Text {
-                visible: !!root.wifi && !Networking.wifiEnabled
-                width: parent.width; wrapMode: Text.WordWrap; horizontalAlignment: Text.AlignHCenter
-                topPadding: 18; bottomPadding: 18; color: main.muted
-                text: "Wi-Fi is turned off."
-                font { family: main.font; pixelSize: 13 }
-            }
-            Text {
-                visible: !root.wifi
-                width: parent.width; horizontalAlignment: Text.AlignHCenter; topPadding: 18; bottomPadding: 18
-                color: main.muted; text: "No Wi-Fi adapter found."
-                font { family: main.font; pixelSize: 13 }
-            }
-            Text {
-                visible: !!root.wifi && Networking.wifiEnabled && root.nets.length === 0
-                width: parent.width; horizontalAlignment: Text.AlignHCenter; topPadding: 18; bottomPadding: 18
-                color: main.muted; text: "Looking for networks…"
-                font { family: main.font; pixelSize: 13 }
-            }
+            MenuSection {
+                shell: root.shell; menu: "network"; section: "networks"; spacing: 6
+                Text {
+                    visible: !!root.wifi && Networking.wifiEnabled
+                    text: "NETWORKS"; color: main.muted; leftPadding: 6; topPadding: 4
+                    font { family: main.font; pixelSize: 11; weight: 700; letterSpacing: 1.2 }
+                }
+                Text {
+                    visible: !!root.wifi && !Networking.wifiEnabled
+                    width: parent.width; wrapMode: Text.WordWrap; horizontalAlignment: Text.AlignHCenter
+                    topPadding: 18; bottomPadding: 18; color: main.muted
+                    text: "Wi-Fi is turned off."
+                    font { family: main.font; pixelSize: 13 }
+                }
+                Text {
+                    visible: !root.wifi
+                    width: parent.width; horizontalAlignment: Text.AlignHCenter; topPadding: 18; bottomPadding: 18
+                    color: main.muted; text: "No Wi-Fi adapter found."
+                    font { family: main.font; pixelSize: 13 }
+                }
+                Text {
+                    visible: !!root.wifi && Networking.wifiEnabled && root.nets.length === 0
+                    width: parent.width; horizontalAlignment: Text.AlignHCenter; topPadding: 18; bottomPadding: 18
+                    color: main.muted; text: "Looking for networks…"
+                    font { family: main.font; pixelSize: 13 }
+                }
 
-            Repeater {
-                model: Networking.wifiEnabled ? root.nets : []
-                NetRow { }
+                Repeater {
+                    model: Networking.wifiEnabled ? root.nets : []
+                    NetRow { }
+                }
             }
         }
     }

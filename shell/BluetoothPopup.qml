@@ -8,11 +8,13 @@ Item {
     id: root
     property bool active: false
     property bool settled: false
+    property var shell: null
     property var expanded: null
     readonly property bool typing: false
 
     readonly property var adapter: Bluetooth.defaultAdapter
     property var devs: []
+    readonly property real wantedWidth: shell ? shell.menuWidth("bluetooth") : 360
     readonly property real wantedHeight: 64 + body.implicitHeight + 16
 
     // nameless devices show up as their MAC address; keep them out of the list

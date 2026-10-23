@@ -65,10 +65,12 @@ Item {
     readonly property bool wsAnimated: ["bars", "scroll", "stretch"].indexOf(shell.cfg.wsStyle) >= 0
     readonly property bool showWs: shell.cfg.islandShowWs
     readonly property bool showStatus: shell.cfg.islandShowStatus
-    readonly property real idleWsW: wsAnimated ? shell.cfg.wsSlots * (shell.cfg.wsStyle === "scroll" ? 20 : 18) * 0.85 : 44
+    readonly property real idleWsW: wsAnimated ? shell.cfg.wsCount * (shell.cfg.wsStyle === "scroll" ? 20 : 18) * 0.85 : 44
     readonly property real idleSide: Math.max(showWs ? Math.max(idleWsW + 14, 66) : 0, showStatus ? 66 : 0, 0) + 22
     readonly property real contentW: (idleRich ? centerW + 2 * idleSide : Math.max(centerW + 28, 64)) + (!!player && player.isPlaying ? 26 : 0)
-    readonly property real collapsedW: Math.max(contentW, shell.cfg.islandCollapsedW)
+    // "modules": the resting island shows the same modules as every other bar (Settings > Bar); "compact": clock, workspaces and status only
+    readonly property bool modulesMode: shell.cfg.islandResting === "modules" && !split
+    readonly property real collapsedW: modulesMode ? Math.max(pillW, shell.cfg.islandCollapsedW) : Math.max(contentW, shell.cfg.islandCollapsedW)
 
     function openMenu(kind, glyph, from) {
         if (menu === kind) { closeMenu(); return; }
@@ -160,14 +162,14 @@ Item {
         Behavior on width {
             SpringAnimation {
                 spring: isl.reshaping ? 2.6 : 4.2
-                damping: isl.reshaping ? 0.46 - 0.30 * Math.max(0, Math.min(1, shell.cfg.motionBounce)) : 0.62
+                damping: isl.reshaping ? 0.46 - 0.30 * Math.max(0, Math.min(1, main.bounce)) : 0.62
                 epsilon: 0.25
             }
         }
         Behavior on height {
             SpringAnimation {
                 spring: isl.reshaping ? 2.6 : 4.2
-                damping: isl.reshaping ? 0.46 - 0.30 * Math.max(0, Math.min(1, shell.cfg.motionBounce)) : 0.62
+                damping: isl.reshaping ? 0.46 - 0.30 * Math.max(0, Math.min(1, main.bounce)) : 0.62
                 epsilon: 0.25
             }
         }
@@ -302,13 +304,13 @@ Item {
                 id: zl; bar: isl.bar; name: "left"; ids: isl.bar.island ? isl.bar.mods.left : []
                 anchors.verticalCenter: parent.verticalCenter
                 x: isl.pad - 5
-                opacity: Math.max(0, Math.min(1, (surface.width - isl.collapsedW) / Math.max(1, isl.pillW - isl.collapsedW) * 1.6 - 0.6))
-                enabled: isl.mode === "bar"
+                opacity: isl.modulesMode ? 1 : Math.max(0, Math.min(1, (surface.width - isl.collapsedW) / Math.max(1, isl.pillW - isl.collapsedW) * 1.6 - 0.6))
+                enabled: isl.mode === "bar" || (isl.modulesMode && isl.mode === "idle")
             }
             Item {
                 id: idleDots
                 visible: opacity > 0.01
-                opacity: isl.idleRich && isl.showWs && isl.mode === "idle" ? 1 : 0
+                opacity: isl.idleRich && !isl.modulesMode && isl.showWs && isl.mode === "idle" ? 1 : 0
                 Behavior on opacity { NumberAnimation { duration: main.ms(200) } }
                 x: 14; anchors.verticalCenter: parent.verticalCenter
                 width: fancy.visible ? fancy.width : plain.width; height: parent.height
@@ -335,7 +337,7 @@ Item {
             Row {
                 id: idleStatus
                 visible: opacity > 0.01
-                opacity: isl.idleRich && isl.showStatus && isl.mode === "idle" ? 1 : 0
+                opacity: isl.idleRich && !isl.modulesMode && isl.showStatus && isl.mode === "idle" ? 1 : 0
                 Behavior on opacity { NumberAnimation { duration: main.ms(200) } }
                 anchors { right: parent.right; rightMargin: 16; verticalCenter: parent.verticalCenter }
                 spacing: 8
@@ -343,7 +345,7 @@ Item {
                 BatteryIcon { visible: isl.hasBattery; anchors.verticalCenter: parent.verticalCenter; size: 14; level: isl.level; charging: isl.charging; tint: main.accent }
             }
             EqBars {
-                visible: isl.mode === "idle" && shell.cfg.islandShowEq && !!isl.player && isl.player.isPlaying
+                visible: isl.mode === "idle" && !isl.modulesMode && shell.cfg.islandShowEq && !!isl.player && isl.player.isPlaying
                 running: visible
                 size: 13
                 anchors.verticalCenter: parent.verticalCenter
@@ -359,7 +361,7 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
                 x: parent.width - implicitWidth - isl.pad + 5
                 opacity: zl.opacity
-                enabled: isl.mode === "bar"
+                enabled: isl.mode === "bar" || (isl.modulesMode && isl.mode === "idle")
             }
         }
 

@@ -15,34 +15,38 @@ PanelWindow {
     function put(key, value) { shell.set(key, value); }
     // what each page is about, for the search box (the page names themselves always count)
     readonly property var pageWords: [
-        "theme colour color wallpaper preset look accent text font background",
-        "creator custom theme make extract palette",
-        "bar island style top bottom opacity roundness height gap clock seconds 24 hour calendar monday icons drawn workspace dots pills numbers split three pieces bounce spring",
-        "modules launcher volume brightness network bluetooth battery media notifications bell power quick text hover labels",
-        "windows gaps border corner rounding inactive opacity focus shadow",
-        "input mouse touchpad keyboard scroll natural tap speed repeat",
-        "glass frosted blur transparent terminal browser files editors",
-        "system kitty fish rofi gtk hyprlock firefox yazi dolphin cava micro lodica terminal lock screen",
-        "control center tiles wifi bluetooth audio quiet night light volume brightness media order",
-        "notifications popups quiet do not disturb timeout daemon mako dunst",
-        "shortcuts keys keybind hotkey bind control center theme wallpaper calendar launcher power lock super alt",
+        "theme colour color wallpaper preset presets look accent text font background creator custom make extract palette bar panel save all settings",
+        "", "bar style layout opacity roundness height gap clock seconds 24 hour calendar monday icons workspace dots pills numbers modules labels text hover",
+        "", "windows gaps border corner rounding inactive opacity focus shadow input mouse touchpad keyboard scroll natural tap speed repeat",
+        "", "glass frosted blur transparent terminal browser files editors",
+        "apps kitty fish rofi gtk hyprlock firefox yazi dolphin cava terminal launcher follow theme",
+        "menus control center tiles wifi bluetooth audio sound display notifications calendar media theme wallpaper quiet night light volume brightness order sections width pop-ups timeout",
+        "", "shortcuts keys keybind hotkey bind control center theme wallpaper launcher power lock super alt",
         "desktop home lock screen widgets clock calendar media notes system customize edit layout wallpaper",
-        "updates update version github upgrade new release check restore backup",
-        "about shortcuts reset defaults keys",
-        "animations animation speed fast slow preset windows workspaces fade spring bounce curve smooth snappy motion hyprland advanced"]
+        "updates update version github upgrade release check restore backup reset defaults about",
+        "", "animations animation speed fast slow preset windows workspaces fade spring bounce curve smooth snappy motion hyprland advanced style",
+        "island dynamic hover click dashboard resting pop-up border shadow distance bounce"]
     property string query: ""
+    property string menuPick: "quick"
     // the sidebar groups the pages; page numbers stay as they are, only the order they are shown in changes
     // what the current setup is, so a setting that makes no sense here can stay out of sight
     readonly property bool isIsland: cfg.barStyle === "island"
     readonly property bool isPill: cfg.barStyle === "pill" || cfg.barStyle === "island"
     readonly property bool dash: isIsland && cfg.islandPanel && !cfg.islandSplit
     function hasMod(id) { const m = cfg.modules || ({}); return (m.left || []).indexOf(id) >= 0 || (m.center || []).indexOf(id) >= 0 || (m.right || []).indexOf(id) >= 0; }
-    readonly property var navOrder: [0, 1, 6, 14, 2, 3, 8, 9, 11, 4, 5, 7, 10, 12, 13]
-    readonly property var navGroups: [{ "label": "Look", "from": 0 }, { "label": "Shell", "from": 4 }, { "label": "System", "from": 9 }, { "label": "App", "from": 13 }]
+    onNavOrderChanged: if (navOrder.indexOf(page) < 0) page = 2
+    readonly property var navLayout: [{ "label": "Look", "ids": [0, 6, 14] }, { "label": "Shell", "ids": [2, 15, 8, 11] },
+                                      { "label": "System", "ids": [4, 7, 10] }, { "label": "App", "ids": [12] }]
+    readonly property var navGroups: {
+        const out = []; let pos = 0;
+        for (const g of navLayout) { const ids = g.ids.filter(i => i !== 15 || isIsland); out.push({ "label": g.label, "from": pos, "ids": ids }); pos += ids.length; }
+        return out;
+    }
+    readonly property var navOrder: navGroups.reduce((all, g) => all.concat(g.ids), [])
     function groupOf(pos) { let g = 0; for (let i = 0; i < navGroups.length; i++) if (navGroups[i].from <= pos) g = i; return g; }
     function navY(page) { const pos = navOrder.indexOf(page); return 82 + pos * 31 + groupOf(pos) * 22; }
     function navStep(d) { const n = navOrder.length; return navOrder[(navOrder.indexOf(page) + d + n) % n]; }
-    readonly property var pageIcons: [0xF03D8, 0xF0A1F, 0xF0572, 0xF003B, 0xF05B1, 0xF037D, 0xF05CC, 0xF0493, 0xF0570, 0xF009A, 0xF030C, 0xF0379, 0xF06B0, 0xF02FD, 0xF093A]
+    readonly property var pageIcons: [0xF03D8, 0xF0A1F, 0xF0572, 0xF003B, 0xF05B1, 0xF037D, 0xF05CC, 0xF0493, 0xF0570, 0xF009A, 0xF030C, 0xF0379, 0xF06B0, 0xF02FD, 0xF093A, 0xF1513]
     onWantedChanged: if (!wanted) { query = ""; search.text = ""; }
     function matches(i) {
         const q = query.trim().toLowerCase();
@@ -72,6 +76,7 @@ PanelWindow {
         if (words.length === 0) { results = []; return; }
         const out = [];
         for (let i = 0; i < pages.length; i++) {
+            if (navOrder.indexOf(i) < 0) continue;
             const hay = pages[i].toLowerCase() + " " + pageWords[i];
             if (words.every(w => hay.indexOf(w) >= 0)) out.push({ "kind": "page", "page": i, "label": pages[i], "sub": "Page", "desc": "" });
         }
@@ -87,12 +92,26 @@ PanelWindow {
             const ct = cardTitle(r);
             out.push({ "kind": "row", "page": e.page, "label": r.label, "sub": pages[e.page] + (ct !== "" ? "  ›  " + ct : ""), "desc": r.desc, "row": r, "pageItem": e.pageItem });
         }
+        for (const kind of shell.menuKinds) {
+            const d = shell.menuDefs[kind];
+            const items = [["", d.label, "Menu", ""]].concat(d.sections.map(x => ["s", x[1], "Section", ""])).concat(d.options.map(o => ["o", o.label, "Option", ""]));
+            for (const it of items) {
+                const label = it[0] === "" ? d.label + " menu" : d.label + ": " + it[1];
+                const hay = (label + " menu menus customize " + pageWords[8]).toLowerCase();
+                if (!words.every(w => hay.indexOf(w) >= 0)) continue;
+                const key = "menu|" + label;
+                if (seen[key]) continue;
+                seen[key] = true;
+                out.push({ "kind": "menu", "menu": kind, "page": 8, "label": label, "sub": "Menus  ›  " + d.label, "desc": "" });
+            }
+        }
         results = out.slice(0, 40);
     }
     onQueryChanged: runSearch()
     function goTo(res) {
         query = ""; search.text = "";
         page = res.page;
+        if (res.kind === "menu") menuPick = res.menu;
         if (res.kind === "row") {
             for (const a of ancestors(res.row)) if (a.collapsible === true) a.expanded = true;
             scrollTarget = res;
@@ -111,7 +130,7 @@ PanelWindow {
             } catch (e) { }
         } }
     function firstMatch() { for (let i = 0; i < pages.length; i++) if (matches(i)) return i; return -1; }
-    readonly property var pages: ["Appearance", "Creator", "Bar & Island", "Modules", "Windows", "Input", "Glass", "System", "Control Center", "Notifications", "Shortcuts", "Desktop", "Updates", "About", "Animations"]
+    readonly property var pages: ["Appearance", "Creator", "Bar", "Modules", "Windows & input", "Input", "Glass", "Apps", "Menus", "Notifications", "Shortcuts", "Desktop", "Updates & about", "About", "Animations", "Island"]
     property bool typing: false
     property bool accentPicker: false
     property string presetName: ""
@@ -180,8 +199,8 @@ PanelWindow {
             Behavior on color { ColorAnimation { duration: main.ms(260) } }
             border.width: 1; border.color: main.line
             opacity: win.wanted ? 1 : 0
-            scale: win.wanted ? 1 : 0.96
-            transform: Translate { y: win.wanted ? 0 : 14
+            scale: win.wanted || cfg.settingsAnim !== "pop" ? 1 : 0.96
+            transform: Translate { y: win.wanted ? 0 : (cfg.settingsAnim === "slide" ? 70 : (cfg.settingsAnim === "pop" ? 14 : 0))
                 Behavior on y { NumberAnimation { duration: main.ms(380); easing.type: Easing.BezierSpline; easing.bezierCurve: win.ease } } }
             Behavior on opacity { NumberAnimation { duration: win.wanted ? 260 : 180; easing.type: Easing.OutCubic } }
             Behavior on scale { NumberAnimation { duration: main.ms(380); easing.type: Easing.BezierSpline; easing.bezierCurve: win.ease } }
@@ -215,24 +234,24 @@ PanelWindow {
                     }
                 }
                 Repeater {
-                    model: win.pages
+                    model: win.navOrder
                     Item {
-                        required property int index
-                        required property string modelData
-                        x: 14; y: win.navY(index); width: nav.width - 28; height: 29
+                        required property int modelData
+                        readonly property int pageId: modelData
+                        x: 14; y: win.navY(pageId); width: nav.width - 28; height: 29
                         IconTile {
-                            x: 8; anchors.verticalCenter: parent.verticalCenter; size: 24; round: true; filled: win.page === index
-                            glyph: String.fromCodePoint(win.pageIcons[index])
-                            tint: win.page === index ? main.tone(index) : main.text
+                            x: 8; anchors.verticalCenter: parent.verticalCenter; size: 24; round: true; filled: win.page === pageId
+                            glyph: String.fromCodePoint(win.pageIcons[pageId])
+                            tint: win.page === pageId ? main.tone(pageId) : main.text
                             Behavior on tint { ColorAnimation { duration: main.ms(180) } }
                         }
                         Text {
-                            x: 42; anchors.verticalCenter: parent.verticalCenter; text: modelData
-                            color: win.page === index || hover.containsMouse ? main.text : Qt.rgba(main.text.r, main.text.g, main.text.b, 0.82)
+                            x: 42; anchors.verticalCenter: parent.verticalCenter; text: win.pages[pageId]
+                            color: win.page === pageId || hover.containsMouse ? main.text : Qt.rgba(main.text.r, main.text.g, main.text.b, 0.82)
                             Behavior on color { ColorAnimation { duration: main.ms(180) } }
                             font { family: main.font; pixelSize: 14; weight: 600 }
                         }
-                        MouseArea { id: hover; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: win.page = index }
+                        MouseArea { id: hover; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: win.page = pageId }
                     }
                 }
                 Text {
@@ -319,7 +338,7 @@ PanelWindow {
                     visible: opacity > 0.01
                     opacity: current && win.wanted ? 1 : 0
                     transform: Translate {
-                        x: pg.current ? 0 : (win.page > pg.idx ? -28 : 28)
+                        x: pg.current || cfg.settingsAnim === "fade" ? 0 : (win.page > pg.idx ? -28 : 28)
                         Behavior on x { NumberAnimation { duration: main.ms(420); easing.type: Easing.BezierSpline; easing.bezierCurve: win.ease } }
                     }
                     Behavior on opacity { NumberAnimation { duration: main.ms(240); easing.type: Easing.OutCubic } }
@@ -394,12 +413,12 @@ PanelWindow {
                         }
                     }
                     HCard {
-                        active: win.page === 0 && win.wanted; order: 2; title: "My presets"; collapsible: true
+                        active: win.page === 0 && win.wanted; order: 2; title: "My presets"
                         Column {
                             width: parent.width; spacing: 12
                             Text {
                                 width: parent.width; wrapMode: Text.WordWrap; color: main.muted
-                                text: "Save everything you have set up (theme, bar, modules, windows, glass, fonts) under a name and switch back to it any time."
+                                text: "Saves every setting of the shell: theme, bar and island, modules, menus, Control Center, widgets, animations, shortcuts and more. Apply it any time to get exactly this setup back. Only your own wallpapers stay out."
                                 font { family: main.font; pixelSize: 12 }
                             }
                             Row {
@@ -462,8 +481,6 @@ PanelWindow {
                                     onPicked: c => win.put("accent", String(c))
                                 }
                             }
-                            HRow { label: "Color burst"; desc: "A different palette colour for each surface instead of one accent"
-                                HToggle { checked: win.cfg.colorBurst; onToggled: v => win.put("colorBurst", v) } }
                             Text { text: "Font"; color: main.text; font { family: main.font; pixelSize: 14; weight: 600 } }
                             FontChips { width: parent.width; value: win.cfg.font; onPicked: f => win.put("font", f) }
                         }
@@ -552,13 +569,8 @@ PanelWindow {
                             }
                         }
                     }
-                }
-
-                // ===== Creator =====
-                Page {
-                    idx: 1; heading: "Creator"; sub: "Make a theme of your own. It appears next to the built-in ones."
-                    HCard {
-                        active: win.page === 1 && win.wanted; order: 0; title: "New theme"
+                                    HCard {
+                        active: win.page === 0 && win.wanted; order: 0; title: "Make your own theme"; collapsible: true
                         Column {
                             width: parent.width; spacing: 14
                             Row {
@@ -623,7 +635,7 @@ PanelWindow {
                         }
                     }
                     HCard {
-                        active: win.page === 1 && win.wanted; order: 1; title: "Preview"
+                        active: win.page === 0 && win.wanted; order: 1; title: "Theme preview"; collapsible: true
                         Row {
                             spacing: 18
                             ThemePreview {
@@ -647,7 +659,7 @@ PanelWindow {
                         }
                     }
                     HCard {
-                        active: win.page === 1 && win.wanted; order: 2; title: "Your themes"
+                        active: win.page === 0 && win.wanted; order: 2; title: "Your themes"; collapsible: true
                         Column {
                             width: parent.width; spacing: 2
                             Text {
@@ -669,11 +681,11 @@ PanelWindow {
                             }
                         }
                     }
-                }
+}
 
                 // ===== Bar =====
                 Page {
-                    idx: 2; heading: "Bar & Island"; sub: "Pick a layout, then fine-tune it."
+                    idx: 2; heading: "Bar"; sub: "Layout, look and modules of the bar."
                     HCard {
                         active: win.page === 2 && win.wanted; order: 0; title: "Layout"
                         Column {
@@ -714,14 +726,79 @@ PanelWindow {
                         active: win.page === 2 && win.wanted; order: 1; title: "Look"; available: true
                         Column {
                             width: parent.width; spacing: 0
-                            HSliderRow { label: "Bar opacity"; desc: "How see-through the bar background is"
+                            HSliderRow { label: "Bar opacity"; available: !win.cfg.glassBar; desc: "How see-through the bar background is"
                                 from: 0.35; to: 1; step: 0.01; value: win.cfg.barOpacity; onMoved: v => win.put("barOpacity", v) }
                             HSliderRow { label: "Bar roundness"; desc: "Corner radius of the bar"
                                 from: 0; to: 15; step: 1; decimals: 0; unit: " px"; value: win.cfg.barRadius; onMoved: v => win.put("barRadius", v) }
                         }
                     }
+                                    HCard {
+                        active: win.page === 2 && win.wanted; order: 2; title: "Bar modules"
+                        Column {
+                            width: parent.width; spacing: 10
+                            Text { width: parent.width; wrapMode: Text.WordWrap; color: main.muted; font { family: main.font; pixelSize: 12 }
+                                text: "This is your bar, and your island. Drag a module to move it, drop it on the left, middle or right, or drag it down to switch it off." }
+                            ModuleEditor { shell: win.shell }
+                            HButton { label: "Reset layout"; onClicked: win.shell.set("modules", win.shell.defaults.modules) }
+                        }
+                    }
                     HCard {
-                        active: win.page === 2 && win.wanted; order: 2; title: "Dynamic island"; available: win.isIsland
+                        active: win.page === 2 && win.wanted; order: 1; title: "Text next to icons"; collapsible: true
+                        available: win.hasMod("volume") || win.hasMod("network") || win.hasMod("bluetooth") || win.hasMod("battery") || win.hasMod("brightness")
+                        Column {
+                            width: parent.width; spacing: 0
+                            HRow { label: "Text next to icons"; keywords: "labels percentage name hover always never"
+                                desc: "The percentage or name beside the volume, network, Bluetooth, battery and brightness icons"
+                                HSegment {
+                                    readonly property var keys: ["always", "hover", "never"]
+                                    options: ["Always", "On hover", "Never"]; segWidth: 74
+                                    current: win.shell.labelMode === "never" ? 2 : (win.shell.labelMode === "hover" ? 1 : 0)
+                                    onPicked: i => win.shell.setLabelMode(keys[i])
+                                } }
+                        }
+                    }
+                    HCard {
+                        active: win.page === 2 && win.wanted; order: 6; title: "Bar details"; collapsible: true
+                        Column {
+                            width: parent.width; spacing: 0
+                                HSliderRow { label: "Bar height"; desc: "Thickness of the bar"
+                                    from: 22; to: 44; step: 1; decimals: 0; unit: " px"; value: win.cfg.barHeight; onMoved: v => win.put("barHeight", v) }
+                                HSliderRow { label: "Text size"; available: !win.dash; desc: "Size of bar text and icons"
+                                    from: 11; to: 17; step: 1; decimals: 0; unit: " px"; value: win.cfg.barFont; onMoved: v => win.put("barFont", v) }
+                                HRow { label: "Icon colours"; available: !win.dash; desc: "Accent, plain text, or one colour per module"
+                                    HSegment { readonly property var keys: ["accent", "text", "colour"]
+                                        options: ["Accent", "Text", "Colourful"]; segWidth: 76
+                                        current: Math.max(0, keys.indexOf(win.cfg.iconMode)); onPicked: i => win.put("iconMode", keys[i]) } }
+                            HRow { label: "Drawn icons"; available: true; desc: "Wi-Fi as signal bars and a drawn battery instead of font icons"
+                                    HToggle { checked: win.cfg.drawnIcons; onToggled: v => win.put("drawnIcons", v) } }
+                                HRow { label: "Workspace style"; available: win.hasMod("workspaces") || win.isIsland; desc: "How the workspace indicators look"
+                                    HSegment { readonly property var keys: ["pills", "dots", "numbers", "bars", "scroll", "stretch"]
+                                        options: ["Pills", "Dots", "Numbers", "Bars", "Scroll", "Stretch"]; segWidth: 62
+                                        current: Math.max(0, keys.indexOf(win.cfg.wsStyle)); onPicked: i => win.put("wsStyle", keys[i]) } }
+                                HRow { label: "Workspaces shown"; available: win.hasMod("workspaces") || win.isIsland; keywords: "number count how many visible at once"
+                                    desc: "Exactly how many workspaces the indicator shows"
+                                    HStepper { from: 1; to: 20; value: win.cfg.wsCount; onMoved: v => win.put("wsCount", v) } }
+                        }
+                    }
+                    HCard {
+                        active: win.page === 2 && win.wanted; order: 7; title: "Clock and calendar"; collapsible: true
+                        Column {
+                            width: parent.width; spacing: 0
+                            HRow { label: "24-hour clock"; desc: "Use 14:30 instead of 2:30 PM"
+                                HToggle { checked: win.cfg.clock24; onToggled: v => win.put("clock24", v) } }
+                            HRow { label: "Show seconds"; desc: "Tick every second in the bar"
+                                HToggle { checked: win.cfg.clockSeconds; onToggled: v => win.put("clockSeconds", v) } }
+                            HRow { label: "Week starts on Monday"; desc: "In the calendar that opens when you click the clock"
+                                HToggle { checked: win.cfg.weekMonday; onToggled: v => win.put("weekMonday", v) } }
+                        }
+                    }
+}
+
+                // ===== Island =====
+                Page {
+                    idx: 15; heading: "Island"; sub: "How the dynamic island opens, rests and looks."
+                    HCard {
+                        active: win.page === 15 && win.wanted; order: 2; title: "Dynamic island"; available: win.isIsland
                         Column {
                             width: parent.width; spacing: 0
                             HRow { label: "Open the island"; desc: "Open the dashboard when you hover over the island, or only when you click it"
@@ -740,21 +817,23 @@ PanelWindow {
                         }
                     }
                     HCard {
-                        active: win.page === 2 && win.wanted; order: 3; title: "Resting island"; available: win.isIsland; collapsible: true
+                        active: win.page === 15 && win.wanted; order: 3; title: "Resting island"; available: win.isIsland; collapsible: true
                         Column {
                             width: parent.width; spacing: 0
-                            HRow { label: "Workspaces on the island"; desc: "The workspace indicator on the left of the clock"
+                            HRow { label: "Resting island"; keywords: "modules compact bar content"
+                                desc: "What the island shows when you are not pointing at it: the modules you chose for the bar, or just a small clock"
+                                HSegment { readonly property var keys: ["modules", "compact"]; options: ["Your modules", "Compact"]; segWidth: 96
+                                    current: Math.max(0, keys.indexOf(win.cfg.islandResting)); onPicked: i => win.put("islandResting", keys[i]) } }
+                            HRow { label: "Workspaces on the island"; available: win.cfg.islandResting === "compact"; desc: "The workspace indicator on the left of the clock"
                                 HToggle { checked: win.cfg.islandShowWs; onToggled: v => win.put("islandShowWs", v) } }
-                            HRow { label: "Status on the island"; desc: "Wi-Fi and battery on the right of the clock"
+                            HRow { label: "Status on the island"; available: win.cfg.islandResting === "compact"; desc: "Wi-Fi and battery on the right of the clock"
                                 HToggle { checked: win.cfg.islandShowStatus; onToggled: v => win.put("islandShowStatus", v) } }
-                            HRow { label: "Music bars"; desc: "Moving bars next to the clock while music plays"
+                            HRow { label: "Music bars"; available: win.cfg.islandResting === "compact"; desc: "Moving bars next to the clock while music plays"
                                 HToggle { checked: win.cfg.islandShowEq; onToggled: v => win.put("islandShowEq", v) } }
-                            HSliderRow { label: "Minimum width"; desc: "Smallest width of the resting island. It always stays wide enough for its content (0 = automatic)"
-                                from: 0; to: 320; step: 2; decimals: 0; unit: " px"; value: win.cfg.islandCollapsedW; onMoved: v => win.put("islandCollapsedW", v) }
                         }
                     }
                     HCard {
-                        active: win.page === 2 && win.wanted; order: 4; title: "Hover dashboard"; available: win.isIsland && win.dash; collapsible: true
+                        active: win.page === 15 && win.wanted; order: 4; title: "Hover dashboard"; available: win.isIsland && win.dash; collapsible: true
                         Column {
                             width: parent.width; spacing: 0
                             HRow { label: "Workspaces column"; desc: "The active window and your workspaces, on the left"
@@ -766,7 +845,7 @@ PanelWindow {
                         }
                     }
                     HCard {
-                        active: win.page === 2 && win.wanted; order: 5; title: "Island appearance"; available: win.isIsland; collapsible: true
+                        active: win.page === 15 && win.wanted; order: 5; title: "Island appearance"; available: win.isIsland; collapsible: true
                         Column {
                             width: parent.width; spacing: 0
                             HRow { label: "Border"; desc: "A thin line around the island"
@@ -775,141 +854,13 @@ PanelWindow {
                                 HToggle { checked: win.cfg.islandShadow; onToggled: v => win.put("islandShadow", v) } }
                             HSliderRow { label: "Distance from the top"; desc: "Space between the island and the screen edge (0 = follow the outer window gaps)"
                                 from: 0; to: 40; step: 1; decimals: 0; unit: " px"; value: win.cfg.islandGap; onMoved: v => win.put("islandGap", v) }
-                            HSliderRow { label: "Bounce"; desc: "How springy the island is when it changes shape"
-                                from: 0; to: 1; step: 0.05; value: win.cfg.motionBounce; onMoved: v => win.put("motionBounce", v) }
-                        }
-                    }
-                    HCard {
-                        active: win.page === 2 && win.wanted; order: 6; title: "Bar details"; collapsible: true
-                        Column {
-                            width: parent.width; spacing: 0
-                                HSliderRow { label: "Bar height"; desc: "Thickness of the bar"
-                                    from: 22; to: 44; step: 1; decimals: 0; unit: " px"; value: win.cfg.barHeight; onMoved: v => win.put("barHeight", v) }
-                                HSliderRow { label: "Top gap"; available: !win.isIsland; desc: "Space between the bar and the screen edge"
-                                    from: 0; to: 16; step: 1; decimals: 0; unit: " px"; value: win.cfg.barGap; onMoved: v => win.put("barGap", v) }
-                                HSliderRow { label: "Side gap"; available: !win.isPill; desc: "Space at the left and right"
-                                    from: 0; to: 40; step: 1; decimals: 0; unit: " px"; value: win.cfg.barSide; onMoved: v => win.put("barSide", v) }
-                                HSliderRow { label: "Text size"; available: !win.dash; desc: "Size of bar text and icons"
-                                    from: 11; to: 17; step: 1; decimals: 0; unit: " px"; value: win.cfg.barFont; onMoved: v => win.put("barFont", v) }
-                                HSliderRow { label: "Module spacing"; available: !win.dash; desc: "Extra room between modules"
-                                    from: 0; to: 16; step: 1; decimals: 0; unit: " px"; value: win.cfg.modSpacing; onMoved: v => win.put("modSpacing", v) }
-                                HRow { label: "Icon colours"; available: !win.dash; desc: "Accent, plain text, or one colour per module"
-                                    HSegment { readonly property var keys: ["accent", "text", "colour"]
-                                        options: ["Accent", "Text", "Colourful"]; segWidth: 76
-                                        current: Math.max(0, keys.indexOf(win.cfg.iconMode)); onPicked: i => win.put("iconMode", keys[i]) } }
-                            HRow { label: "Drawn icons"; available: true; desc: "Wi-Fi as signal bars and a drawn battery instead of font icons"
-                                    HToggle { checked: win.cfg.drawnIcons; onToggled: v => win.put("drawnIcons", v) } }
-                                HRow { label: "Workspace style"; available: win.hasMod("workspaces") || win.isIsland; desc: "How the workspace indicators look"
-                                    HSegment { readonly property var keys: ["pills", "dots", "numbers", "bars", "scroll", "stretch"]
-                                        options: ["Pills", "Dots", "Numbers", "Bars", "Scroll", "Stretch"]; segWidth: 62
-                                        current: Math.max(0, keys.indexOf(win.cfg.wsStyle)); onPicked: i => win.put("wsStyle", keys[i]) } }
-                                HSliderRow { label: "Workspaces shown"; available: (win.hasMod("workspaces") || win.isIsland) && ["pills", "dots", "numbers", "stretch"].indexOf(win.cfg.wsStyle) >= 0; desc: "How many workspaces appear"
-                                    from: 3; to: 10; step: 1; decimals: 0; value: win.cfg.wsCount; onMoved: v => win.put("wsCount", v) }
-                                HSliderRow { label: "Visible at once"; available: (win.hasMod("workspaces") || win.isIsland) && ["bars", "scroll"].indexOf(win.cfg.wsStyle) >= 0; desc: "How many marks of the endless line you see at a time"
-                                    from: 3; to: 13; step: 2; decimals: 0; value: win.cfg.wsSlots; onMoved: v => win.put("wsSlots", v) }
-                                HRow { label: "Hide empty workspaces"; available: (win.hasMod("workspaces") || win.isIsland) && ["pills", "dots", "numbers"].indexOf(win.cfg.wsStyle) >= 0; desc: "Only show workspaces that are in use"
-                                    HToggle { checked: win.cfg.wsOccupiedOnly; onToggled: v => win.put("wsOccupiedOnly", v) } }
-                                HRow { label: "Date in the clock"; available: win.hasMod("clock") && !win.dash; desc: "Show the weekday and date next to the time"
-                                    HToggle { checked: win.cfg.clockDate; onToggled: v => win.put("clockDate", v) } }
-                        }
-                    }
-                    HCard {
-                        active: win.page === 2 && win.wanted; order: 7; title: "Clock and calendar"; collapsible: true
-                        Column {
-                            width: parent.width; spacing: 0
-                            HRow { label: "24-hour clock"; desc: "Use 14:30 instead of 2:30 PM"
-                                HToggle { checked: win.cfg.clock24; onToggled: v => win.put("clock24", v) } }
-                            HRow { label: "Show seconds"; desc: "Tick every second in the bar"
-                                HToggle { checked: win.cfg.clockSeconds; onToggled: v => win.put("clockSeconds", v) } }
-                            HRow { label: "Week starts on Monday"; desc: "In the calendar that opens when you click the clock"
-                                HToggle { checked: win.cfg.weekMonday; onToggled: v => win.put("weekMonday", v) } }
-                        }
-                    }
-                    HCard {
-                        active: win.page === 2 && win.wanted; order: 8; title: "Session"; collapsible: true
-                        HRow {
-                            label: "Lock screen"; desc: "Morphing clock lock, same as Super + N"
-                            HButton { label: "Lock now"; primary: true; onClicked: { win.shell.closeSettings(); lockDelay.restart(); } }
-                        }
-                    }
-                }
-
-                // ===== Modules =====
-                Page {
-                    idx: 3; heading: "Modules"; sub: "Choose what the bar shows and where it goes."
-                    HCard {
-                        active: win.page === 3 && win.wanted; order: 0; title: "Bar modules"
-                        Column {
-                            width: parent.width; spacing: 2
-                            Repeater {
-                                model: win.shell.moduleOrder
-                                Item {
-                                    id: mrow
-                                    required property string modelData
-                                    readonly property string zone: win.shell.zoneOf(modelData)
-                                    readonly property var info: win.shell.moduleInfo[modelData]
-                                    width: parent.width; height: 48
-                                    IconTile { x: 2; anchors.verticalCenter: parent.verticalCenter; glyph: main.iconFor(mrow.info.label); tint: mrow.zone === "" ? main.muted : main.accent }
-                                    Text {
-                                        x: 46; anchors.verticalCenter: parent.verticalCenter; width: parent.width - 330 - 46; elide: Text.ElideRight
-                                        text: mrow.info.label; color: mrow.zone === "" ? main.muted : main.text
-                                        font { family: main.font; pixelSize: 14; weight: 600 }
-                                    }
-                                    Row {
-                                        anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter; spacing: 8
-                                        HSegment {
-                                            readonly property var zones: ["", "left", "center", "right"]
-                                            options: ["Off", "Left", "Middle", "Right"]; segWidth: 56
-                                            current: Math.max(0, zones.indexOf(mrow.zone))
-                                            onPicked: i => win.shell.setModuleZone(mrow.modelData, zones[i])
-                                        }
-                                        HButton { label: "↑"; padX: 11; enabled: mrow.zone !== ""; opacity: enabled ? 1 : 0.35
-                                            onClicked: win.shell.moveModule(mrow.modelData, -1) }
-                                        HButton { label: "↓"; padX: 11; enabled: mrow.zone !== ""; opacity: enabled ? 1 : 0.35
-                                            onClicked: win.shell.moveModule(mrow.modelData, 1) }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    HCard {
-                        active: win.page === 3 && win.wanted; order: 1; title: "Text next to icons"; collapsible: true
-                        Column {
-                            width: parent.width; spacing: 2
-                            HRow { label: "Show text"; available: win.hasMod("volume") || win.hasMod("network") || win.hasMod("bluetooth") || win.hasMod("battery") || win.hasMod("brightness"); desc: "Always, or only while the pointer is over a module"
-                                HSegment { options: ["Always", "On hover"]; segWidth: 76
-                                    current: win.cfg.labelsOnHover ? 1 : 0
-                                    onPicked: i => win.put("labelsOnHover", i === 1) } }
-                            HRow { label: "Volume"; available: win.hasMod("volume"); desc: "Show the percentage"
-                                HToggle { checked: win.cfg.labelVolume; onToggled: v => win.put("labelVolume", v) } }
-                            HRow { label: "Brightness"; available: win.hasMod("brightness") && win.shell.caps.backlight; desc: "Show the percentage"
-                                HToggle { checked: win.cfg.labelBrightness; onToggled: v => win.put("labelBrightness", v) } }
-                            HRow { label: "Network"; available: win.hasMod("network"); desc: "Show the Wi-Fi name"
-                                HToggle { checked: win.cfg.labelNetwork; onToggled: v => win.put("labelNetwork", v) } }
-                            HRow { label: "Bluetooth"; available: win.hasMod("bluetooth") && win.shell.caps.bluetooth; desc: "Show the connected device"
-                                HToggle { checked: win.cfg.labelBluetooth; onToggled: v => win.put("labelBluetooth", v) } }
-                            HRow { label: "Battery"; available: win.hasMod("battery") && win.shell.caps.battery; desc: "Show the percentage"
-                                HToggle { checked: win.cfg.labelBattery; onToggled: v => win.put("labelBattery", v) } }
-                        }
-                    }
-                    HCard {
-                        active: win.page === 3 && win.wanted; order: 2; title: "Good to know"; collapsible: true
-                        Column {
-                            width: parent.width; spacing: 10
-                            Text { width: parent.width; wrapMode: Text.WordWrap; color: main.muted
-                                text: "Network and Bluetooth open a menu that grows out of their button. Volume and Brightness change when you scroll over them. The Battery module hides itself on a desktop, Brightness without a backlight, and Bluetooth without an adapter."
-                                font { family: main.font; pixelSize: 12 } }
-                            HRow {
-                                label: "Reset modules"; desc: "Workspaces, clock, volume, network and battery"
-                                HButton { label: "Reset"; onClicked: win.shell.set("modules", win.shell.defaults.modules) }
-                            }
                         }
                     }
                 }
 
                 // ===== Windows =====
                 Page {
-                    idx: 4; heading: "Windows"; sub: "Spacing, borders and effects for Hyprland windows."
+                    idx: 4; heading: "Windows & input"; sub: "Spacing and borders of windows, and how mouse and keyboard behave."
                     HCard {
                         active: win.page === 4 && win.wanted; order: 0; title: "Layout"
                         Column {
@@ -934,20 +885,13 @@ PanelWindow {
                                 title: "Shadows and borders"
                                 HRow { label: "Window shadows"; desc: "A soft shadow under every window"
                                     HToggle { checked: win.cfg.shadow; onToggled: v => win.put("shadow", v) } }
-                                HSliderRow { label: "Shadow size"; available: win.cfg.shadow; desc: "How far the shadow reaches"
-                                    from: 2; to: 30; step: 1; decimals: 0; unit: " px"; value: win.cfg.shadowSize; onMoved: v => win.put("shadowSize", v) }
                                 HRow { label: "Gradient border"; desc: "Blend the accent colours, or use a single colour"
                                     HToggle { checked: win.cfg.gradientBorder; onToggled: v => win.put("gradientBorder", v) } }
                             }
                         }
                     }
-                }
-
-                // ===== Input =====
-                Page {
-                    idx: 5; heading: "Input"; sub: "Mouse, touchpad and keyboard behaviour."
-                    HCard {
-                        active: win.page === 5 && win.wanted; order: 0; title: "Mouse and touchpad"
+                                    HCard {
+                        active: win.page === 4 && win.wanted; order: 0; title: "Mouse and touchpad"
                         Column {
                             width: parent.width; spacing: 4
                             HRow { label: "Focus follows mouse"; desc: "Windows take focus when you point at them"
@@ -961,16 +905,14 @@ PanelWindow {
                         }
                     }
                     HCard {
-                        active: win.page === 5 && win.wanted; order: 1; title: "Keyboard"
+                        active: win.page === 4 && win.wanted; order: 1; title: "Keyboard"
                         Column {
                             width: parent.width; spacing: 4
                             HSliderRow { label: "Key repeat speed"; desc: "How fast a held key repeats"
                                 from: 10; to: 60; step: 1; decimals: 0; unit: "/s"; value: win.cfg.repeatRate; onMoved: v => win.put("repeatRate", v) }
-                            HSliderRow { label: "Repeat delay"; desc: "How long to hold before a key starts repeating"
-                                from: 150; to: 900; step: 10; decimals: 0; unit: " ms"; value: win.cfg.repeatDelay; onMoved: v => win.put("repeatDelay", v) }
                         }
                     }
-                }
+}
 
                 // ===== Glass =====
                 Page {
@@ -1023,7 +965,7 @@ PanelWindow {
 
                 // ===== System =====
                 Page {
-                    idx: 7; heading: "System"; sub: "Choose which apps follow the theme."
+                    idx: 7; heading: "Apps"; sub: "Which apps follow the theme, and how they look."
                     HCard {
                         active: win.page === 7 && win.wanted; order: 0; title: "Follow the theme"
                         Column {
@@ -1052,15 +994,11 @@ PanelWindow {
                                 title: "More terminal options"
                                 HSliderRow { label: "Font size"; desc: "Text size in kitty"
                                     from: 8; to: 20; step: 1; decimals: 0; unit: " pt"; value: win.cfg.kittyFont; onMoved: v => win.put("kittyFont", v) }
-                                HSliderRow { label: "Padding"; desc: "Space around the text"
-                                    from: 0; to: 40; step: 2; decimals: 0; unit: " px"; value: win.cfg.kittyPad; onMoved: v => win.put("kittyPad", v) }
                                 HRow { label: "Cursor"; desc: "Shape of the text cursor"
                                     HSegment { readonly property var keys: ["beam", "block", "underline"]
                                         options: ["Beam", "Block", "Line"]; segWidth: 66
                                         current: Math.max(0, keys.indexOf(win.cfg.kittyCursor)); onPicked: i => win.put("kittyCursor", keys[i]) } }
                             }
-                            HRow { label: "Apply now"; available: win.cfg.syncKitty || win.cfg.syncFish || win.cfg.syncRofi || win.cfg.syncGtk || win.cfg.syncApps || win.cfg.syncLock; desc: "Re-write every themed config file"
-                                HButton { label: "Re-apply"; onClicked: win.shell.reapply() } }
                         }
                     }
                     HCard {
@@ -1073,8 +1011,6 @@ PanelWindow {
                                 title: "More launcher options"
                                 HSliderRow { label: "Rows"; desc: "How many apps are listed"
                                     from: 4; to: 12; step: 1; decimals: 0; value: win.cfg.rofiLines; onMoved: v => win.put("rofiLines", v) }
-                                HRow { label: "App icons"; desc: "Show an icon next to each app"
-                                    HToggle { checked: win.cfg.rofiIcons; onToggled: v => win.put("rofiIcons", v) } }
                             }
                         }
                     }
@@ -1082,9 +1018,37 @@ PanelWindow {
 
                 // ===== Control Center =====
                 Page {
-                    idx: 8; heading: "Control Center"; sub: "Arrange it exactly as it will look: drag, resize, add and remove."
+                    idx: 8; heading: "Menus"; sub: "Design the Control Center and every menu of the island."
+                    Flow {
+                        id: menuChips
+                        width: parent.width; spacing: 8
+                        Repeater {
+                            model: ["quick"].concat(win.shell.menuKinds)
+                            delegate: Rectangle {
+                                id: mchip
+                                required property string modelData
+                                readonly property bool sel: win.menuPick === modelData
+                                readonly property string label: modelData === "quick" ? "Control Center" : win.shell.menuDefs[modelData].label
+                                readonly property int glyph: modelData === "quick" ? 0xF0570 : win.shell.menuDefs[modelData].glyph
+                                height: 34; width: ml.implicitWidth + 50; radius: 17
+                                color: sel ? main.accent : (mm.containsMouse ? Qt.rgba(main.text.r, main.text.g, main.text.b, 0.14) : Qt.rgba(main.text.r, main.text.g, main.text.b, 0.07))
+                                Behavior on color { ColorAnimation { duration: main.ms(140) } }
+                                Text { x: 13; anchors.verticalCenter: parent.verticalCenter; text: String.fromCodePoint(mchip.glyph); color: mchip.sel ? main.onAccent : main.accent
+                                    font { family: "JetBrainsMono Nerd Font Propo"; pixelSize: 15 } }
+                                Text { id: ml; x: 36; anchors.verticalCenter: parent.verticalCenter; text: mchip.label; color: mchip.sel ? main.onAccent : main.text
+                                    font { family: main.font; pixelSize: 12; weight: 600 } }
+                                MouseArea { id: mm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: win.menuPick = mchip.modelData }
+                            }
+                        }
+                    }
+                    MenuEditor {
+                        visible: win.menuPick !== "quick"
+                        width: parent.width
+                        shell: win.shell; menu: win.menuPick === "quick" ? "network" : win.menuPick
+                    }
                     Item {
                         id: ccEditor
+                        visible: win.menuPick === "quick"
                         width: parent.width
                         readonly property bool below: width - frame.width - 20 < 200
                         readonly property var flick: { let p = parent; while (p && p.contentY === undefined) p = p.parent; return p; }
@@ -1332,13 +1296,8 @@ PanelWindow {
                             }
                         }
                     }
-                }
-
-                // ===== Notifications =====
-                Page {
-                    idx: 9; heading: "Notifications"; sub: "Pop-ups, the notification centre and quiet mode."
-                    HCard {
-                        active: win.page === 9 && win.wanted; order: 0; title: "Pop-ups"
+                                    HCard {
+                        active: win.page === 8 && win.wanted; order: 0; title: "Pop-ups"; available: win.menuPick === "notifications"
                         Column {
                             width: parent.width; spacing: 4
                             HRow { label: "Show notifications"; desc: "Pop-ups and a notification centre. Turn off if mako, dunst or another daemon should handle them (takes effect after a restart)"
@@ -1349,7 +1308,7 @@ PanelWindow {
                                 HToggle { checked: win.shell.notifier.dnd; onToggled: v => { win.shell.notifier.dnd = v; } } }
                         }
                     }
-                }
+}
 
                 // ===== Shortcuts =====
                 Page {
@@ -1481,7 +1440,28 @@ PanelWindow {
                             }
                         }
                     }
-                }
+                                    HCard {
+                        active: win.page === 10 && win.wanted; order: 0; title: "Built-in shortcuts"; collapsible: true
+                        Column {
+                            width: parent.width; spacing: 2
+                            Repeater {
+                                model: [["Super + ,", "Open / close settings"], ["Super + N", "Lock screen"],
+                                        ["Alt + Space", "App launcher"], ["Super + Q", "Terminal"], ["Esc", "Close settings"],
+                                        ["Up / Down", "Switch settings page"]]
+                                Item {
+                                    required property var modelData
+                                    width: parent.width; height: 34
+                                    Text { anchors.verticalCenter: parent.verticalCenter; text: modelData[1]; color: main.text; font { family: main.font; pixelSize: 14 } }
+                                    Rectangle {
+                                        anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
+                                        width: keyTxt.implicitWidth + 20; height: 24; radius: 8; color: main.page; border.width: 1; border.color: main.line
+                                        Text { id: keyTxt; anchors.centerIn: parent; text: modelData[0]; color: main.accent; font { family: main.font; pixelSize: 12; weight: 600 } }
+                                    }
+                                }
+                            }
+                        }
+                    }
+}
 
                 // ===== Desktop =====
                 Page {
@@ -1539,18 +1519,6 @@ PanelWindow {
                                 from: 0.25; to: 0.55; step: 0.01; decimals: 2; value: win.cfg.lockClockY; onMoved: v => win.put("lockClockY", v) }
                             HSliderRow { label: "Blur"; desc: "How much your desktop is blurred behind the lock screen"
                                 from: 0; to: 1.5; step: 0.05; decimals: 2; value: win.cfg.lockBlur; onMoved: v => win.put("lockBlur", v) }
-                            HSliderRow { label: "Dim"; desc: "Darken the lock screen"
-                                from: 0; to: 0.6; step: 0.02; decimals: 2; value: win.cfg.lockDim; onMoved: v => win.put("lockDim", v) }
-                        }
-                    }
-                    HCard {
-                        active: win.page === 11 && win.wanted; order: 4; title: "Start over"; collapsible: true
-                        Column {
-                            width: parent.width; spacing: 0
-                            HRow { label: "Remove desktop widgets"; desc: "Take every widget off the desktop"
-                                HButton { label: "Remove all"; onClicked: win.put("homeWidgets", []) } }
-                            HRow { label: "Remove lock screen widgets"; desc: "Take every widget off the lock screen"
-                                HButton { label: "Remove all"; onClicked: win.put("lockWidgets", []) } }
                         }
                     }
                 }
@@ -1558,7 +1526,7 @@ PanelWindow {
                 // ===== Updates =====
                 Page {
                     id: updPage
-                    idx: 12; heading: "Updates"; sub: "Check GitHub for a newer version and install it from here."
+                    idx: 12; heading: "Updates & about"; sub: "Check GitHub for a newer version, and reset the shell."
                     readonly property var up: win.shell.updater
                     readonly property bool wide: up.phase === "available" || up.phase === "current"
                     onCurrentChanged: if (current && win.wanted) up.checkIfStale()
@@ -1618,7 +1586,14 @@ PanelWindow {
                                 HButton { label: "Restore backup"; opacity: updPage.up.busy ? 0.5 : 1; onClicked: updPage.up.restore() } }
                         }
                     }
-                }
+                                    HCard {
+                        active: win.page === 12 && win.wanted; order: 1; title: "Reset"; collapsible: true
+                        HRow {
+                            label: "Reset to defaults"; desc: "Restore Everforest and the original layout"
+                            HButton { label: "Reset"; onClicked: win.shell.resetSettings() }
+                        }
+                    }
+}
 
                 // ===== Animations =====
                 Page {
@@ -1641,7 +1616,35 @@ PanelWindow {
                         }
                     }
                     HCard {
-                        active: win.page === 14 && win.wanted; order: 1; title: "Hyprland animations"; available: win.cfg.motion !== "off"
+                        active: win.page === 14 && win.wanted; order: 1; title: "Shell animations"; available: win.cfg.motion !== "off"
+                        Column {
+                            width: parent.width; spacing: 12
+                            Flow {
+                                width: parent.width; spacing: 8
+                                Repeater {
+                                    model: win.shell.shellStyleOrder
+                                    delegate: Rectangle {
+                                        id: sc
+                                        required property string modelData
+                                        readonly property bool sel: win.cfg.shellAnim === modelData
+                                        width: (parent.width - 8) / 2; height: 62; radius: 16
+                                        color: sel ? Qt.rgba(main.accent.r, main.accent.g, main.accent.b, 0.2) : (sm.containsMouse ? Qt.rgba(main.text.r, main.text.g, main.text.b, 0.09) : Qt.rgba(main.text.r, main.text.g, main.text.b, 0.05))
+                                        border.width: sel ? 2 : 0; border.color: main.accent
+                                        Behavior on color { ColorAnimation { duration: main.ms(140) } }
+                                        Text { x: 14; y: 11; text: win.shell.shellStyles[sc.modelData].label; color: sc.sel ? main.accent : main.text; font { family: main.font; pixelSize: 13; weight: 700 } }
+                                        Text { x: 14; y: 33; width: parent.width - 24; elide: Text.ElideRight; text: win.shell.shellStyles[sc.modelData].desc; color: main.muted; font { family: main.font; pixelSize: 10 } }
+                                        MouseArea { id: sm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: win.put("shellAnim", sc.modelData) }
+                                    }
+                                }
+                            }
+                            HRow { label: "Settings window"; keywords: "open close page transition"
+                                desc: "How this window appears and how pages change"
+                                HSegment { readonly property var keys: ["pop", "slide", "fade"]; options: ["Pop", "Slide", "Fade"]; segWidth: 70
+                                    current: Math.max(0, keys.indexOf(win.cfg.settingsAnim)); onPicked: i => win.put("settingsAnim", keys[i]) } }
+                        }
+                    }
+                    HCard {
+                        active: win.page === 14 && win.wanted; order: 2; title: "Hyprland animations"; available: win.cfg.motion !== "off"
                         Column {
                             width: parent.width; spacing: 12
                             Flow {
@@ -1712,38 +1715,6 @@ PanelWindow {
                     }
                 }
 
-                // ===== About =====
-                Page {
-                    idx: 13; heading: "About"; sub: "Shortcuts and housekeeping."
-                    HCard {
-                        active: win.page === 13 && win.wanted; order: 0; title: "Built-in shortcuts"
-                        Column {
-                            width: parent.width; spacing: 2
-                            Repeater {
-                                model: [["Super + ,", "Open / close settings"], ["Super + N", "Lock screen"],
-                                        ["Alt + Space", "App launcher"], ["Super + Q", "Terminal"], ["Esc", "Close settings"],
-                                        ["Up / Down", "Switch settings page"]]
-                                Item {
-                                    required property var modelData
-                                    width: parent.width; height: 34
-                                    Text { anchors.verticalCenter: parent.verticalCenter; text: modelData[1]; color: main.text; font { family: main.font; pixelSize: 14 } }
-                                    Rectangle {
-                                        anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
-                                        width: keyTxt.implicitWidth + 20; height: 24; radius: 8; color: main.page; border.width: 1; border.color: main.line
-                                        Text { id: keyTxt; anchors.centerIn: parent; text: modelData[0]; color: main.accent; font { family: main.font; pixelSize: 12; weight: 600 } }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    HCard {
-                        active: win.page === 13 && win.wanted; order: 1; title: "Housekeeping"; collapsible: true
-                        HRow {
-                            label: "Reset to defaults"; desc: "Restore Everforest and the original layout"
-                            HButton { label: "Reset"; onClicked: win.shell.resetSettings() }
-                        }
-                    }
-                }
             }
 
             // transient confirmation

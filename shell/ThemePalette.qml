@@ -13,6 +13,8 @@ QtObject {
     property real panelAlpha: 1     // < 1 = frosted settings panel
     property string font: "Inter"   // UI font, chosen in Appearance
     property string serif: "Noto Serif"
+    property real bounce: 0.5       // how much the island and menus overshoot (0 = none)
+    property var popCurve: [0.34, 1.3, 0.64, 1, 1, 1]   // the curve content uses to pop into a menu
     property real speed: 1          // animation speed multiplier, big = effectively instant
     property int barPx: 13          // text size of bar modules
     property string iconMode: "accent"   // accent | text | colour

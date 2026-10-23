@@ -17,6 +17,7 @@ Item {
         return players.length > 0 ? players[0] : null;
     }
     onActiveChanged: if (active) chosen = null
+    readonly property real wantedWidth: shell ? shell.menuWidth("media") : 360
     readonly property real wantedHeight: 62 + 200 + (players.length > 1 ? 52 : 0) + 24
     Timer { interval: 1000; running: root.active && !!root.player && root.player.isPlaying; repeat: true; onTriggered: root.player.positionChanged() }
 

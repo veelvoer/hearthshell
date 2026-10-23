@@ -21,6 +21,7 @@ Item {
     readonly property var sink: Pipewire.defaultAudioSink
     readonly property var source: Pipewire.defaultAudioSource
     readonly property bool ready: !!sink && sink.ready && !!sink.audio
+    readonly property real wantedWidth: shell ? shell.menuWidth("sound") : 360
     readonly property real wantedHeight: 62 + col.implicitHeight + 16
     PwObjectTracker { objects: root.active ? root.all : [] }
 
@@ -50,51 +51,64 @@ Item {
         x: 12; y: 58; width: parent.width - 24; height: Math.max(0, parent.height - 58 - 12)
         contentWidth: width; contentHeight: col.implicitHeight; clip: true
         boundsBehavior: Flickable.StopAtBounds
-        Column {
+        MenuColumn {
             id: col
+            shell: root.shell; menu: "sound"
             width: scroller.width; spacing: 8
-        PillSlider {
-            width: parent.width
-            glyph: root.ready && root.sink.audio.muted ? String.fromCodePoint(0xF0581) : String.fromCodePoint(0xF057E)
-            from: 0; to: 1; value: root.ready ? root.sink.audio.volume : 0
-            valueText: !root.ready ? "" : root.sink.audio.muted ? "Muted" : Math.round(root.sink.audio.volume * 100) + "%"
-            onMoved: v => { if (root.ready) { root.sink.audio.volume = v; root.sink.audio.muted = false; } }
-        }
-        Heading { text: "Output"; leftPadding: 6; topPadding: 4 }
-        Repeater {
-            model: root.outs
-            delegate: DeviceRow {
-                required property var modelData
-                glyph: String.fromCodePoint(0xF04C3); label: root.nameOf(modelData); on: modelData === root.sink
-                onClicked: Pipewire.preferredDefaultAudioSink = modelData
-            }
-        }
-        Heading { visible: root.ins.length > 0; text: "Input"; leftPadding: 6; topPadding: 4 }
-        Repeater {
-            model: root.ins
-            delegate: DeviceRow {
-                required property var modelData
-                glyph: String.fromCodePoint(0xF036C); label: root.nameOf(modelData); on: modelData === root.source
-                onClicked: Pipewire.preferredDefaultAudioSource = modelData
-            }
-        }
-        Heading { visible: root.apps.length > 0; text: "Apps"; leftPadding: 6; topPadding: 4 }
-        Repeater {
-            model: root.apps
-            delegate: Item {
-                required property var modelData
-                width: col.width; height: 44
-                Text { x: 6; width: 110; anchors.verticalCenter: parent.verticalCenter; elide: Text.ElideRight; text: root.appName(modelData); color: main.text
-                    font { family: main.font; pixelSize: 12; weight: 600 } }
-                HSlider {
-                    x: 124; width: parent.width - 124 - 46; anchors.verticalCenter: parent.verticalCenter
-                    from: 0; to: 1; value: modelData.audio.volume
-                    onMoved: v => { modelData.audio.volume = v; }
+            MenuSection {
+                shell: root.shell; menu: "sound"; section: "volume"
+                PillSlider {
+                    width: parent.width
+                    glyph: root.ready && root.sink.audio.muted ? String.fromCodePoint(0xF0581) : String.fromCodePoint(0xF057E)
+                    from: 0; to: 1; value: root.ready ? root.sink.audio.volume : 0
+                    valueText: !root.ready ? "" : root.sink.audio.muted ? "Muted" : Math.round(root.sink.audio.volume * 100) + "%"
+                    onMoved: v => { if (root.ready) { root.sink.audio.volume = v; root.sink.audio.muted = false; } }
                 }
-                Text { anchors { right: parent.right; rightMargin: 6; verticalCenter: parent.verticalCenter } text: Math.round(modelData.audio.volume * 100) + "%"; color: main.muted
-                    font { family: main.font; pixelSize: 11; weight: 600 } }
             }
-        }
+            MenuSection {
+                shell: root.shell; menu: "sound"; section: "output"
+                Heading { text: "Output"; leftPadding: 6; topPadding: 4 }
+                Repeater {
+                    model: root.outs
+                    delegate: DeviceRow {
+                        required property var modelData
+                        glyph: String.fromCodePoint(0xF04C3); label: root.nameOf(modelData); on: modelData === root.sink
+                        onClicked: Pipewire.preferredDefaultAudioSink = modelData
+                    }
+                }
+            }
+            MenuSection {
+                shell: root.shell; menu: "sound"; section: "input"; want: root.ins.length > 0
+                Heading { text: "Input"; leftPadding: 6; topPadding: 4 }
+                Repeater {
+                    model: root.ins
+                    delegate: DeviceRow {
+                        required property var modelData
+                        glyph: String.fromCodePoint(0xF036C); label: root.nameOf(modelData); on: modelData === root.source
+                        onClicked: Pipewire.preferredDefaultAudioSource = modelData
+                    }
+                }
+            }
+            MenuSection {
+                shell: root.shell; menu: "sound"; section: "apps"; want: root.apps.length > 0
+                Heading { text: "Apps"; leftPadding: 6; topPadding: 4 }
+                Repeater {
+                    model: root.apps
+                    delegate: Item {
+                        required property var modelData
+                        width: col.width; height: 44
+                        Text { x: 6; width: 110; anchors.verticalCenter: parent.verticalCenter; elide: Text.ElideRight; text: root.appName(modelData); color: main.text
+                            font { family: main.font; pixelSize: 12; weight: 600 } }
+                        HSlider {
+                            x: 124; width: parent.width - 124 - 46; anchors.verticalCenter: parent.verticalCenter
+                            from: 0; to: 1; value: modelData.audio.volume
+                            onMoved: v => { modelData.audio.volume = v; }
+                        }
+                        Text { anchors { right: parent.right; rightMargin: 6; verticalCenter: parent.verticalCenter } text: Math.round(modelData.audio.volume * 100) + "%"; color: main.muted
+                            font { family: main.font; pixelSize: 11; weight: 600 } }
+                    }
+                }
+            }
         }
     }
 }

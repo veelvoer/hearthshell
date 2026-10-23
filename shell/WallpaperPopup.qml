@@ -9,7 +9,10 @@ Item {
     property bool settled: false
     property var shell: null
     readonly property bool typing: false
+    readonly property real wantedWidth: shell ? shell.menuWidth("wallpaper") : 360
     readonly property real wantedHeight: 62 + body.implicitHeight + 14
+    readonly property int cols: shell ? shell.menuOpt("wallpaper", "columns") : 2
+    readonly property bool buttons: !shell || shell.menuOpt("wallpaper", "buttons")
     readonly property int count: shell ? shell.wallCount(shell.cfg.theme) : 0
 
     Text { x: 54; y: 15; text: "Wallpaper"; color: main.text; font { family: main.serif; pixelSize: 18 } }
@@ -31,7 +34,7 @@ Item {
                         id: wp
                         required property int index
                         readonly property bool sel: !!root.shell && root.shell.wallIndex === index + 1
-                        width: (thumbs.width - 10) / 2; height: width * 9 / 16
+                        width: (thumbs.width - 10 * (root.cols - 1)) / root.cols; height: width * 9 / 16
                         scale: wm.pressed ? 0.96 : 1
                         Behavior on scale { NumberAnimation { duration: main.ms(170); easing.type: Easing.OutBack } }
                         Image {
@@ -57,12 +60,12 @@ Item {
                 }
             }
             Row {
-                spacing: 8
+                visible: root.buttons; spacing: 8
                 HButton { label: "Shuffle"; onClicked: root.shell.shuffleWallpaper() }
                 HButton { label: "Add your own…"; primary: true; onClicked: root.shell.pickWallpaper(themed.current === 1) }
             }
             Row {
-                spacing: 10
+                visible: root.buttons; spacing: 10
                 Text { anchors.verticalCenter: parent.verticalCenter; text: "Added images"; color: main.muted; font { family: main.font; pixelSize: 12 } }
                 HSegment { id: themed; options: ["Original", "Themed"]; segWidth: 70; current: 0; onPicked: i => current = i }
             }

@@ -20,7 +20,7 @@ Item {
                 ParallelAnimation {
                     NumberAnimation { target: pane; property: "opacity"; duration: main.ms(230); easing.type: Easing.OutCubic }
                     NumberAnimation { target: pane; property: "scale"; to: 1; duration: main.ms(420)
-                        easing.type: Easing.BezierSpline; easing.bezierCurve: [0.34, 1.3, 0.64, 1, 1, 1] }
+                        easing.type: Easing.BezierSpline; easing.bezierCurve: main.popCurve }
                 }
             }
         },

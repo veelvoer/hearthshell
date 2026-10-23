@@ -12,6 +12,7 @@ Item {
     property var shell: null
     readonly property bool typing: false
     readonly property var mons: Hyprland.monitors.values
+    readonly property real wantedWidth: shell ? shell.menuWidth("display") : 360
     readonly property real wantedHeight: 62 + col.implicitHeight + 16
     property int bright: 0
     property bool brightAvailable: false
@@ -50,74 +51,82 @@ Item {
         x: 12; y: 58; width: parent.width - 24; height: Math.max(0, parent.height - 58 - 12)
         contentWidth: width; contentHeight: col.implicitHeight; clip: true
         boundsBehavior: Flickable.StopAtBounds
-        Column {
+        MenuColumn {
             id: col
+            shell: root.shell; menu: "display"
             width: scroller.width; spacing: 10
-        PillSlider {
-            visible: root.brightAvailable
-            width: parent.width
-            glyph: String.fromCodePoint(0xF00E0); from: 5; to: 100; value: root.bright; valueText: root.bright + "%"
-            onPressedChanged: root.dragging = pressed
-            onMoved: v => root.setBrightness(v)
-        }
-        Repeater {
-            model: root.mons
-            delegate: Rectangle {
-                id: mc
-                required property var modelData
-                readonly property var o: modelData.lastIpcObject || {}
-                readonly property var modes: {
-                    const seen = {}, out = [];
-                    for (const s of (o.availableModes || [])) {
-                        const base = s.split("@")[0];
-                        if (base !== modelData.width + "x" + modelData.height) continue;
-                        const hz = Math.round(parseFloat(s.split("@")[1]));
-                        if (!seen[hz]) { seen[hz] = 1; out.push({ "hz": hz, "mode": base + "@" + hz }); }
+            MenuSection {
+                shell: root.shell; menu: "display"; section: "brightness"; want: root.brightAvailable
+            PillSlider {
+                    width: parent.width
+                glyph: String.fromCodePoint(0xF00E0); from: 5; to: 100; value: root.bright; valueText: root.bright + "%"
+                onPressedChanged: root.dragging = pressed
+                onMoved: v => root.setBrightness(v)
+            }
+            }
+            MenuSection {
+                shell: root.shell; menu: "display"; section: "screens"; spacing: 10
+            Repeater {
+                model: root.mons
+                delegate: Rectangle {
+                    id: mc
+                    required property var modelData
+                    readonly property var o: modelData.lastIpcObject || {}
+                readonly property bool showScale: !root.shell || root.shell.menuOpt("display", "scale")
+                readonly property bool showHz: modes.length > 1 && (!root.shell || root.shell.menuOpt("display", "refresh"))
+                    readonly property var modes: {
+                        const seen = {}, out = [];
+                        for (const s of (o.availableModes || [])) {
+                            const base = s.split("@")[0];
+                            if (base !== modelData.width + "x" + modelData.height) continue;
+                            const hz = Math.round(parseFloat(s.split("@")[1]));
+                            if (!seen[hz]) { seen[hz] = 1; out.push({ "hz": hz, "mode": base + "@" + hz }); }
+                        }
+                        return out.slice(0, 5);
                     }
-                    return out.slice(0, 5);
-                }
-                width: col.width; height: head.height + 14 + scaleRow.height + (modes.length > 1 ? 14 + hzRow.height : 0) + 20
-                radius: 24; color: Qt.rgba(main.text.r, main.text.g, main.text.b, 0.07)
-                Row {
-                    id: head; x: 16; y: 14; spacing: 12
-                    Rectangle { width: 40; height: 40; radius: 20; color: Qt.rgba(main.accent.r, main.accent.g, main.accent.b, 0.9)
-                        Text { anchors.centerIn: parent; text: String.fromCodePoint(0xF0379); color: main.bg; font { family: "JetBrainsMono Nerd Font Propo"; pixelSize: 18 } } }
-                    Column {
-                        anchors.verticalCenter: parent.verticalCenter
-                        Text { text: mc.modelData.name; color: main.text; font { family: main.font; pixelSize: 14; weight: 700 } }
-                        Text { text: mc.modelData.width + "×" + mc.modelData.height + "  ·  " + Math.round(mc.o.refreshRate || 0) + " Hz  ·  " + mc.modelData.scale + "×"; color: main.muted; font { family: main.font; pixelSize: 11 } }
-                    }
-                }
-                Row {
-                    id: scaleRow; x: 16; y: head.y + head.height + 14; spacing: 6
-                    Repeater {
-                        model: [1, 1.25, 1.5, 1.75, 2]
-                        delegate: Rectangle {
-                            required property real modelData
-                            readonly property bool on: Math.abs(mc.modelData.scale - modelData) < 0.01
-                            width: 52; height: 30; radius: 15
-                            color: on ? main.accent : (sm.containsMouse ? Qt.rgba(main.text.r, main.text.g, main.text.b, 0.16) : Qt.rgba(main.text.r, main.text.g, main.text.b, 0.08))
-                            Text { anchors.centerIn: parent; text: modelData.toFixed(modelData % 1 === 0 ? 1 : 2) + "×"; color: on ? main.bg : main.text; font { family: main.font; pixelSize: 12; weight: 700 } }
-                            MouseArea { id: sm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: if (!on) root.apply(mc.modelData, "", modelData) }
+                    width: col.width; height: head.height + (showScale ? 14 + scaleRow.height : 0) + (showHz ? 14 + hzRow.height : 0) + 20
+                    radius: 24; color: Qt.rgba(main.text.r, main.text.g, main.text.b, 0.07)
+                    Row {
+                        id: head; x: 16; y: 14; spacing: 12
+                        Rectangle { width: 40; height: 40; radius: 20; color: Qt.rgba(main.accent.r, main.accent.g, main.accent.b, 0.9)
+                            Text { anchors.centerIn: parent; text: String.fromCodePoint(0xF0379); color: main.bg; font { family: "JetBrainsMono Nerd Font Propo"; pixelSize: 18 } } }
+                        Column {
+                            anchors.verticalCenter: parent.verticalCenter
+                            Text { text: mc.modelData.name; color: main.text; font { family: main.font; pixelSize: 14; weight: 700 } }
+                            Text { text: mc.modelData.width + "×" + mc.modelData.height + "  ·  " + Math.round(mc.o.refreshRate || 0) + " Hz  ·  " + mc.modelData.scale + "×"; color: main.muted; font { family: main.font; pixelSize: 11 } }
                         }
                     }
-                }
-                Row {
-                    id: hzRow; visible: mc.modes.length > 1; x: 16; y: scaleRow.y + scaleRow.height + 14; spacing: 6
-                    Repeater {
-                        model: mc.modes
-                        delegate: Rectangle {
-                            required property var modelData
-                            readonly property bool on: Math.round(mc.o.refreshRate || 0) === modelData.hz
-                            width: 64; height: 30; radius: 15
-                            color: on ? main.accent : (hm.containsMouse ? Qt.rgba(main.text.r, main.text.g, main.text.b, 0.16) : Qt.rgba(main.text.r, main.text.g, main.text.b, 0.08))
-                            Text { anchors.centerIn: parent; text: modelData.hz + " Hz"; color: on ? main.bg : main.text; font { family: main.font; pixelSize: 12; weight: 700 } }
-                            MouseArea { id: hm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: if (!on) root.apply(mc.modelData, modelData.mode, "") }
+                    Row {
+                        id: scaleRow; visible: mc.showScale; x: 16; y: head.y + head.height + 14; spacing: 6
+                        Repeater {
+                            model: [1, 1.25, 1.5, 1.75, 2]
+                            delegate: Rectangle {
+                                required property real modelData
+                                readonly property bool on: Math.abs(mc.modelData.scale - modelData) < 0.01
+                                width: 52; height: 30; radius: 15
+                                color: on ? main.accent : (sm.containsMouse ? Qt.rgba(main.text.r, main.text.g, main.text.b, 0.16) : Qt.rgba(main.text.r, main.text.g, main.text.b, 0.08))
+                                Text { anchors.centerIn: parent; text: modelData.toFixed(modelData % 1 === 0 ? 1 : 2) + "×"; color: on ? main.bg : main.text; font { family: main.font; pixelSize: 12; weight: 700 } }
+                                MouseArea { id: sm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: if (!on) root.apply(mc.modelData, "", modelData) }
+                            }
+                        }
+                    }
+                    Row {
+                        id: hzRow; visible: mc.showHz; x: 16; y: (mc.showScale ? scaleRow.y + scaleRow.height : head.y + head.height) + 14; spacing: 6
+                        Repeater {
+                            model: mc.modes
+                            delegate: Rectangle {
+                                required property var modelData
+                                readonly property bool on: Math.round(mc.o.refreshRate || 0) === modelData.hz
+                                width: 64; height: 30; radius: 15
+                                color: on ? main.accent : (hm.containsMouse ? Qt.rgba(main.text.r, main.text.g, main.text.b, 0.16) : Qt.rgba(main.text.r, main.text.g, main.text.b, 0.08))
+                                Text { anchors.centerIn: parent; text: modelData.hz + " Hz"; color: on ? main.bg : main.text; font { family: main.font; pixelSize: 12; weight: 700 } }
+                                MouseArea { id: hm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: if (!on) root.apply(mc.modelData, modelData.mode, "") }
+                            }
                         }
                     }
                 }
             }
-        }
+            }
         }
     }
 }

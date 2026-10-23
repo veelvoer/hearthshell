@@ -6,13 +6,13 @@ import QtQuick
 Item {
     id: root
     property string kind: "bars"            // bars | scroll | stretch
-    property int slots: cfg.wsSlots         // how many entries are visible at once
+    property int slots: Math.max(1, cfg.wsCount)   // exactly how many entries are visible at once
     property real unit: 1                   // overall size
     // the line starts at workspace 1 and grows with the workspaces that exist (Hyprland makes new ones as you scroll)
-    readonly property int total: Math.max(1, cfg.wsCount, highest, active + 1)
+    readonly property int total: Math.max(1, slots, highest, active + 1)
     readonly property int active: Hyprland.focusedWorkspace ? Hyprland.focusedWorkspace.id - 1 : 0
     readonly property real step: (kind === "scroll" ? 20 : 18) * unit
-    readonly property int shown: kind === "stretch" ? Math.max(1, Math.min(Math.max(slots, 4), Math.min(total, Math.max(4, highest, active + 1)))) : slots
+    readonly property int shown: kind === "stretch" ? slots : slots
     readonly property int highest: {
         let h = 0;
         for (const w of Hyprland.workspaces.values) h = Math.max(h, w.id);
@@ -39,7 +39,7 @@ Item {
     // The visible window slides along the line but never past its ends, so workspace 1 sits at the left edge and the last one at the right.
     readonly property real half: (slots - 1) / 2
     // endless to the right (Hyprland makes a workspace as soon as you go there), with workspace 1 as the left end
-    readonly property int lineCount: Math.max(cfg.wsCount, highest, active + 1) + slots
+    readonly property int lineCount: Math.max(slots, highest, active + 1) + slots
     readonly property real centre: Math.max(half, pos)
     // edge fade for the carousels
     function fade(i) { return Math.max(0, Math.min(1, slots / 2 + 0.2 - Math.abs(i - centre))); }

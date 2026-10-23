@@ -18,7 +18,7 @@ PanelWindow {
     property string label: ""
     property real p: 0                       // 0 = the button, 1 = the open menu
 
-    readonly property real tw: 360
+    readonly property real tw: openItem && openItem.wantedWidth ? openItem.wantedWidth : 360
     readonly property real maxH: Math.max(200, Math.min(580, height - 140))
     readonly property var openItem: stack.item
     readonly property real wantedH: openItem ? Math.min(maxH, openItem.wantedHeight) : 120

@@ -39,8 +39,8 @@ Item {
         visible: st.menu === kind
         onVisibleChanged: if (visible) wanted = true
     }
-    Slot { id: net; kind: "network"; sourceComponent: NetworkPopup { active: st.menu === "network"; settled: active && st.settled } }
-    Slot { id: bt; kind: "bluetooth"; sourceComponent: BluetoothPopup { active: st.menu === "bluetooth"; settled: active && st.settled } }
+    Slot { id: net; kind: "network"; sourceComponent: NetworkPopup { active: st.menu === "network"; settled: active && st.settled; shell: st.shell } }
+    Slot { id: bt; kind: "bluetooth"; sourceComponent: BluetoothPopup { active: st.menu === "bluetooth"; settled: active && st.settled; shell: st.shell } }
     Slot { id: quick; kind: "quick"
         sourceComponent: QuickPopup {
             active: st.menu === "quick"; settled: active && st.settled; shell: st.shell

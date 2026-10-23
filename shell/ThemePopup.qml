@@ -8,6 +8,8 @@ Item {
     property bool settled: false
     property var shell: null
     readonly property bool typing: false
+    readonly property real wantedWidth: shell ? shell.menuWidth("theme") : 360
+    readonly property int cols: shell ? shell.menuOpt("theme", "columns") : 2
     readonly property real wantedHeight: 62 + grid.implicitHeight + 14
 
     Text { x: 54; y: 15; text: "Theme"; color: main.text; font { family: main.serif; pixelSize: 18 } }
@@ -27,7 +29,7 @@ Item {
                     themeId: modelData
                     info: root.shell.themeList.data[modelData]
                     selected: root.shell.cfg.theme === modelData
-                    width: (grid.width - 10) / 2; height: 104
+                    width: (grid.width - 10 * (root.cols - 1)) / root.cols; height: root.cols === 1 ? 120 : 104
                     onPicked: root.shell.setTheme(modelData)
                 }
             }

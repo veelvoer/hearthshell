@@ -10,6 +10,7 @@ Item {
     readonly property bool typing: false
     signal requestClose()
     readonly property real rowH: 32
+    readonly property real wantedWidth: shell ? shell.menuWidth("calendar") : 360
     readonly property real wantedHeight: 12 + 34 + 26 + rowH * 6 + 14
 
     SystemClock { id: clock; precision: SystemClock.Minutes }
@@ -20,6 +21,15 @@ Item {
     readonly property int firstDow: cfg.weekMonday ? 1 : 0
     readonly property int lead: (shown.getDay() - firstDow + 7) % 7
     readonly property int days: new Date(shown.getFullYear(), shown.getMonth() + 1, 0).getDate()
+    readonly property bool wk: !!shell && shell.menuOpt("calendar", "weekNumbers")
+    readonly property bool others: !shell || shell.menuOpt("calendar", "otherMonths")
+    readonly property real gx: wk ? 42 : 14
+    function weekOf(d) {
+        const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+        const n = t.getUTCDay() || 7;
+        t.setUTCDate(t.getUTCDate() + 4 - n);
+        return Math.ceil(((t - new Date(Date.UTC(t.getUTCFullYear(), 0, 1))) / 86400000 + 1) / 7);
+    }
     readonly property int prevDays: new Date(shown.getFullYear(), shown.getMonth(), 0).getDate()
 
     Item {
@@ -50,7 +60,7 @@ Item {
     }
     Row {
         id: dow
-        x: 14; y: head.y + head.height + 4; width: parent.width - 28
+        x: root.gx; y: head.y + head.height + 4; width: parent.width - root.gx - 14
         Repeater {
             model: 7
             Text {
@@ -61,9 +71,21 @@ Item {
             }
         }
     }
+    Column {
+        visible: root.wk; x: 14; y: grid.y
+        Repeater {
+            model: 6
+            Text {
+                required property int index
+                width: 24; height: root.rowH; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
+                text: root.weekOf(new Date(root.shown.getFullYear(), root.shown.getMonth(), index * 7 - root.lead + 4))
+                color: main.muted; opacity: 0.8; font { family: main.font; pixelSize: 10; weight: 600 }
+            }
+        }
+    }
     Grid {
         id: grid
-        x: 14; y: dow.y + 22; width: parent.width - 28; columns: 7
+        x: root.gx; y: dow.y + 22; width: parent.width - root.gx - 14; columns: 7
         Repeater {
             model: 42
             delegate: Item {
@@ -78,7 +100,7 @@ Item {
                     color: isToday ? main.accent : "transparent"
                     Behavior on color { ColorAnimation { duration: main.ms(200) } }
                     Text {
-                        anchors.centerIn: parent; text: shownDay
+                        anchors.centerIn: parent; visible: inMonth || root.others; text: shownDay
                         color: isToday ? main.onAccent : (inMonth ? main.text : Qt.rgba(main.text.r, main.text.g, main.text.b, 0.25))
                         font { family: main.font; pixelSize: 12; weight: isToday ? 700 : 500 }
                     }
