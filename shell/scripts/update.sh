@@ -17,17 +17,28 @@ DRY=0
 RESTORE=0
 HERE=$(cd "$(dirname "$0")/.." && pwd)
 TARGET=$HERE
+OWN=1
 
 while [ $# -gt 0 ]; do
     case $1 in
         --dry-run) DRY=1 ;;
         --restore) RESTORE=1 ;;
-        --target) shift; TARGET=$1 ;;
+        --target) shift; TARGET=$1; OWN=0 ;;
         --ref) shift; REF=$1 ;;
         *) echo "unknown option: $1" >&2; exit 2 ;;
     esac
     shift
 done
+
+# the running shell keeps its old code until it restarts, so restart it a moment after this script has reported back
+restart_later() {
+    [ "$OWN" = 1 ] && [ -x "$TARGET/bin/hearthshell" ] || return 0
+    if command -v setsid >/dev/null 2>&1; then
+        setsid -f sh -c 'sleep 2; exec "$0" restart' "$TARGET/bin/hearthshell" >/dev/null 2>&1 </dev/null
+    else
+        nohup sh -c 'sleep 2; exec "$0" restart' "$TARGET/bin/hearthshell" >/dev/null 2>&1 </dev/null &
+    fi
+}
 
 STATE=${XDG_STATE_HOME:-$HOME/.local/state}/hearthshell
 BACKUPS=$STATE/backups
@@ -37,7 +48,9 @@ if [ "$RESTORE" = 1 ]; then
     last=$(ls -1t "$BACKUPS"/shell-*.tar.gz 2>/dev/null | head -n 1 || true)
     [ -n "$last" ] || { echo "no backup found in $BACKUPS" >&2; exit 1; }
     tar -xzf "$last" -C "$TARGET"
-    echo "restored $(basename "$last")"
+    chmod +x "$TARGET"/scripts/*.py "$TARGET"/scripts/*.sh "$TARGET"/bin/hearthshell 2>/dev/null || true
+    echo "restored $(basename "$last")$([ "$OWN" = 1 ] && echo ", restarting the shell")"
+    restart_later
     exit 0
 fi
 
@@ -78,5 +91,7 @@ ls -1t "$BACKUPS"/shell-*.tar.gz | tail -n +11 | while read -r old; do rm -f "$o
 echo "applying the update"
 # shellcheck disable=SC2086
 (cd "$SRC" && tar -cf - $EXCLUDES .) | (cd "$TARGET" && tar -xf -)
-[ -n "$sha" ] && printf '%s\n' "$sha" > "$TARGET/.version"
-echo "done ${sha:-}"
+[ -z "$sha" ] || printf '%s\n' "$sha" > "$TARGET/.version"
+chmod +x "$TARGET"/scripts/*.py "$TARGET"/scripts/*.sh "$TARGET"/bin/hearthshell 2>/dev/null || true
+echo "updated$([ "$OWN" = 1 ] && echo ", restarting the shell")"
+restart_later
