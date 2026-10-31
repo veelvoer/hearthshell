@@ -55,7 +55,7 @@ ask "Continue?" y || { say "Nothing was changed."; exit 0; }
 # ------------------------------------------------------------ stop the shell
 step "Stopping hearthshell"
 QSB=$(qs_bin)
-if [ -n "$QSB" ] && ! dry; then "$QSB" kill -c "$NAME" >/dev/null 2>&1; fi
+if [ -n "$QSB" ] && ! dry; then "$QSB" kill -p "$CONF_HOME/quickshell/hearthshell" >/dev/null 2>&1; fi
 if have systemctl && grep -q '^SERVICE ' "$MANIFEST"; then
     run systemctl --user disable --now hearthshell.service >/dev/null 2>&1
 fi
@@ -118,7 +118,7 @@ printf '%s\n' "$REV" | while IFS= read -r line; do
                 info "removed the Quickshell build installed to ~/.local"
             fi ;;
         DIR) ;;     # directories are handled after the files are gone
-        SERVICE) have systemctl && run systemctl --user disable "$2" >/dev/null 2>&1 ;;
+        SERVICE) have systemctl && run systemctl --user disable --now "$2" >/dev/null 2>&1 ;;
     esac
 done
 

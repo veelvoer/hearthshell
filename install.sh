@@ -379,6 +379,29 @@ install_file "$HERE/shell/bin/hearthshell" "$BIN_DIR/hearthshell" 755
 make_dir "$SHARE_DIR/lib"
 install_file "$HERE/uninstall.sh" "$SHARE_DIR/uninstall.sh" 755
 install_file "$HERE/lib/common.sh" "$SHARE_DIR/lib/common.sh" 644
+
+# ~/Applications: AppImages dropped in there are unpacked and get a launcher, icon and command
+info "~/Applications: installing the AppImage watcher"
+make_dir "$HOME/Applications"
+install_file "$HERE/integration/appimage-sync.sh" "$BIN_DIR/appimage-sync" 755
+if have systemctl; then
+    {
+        echo "[Unit]"; echo "Description=Watch ~/Applications for AppImages"; echo ""
+        echo "[Path]"; echo "PathChanged=%h/Applications"; echo "Unit=appimage-sync.service"; echo ""
+        echo "[Install]"; echo "WantedBy=default.target"
+    } | write_file "$CONF_HOME/systemd/user/appimage-sync.path"
+    {
+        echo "[Unit]"; echo "Description=Install AppImages from ~/Applications"; echo ""
+        echo "[Service]"; echo "Type=oneshot"; echo "ExecStart=%h/.local/bin/appimage-sync"
+    } | write_file "$CONF_HOME/systemd/user/appimage-sync.service"
+    if ! dry; then
+        systemctl --user daemon-reload 2>/dev/null
+        if systemctl --user enable --now appimage-sync.path >/dev/null 2>&1; then record "SERVICE appimage-sync.path"; info "AppImage watcher enabled"
+        else warn "could not enable the AppImage watcher"; fi
+    fi
+else
+    warn "systemctl not found; run appimage-sync by hand after dropping an AppImage into ~/Applications"
+fi
 case ":$PATH:" in *":$BIN_DIR:"*) ;; *) warn "$BIN_DIR is not in your PATH. Add it, or call $BIN_DIR/hearthshell directly. (Hyprland binds use the full path.)" ;; esac
 
 # ---------------------------------------------------------------- wallpapers
