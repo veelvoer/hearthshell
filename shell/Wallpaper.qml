@@ -11,14 +11,6 @@ Item {
     property bool fit: false
     property bool primed: false
 
-    // shown until (or instead of) a wallpaper image: a quiet gradient in the theme colours
-    Rectangle {
-        anchors.fill: parent
-        gradient: Gradient {
-            GradientStop { position: 0; color: Qt.darker(main.bg, 1.15) }
-            GradientStop { position: 1; color: Qt.darker(main.bg, 1.9) }
-        }
-    }
     Item {
         id: stack
         anchors.fill: parent

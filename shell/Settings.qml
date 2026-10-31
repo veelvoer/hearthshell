@@ -833,15 +833,17 @@ PanelWindow {
                         }
                     }
                     HCard {
-                        active: win.page === 15 && win.wanted; order: 4; title: "Hover dashboard"; available: win.isIsland && win.dash; collapsible: true
+                        active: win.page === 15 && win.wanted; order: 2; title: "Hover dashboard"; available: win.isIsland && win.dash
                         Column {
-                            width: parent.width; spacing: 0
-                            HRow { label: "Workspaces column"; desc: "The active window and your workspaces, on the left"
-                                HToggle { checked: win.cfg.islandPanelLeft; onToggled: v => win.put("islandPanelLeft", v) } }
-                            HRow { label: "Status column"; desc: "Battery, Wi-Fi, Bluetooth and quick switches, on the right"
-                                HToggle { checked: win.cfg.islandPanelRight; onToggled: v => win.put("islandPanelRight", v) } }
-                            HSliderRow { label: "Height"; desc: "How tall the dashboard is"
-                                from: 150; to: 260; step: 2; decimals: 0; unit: " px"; value: win.cfg.islandPanelH; onMoved: v => win.put("islandPanelH", v) }
+                            width: parent.width; spacing: 10
+                            Text { width: parent.width; wrapMode: Text.WordWrap; color: main.muted; font { family: main.font; pixelSize: 12 }
+                                text: "What the island shows when you point at it. Drag elements between the columns, or down to switch them off. The island resizes to fit." }
+                            LaneEditor {
+                                items: win.shell.dash; allIds: win.shell.dashOrder; info: win.shell.dashInfo
+                                trayText: "Not shown  ·  drag one up"
+                                onPlace: (id, lane, index) => win.shell.placeDash(id, lane, index)
+                            }
+                            HButton { label: "Reset dashboard"; onClicked: win.shell.set("dashboard", win.shell.defaults.dashboard) }
                         }
                     }
                     HCard {

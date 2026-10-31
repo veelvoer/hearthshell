@@ -9,7 +9,7 @@ import re
 import subprocess
 import sys
 
-from themelib import IM, mix, rgb
+from themelib import mix, rgb
 
 
 def hsv(c: str) -> tuple[float, float, float]:
@@ -23,7 +23,7 @@ def from_hsv(h: float, s: float, v: float) -> str:
 
 def swatches(path: str) -> list[str]:
     out = subprocess.run(
-        [IM, f"{path}[0]", "-resize", "120x120!", "-colors", "12", "-unique-colors", "txt:-"],
+        ["magick", f"{path}[0]", "-resize", "120x120!", "-colors", "12", "-unique-colors", "txt:-"],
         check=True, capture_output=True, text=True).stdout
     return re.findall(r"#[0-9A-Fa-f]{6}", out)
 

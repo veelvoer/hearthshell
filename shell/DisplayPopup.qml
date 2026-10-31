@@ -55,6 +55,10 @@ Item {
             id: col
             shell: root.shell; menu: "display"
             width: scroller.width; spacing: 10
+            Repeater {
+                model: root.shell ? root.shell.menuExtraIds("display") : []
+                delegate: MenuExtra { required property string modelData; shell: root.shell; menu: "display"; section: modelData }
+            }
             MenuSection {
                 shell: root.shell; menu: "display"; section: "brightness"; want: root.brightAvailable
             PillSlider {

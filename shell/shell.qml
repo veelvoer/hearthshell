@@ -156,7 +156,7 @@ ShellRoot {
         "termOpacity": 0.92, "blurSize": 6,
         "barStyle": "classic", "barPos": "top",
         "glassBar": false, "glassPanel": false, "glassLauncher": false, "glassTerminal": false, "glassAmount": 0.4,
-        "drawnIcons": false, "islandSplit": false, "islandPanel": true, "colorBurst": false, "menus": {}, "shellAnim": "spring", "settingsAnim": "pop", "islandOpenOn": "hover", "islandResting": "modules", "islandHoverDelay": 0, "islandGap": 0, "islandBorder": true, "islandShadow": true, "islandShowWs": true, "islandShowStatus": true, "islandShowEq": true, "islandPanelLeft": true, "islandPanelRight": true, "islandPeekLevels": true, "islandPeekMedia": true, "barColor": "", "panelColor": "", "islandCollapsedW": 0, "islandPanelH": 172, "ccLayout": { "cols": 6, "items": {} }, "nightLevel": 2, "shortcuts": {}, "shortcutsApplied": [], "homeEnabled": true, "homeWidgets": [], "lockWidgetsEnabled": true, "lockWidgets": [], "widgetNotes": {}, "widgetStyle": "auto", "widgetRadius": 26, "lockClockY": 0.4, "lockDim": 0, "notifTimeout": 6, "weekMonday": true, "ccOrder": ["wifi", "bluetooth", "audio", "quiet", "night", "volume", "brightness", "media", "notifications"], "ccHidden": ["airplane", "caffeine", "game", "mic", "micvol", "screenshot", "wallpaper", "theme", "battery", "system"], "motionBounce": 0.5, "notifications": true, "glassWindows": false, "glassBrowsers": true, "glassFiles": true, "glassEditors": true, "glassChat": true, "glassOther": true,
+        "drawnIcons": false, "islandSplit": false, "islandPanel": true, "colorBurst": false, "dashboard": { "left": ["workspaces"], "center": ["clock", "music"], "right": ["status", "toggles"] }, "menus": {}, "shellAnim": "spring", "settingsAnim": "pop", "islandOpenOn": "hover", "islandResting": "modules", "islandHoverDelay": 0, "islandGap": 0, "islandBorder": true, "islandShadow": true, "islandShowWs": true, "islandShowStatus": true, "islandShowEq": true, "islandPanelLeft": true, "islandPanelRight": true, "islandPeekLevels": true, "islandPeekMedia": true, "barColor": "", "panelColor": "", "islandCollapsedW": 0, "islandPanelH": 172, "ccLayout": { "cols": 6, "items": {} }, "nightLevel": 2, "shortcuts": {}, "shortcutsApplied": [], "homeEnabled": true, "homeWidgets": [], "lockWidgetsEnabled": true, "lockWidgets": [], "widgetNotes": {}, "widgetStyle": "auto", "widgetRadius": 26, "lockClockY": 0.4, "lockDim": 0, "notifTimeout": 6, "weekMonday": true, "ccOrder": ["wifi", "bluetooth", "audio", "quiet", "night", "volume", "brightness", "media", "notifications"], "ccHidden": ["airplane", "caffeine", "game", "mic", "micvol", "screenshot", "wallpaper", "theme", "battery", "system"], "motionBounce": 0.5, "notifications": true, "glassWindows": false, "glassBrowsers": true, "glassFiles": true, "glassEditors": true, "glassChat": true, "glassOther": true,
         "userWalls": {},
         "font": "Inter", "motion": "normal", "accent": "", "wallFit": "fill",
         "barHeight": 30, "barGap": 4, "barSide": 10, "barFont": 13, "modSpacing": 0, "iconMode": "accent",
@@ -226,35 +226,69 @@ ShellRoot {
         set("widgetNotes", n);
     }
     // what this computer has, so Settings only offers what can work here
+    // ---- the hover dashboard: lanes of elements you arrange in Settings > Island
+    readonly property var dashInfo: ({
+        "workspaces": { "label": "Workspaces", "glyph": 0xF0572 }, "clock": { "label": "Clock and week", "glyph": 0xF0954 },
+        "music": { "label": "Music", "glyph": 0xF075A }, "status": { "label": "Status", "glyph": 0xF05A9 },
+        "toggles": { "label": "Quick switches", "glyph": 0xF0594 }, "volume": { "label": "Volume", "glyph": 0xF057E },
+        "system": { "label": "System", "glyph": 0xF061A }, "date": { "label": "Date", "glyph": 0xF00F6 },
+        "battery": { "label": "Battery", "glyph": 0xF0079 } })
+    readonly property var dashOrder: ["workspaces", "clock", "music", "status", "toggles", "volume", "system", "date", "battery"]
+    readonly property var dash: {
+        const d = cfg.dashboard || {}, seen = {}, out = { "left": [], "center": [], "right": [] };
+        for (const z of ["left", "center", "right"]) for (const id of (d[z] || [])) if (dashInfo[id] && !seen[id]) { seen[id] = true; out[z].push(id); }
+        return out;
+    }
+    function placeDash(id, zone, index) {
+        const m = { "left": dash.left.slice(), "center": dash.center.slice(), "right": dash.right.slice() };
+        for (const z of ["left", "center", "right"]) m[z] = m[z].filter(x => x !== id);
+        if (zone !== "") { if (index < 0 || index > m[zone].length) m[zone].push(id); else m[zone].splice(index, 0, id); }
+        set("dashboard", m);
+    }
     // ---- the menus on the island (Wi-Fi, Sound, ...): what each shows, in what order, and how it looks. The Control Center has its own grid.
     readonly property var menuDefs: ({
         "network": { "label": "Wi-Fi", "glyph": 0xF05A9,
-            "sections": [["ethernet", "Ethernet"], ["networks", "Networks"]],
+            "sections": [["ethernet", "Ethernet"], ["networks", "Networks"], ["airplane", "Airplane mode", false], ["speed", "Download and upload speed", false], ["ping", "Ping", false]],
             "options": [] },
-        "bluetooth": { "label": "Bluetooth", "glyph": 0xF00AF, "sections": [], "options": [] },
+        "bluetooth": { "label": "Bluetooth", "glyph": 0xF00AF, "sections": [["devices", "Devices"], ["btBattery", "Device battery", false]], "options": [] },
         "sound": { "label": "Sound", "glyph": 0xF057E,
-            "sections": [["volume", "Volume"], ["output", "Outputs"], ["input", "Inputs"], ["apps", "Apps"]],
+            "sections": [["volume", "Volume"], ["output", "Outputs"], ["input", "Inputs"], ["apps", "Apps"], ["micvol", "Microphone volume", false], ["mutes", "Mute buttons", false], ["appMixer", "App sound control", false]],
             "options": [] },
         "display": { "label": "Display", "glyph": 0xF0379,
-            "sections": [["brightness", "Brightness"], ["screens", "Screens"]],
+            "sections": [["brightness", "Brightness"], ["screens", "Screens"], ["nightlight", "Night Light", false], ["cast", "Cast to display", false]],
             "options": [{ "key": "scale", "label": "Scaling buttons", "kind": "toggle", "def": true },
                         { "key": "refresh", "label": "Refresh rate buttons", "kind": "toggle", "def": true }] },
-        "notifications": { "label": "Notifications", "glyph": 0xF009A, "sections": [],
+        "notifications": { "label": "Notifications", "glyph": 0xF009A, "sections": [["list", "Notifications"], ["timeout", "Pop-up time", false], ["quiet", "Quiet mode", false]],
             "options": [{ "key": "quietButton", "label": "Quiet button", "kind": "toggle", "def": true },
                         { "key": "clearButton", "label": "Clear button", "kind": "toggle", "def": true },
                         { "key": "rows", "label": "Notifications shown", "kind": "stepper", "min": 2, "max": 8, "def": 5 }] },
-        "calendar": { "label": "Calendar", "glyph": 0xF00ED, "sections": [],
+        "calendar": { "label": "Calendar", "glyph": 0xF00ED, "sections": [["month", "Month"], ["clock", "Clock", false], ["weekInfo", "Date finder", false]],
             "options": [{ "key": "weekNumbers", "label": "Week numbers", "kind": "toggle", "def": false },
                         { "key": "otherMonths", "label": "Days of other months", "kind": "toggle", "def": true }] },
-        "media": { "label": "Now playing", "glyph": 0xF075A, "sections": [], "options": [] },
-        "theme": { "label": "Theme", "glyph": 0xF03D8, "sections": [],
+        "media": { "label": "Now playing", "glyph": 0xF075A, "sections": [["card", "Player"], ["volume", "Volume", false], ["source", "Source", false], ["position", "Position", false]], "options": [] },
+        "theme": { "label": "Theme", "glyph": 0xF03D8, "sections": [["themes", "Themes"], ["accent", "Accent colour", false], ["font", "Font", false], ["glass", "Glass", false]],
             "options": [{ "key": "columns", "label": "Columns", "kind": "stepper", "min": 1, "max": 3, "def": 2 }] },
-        "wallpaper": { "label": "Wallpaper", "glyph": 0xF0E09, "sections": [],
+        "wallpaper": { "label": "Wallpaper", "glyph": 0xF0E09, "sections": [["wallpapers", "Wallpapers"], ["dim", "Dim", false], ["blur", "Blur", false], ["fit", "Fit", false]],
             "options": [{ "key": "columns", "label": "Columns", "kind": "stepper", "min": 1, "max": 3, "def": 2 },
                         { "key": "buttons", "label": "Shuffle and add buttons", "kind": "toggle", "def": true }] }
     })
     readonly property var menuWidths: [[320, "Narrow"], [360, "Normal"], [440, "Wide"]]
     readonly property var menuKinds: ["network", "bluetooth", "sound", "display", "notifications", "calendar", "media", "theme", "wallpaper"]
+    function btGlyph(icon, name) {
+        const i = (icon || "").toLowerCase(), n = (name || "").toLowerCase();
+        const cp = String.fromCodePoint;
+        if (/buds|pods|earbud|earphone|tws/.test(n) || i.indexOf("earbud") >= 0) return cp(0xF184F);
+        if (i.indexOf("headphone") >= 0 || /headphone|wh-|xm[0-9]|over-ear/.test(n)) return cp(0xF02CB);
+        if (i.indexOf("headset") >= 0) return cp(0xF02CE);
+        if (i.indexOf("gaming") >= 0 || i.indexOf("joystick") >= 0 || /controller|gamepad|dualsense|dualshock|xbox/.test(n)) return cp(0xF0297);
+        if (i.indexOf("keyboard") >= 0) return cp(0xF030C);
+        if (i.indexOf("mouse") >= 0) return cp(0xF037D);
+        if (i.indexOf("phone") >= 0) return cp(0xF011C);
+        if (i.indexOf("watch") >= 0) return cp(0xF0589);
+        if (i.indexOf("computer") >= 0 || i.indexOf("laptop") >= 0) return cp(0xF0322);
+        if (i.indexOf("audio") >= 0 || /speaker|boombox|soundbar/.test(n)) return cp(0xF04C3);
+        return cp(0xF00AF);
+    }
     function menuEntry(kind) { return (cfg.menus && cfg.menus[kind]) || {}; }
     function menuWidth(kind) { const w = menuEntry(kind).width; return w === 320 || w === 440 ? w : 360; }
     function menuOrder(kind) {
@@ -262,7 +296,6 @@ ShellRoot {
         const saved = (menuEntry(kind).order || []).filter(x => d.indexOf(x) >= 0);
         return saved.concat(d.filter(x => saved.indexOf(x) < 0));
     }
-    function menuSectionOn(kind, id) { return (menuEntry(kind).hidden || []).indexOf(id) < 0; }
     function menuOpt(kind, key) {
         const o = menuEntry(kind).opts;
         if (o && o[key] !== undefined) return o[key];
@@ -276,11 +309,22 @@ ShellRoot {
         set("menus", m);
     }
     function setMenuOpt(kind, key, value) { const o = Object.assign({}, menuEntry(kind).opts || {}); o[key] = value; setMenuEntry(kind, { "opts": o }); }
-    function toggleMenuSection(kind, id) {
-        const h = (menuEntry(kind).hidden || []).slice(), i = h.indexOf(id);
-        if (i >= 0) h.splice(i, 1); else h.push(id);
-        setMenuEntry(kind, { "hidden": h });
+    function menuSectionDefault(kind, id) { for (const x of (menuDefs[kind] ? menuDefs[kind].sections : [])) if (x[0] === id) return x.length < 3 || x[2] !== false; return true; }
+    function menuSectionOn(kind, id) { const o = menuEntry(kind).on; return o && o[id] !== undefined ? !!o[id] : menuSectionDefault(kind, id); }
+    function toggleMenuSection(kind, id) { setMenuSectionOn(kind, id, !menuSectionOn(kind, id)); }
+    function setMenuSectionOn(kind, id, on) { const o = Object.assign({}, menuEntry(kind).on || {}); o[id] = on; setMenuEntry(kind, { "on": o }); }
+    // drop a section at a position among the shown ones (zone "on"), or switch it off (zone "")
+    function placeMenuSection(kind, id, zone, index) {
+        const order = menuOrder(kind).filter(x => x !== id);
+        const shown = order.filter(x => menuSectionOn(kind, x)), off = order.filter(x => !menuSectionOn(kind, x));
+        if (zone === "on") { if (index < 0 || index > shown.length) shown.push(id); else shown.splice(index, 0, id); }
+        else off.unshift(id);
+        const o = Object.assign({}, menuEntry(kind).on || {}); o[id] = zone === "on";
+        setMenuEntry(kind, { "order": shown.concat(off), "on": o });
     }
+    property int calendarReset: 0
+    function menuExtraIds(kind) { return (menuDefs[kind] ? menuDefs[kind].sections : []).filter(x => x.length > 2 && x[2] === false).map(x => x[0]); }
+    function menuShownList(kind) { return menuOrder(kind).filter(x => menuSectionOn(kind, x)); }
     function moveMenuSection(kind, id, delta) {
         const o = menuOrder(kind), i = o.indexOf(id), j = i + delta;
         if (i < 0 || j < 0 || j >= o.length) return;
@@ -655,7 +699,6 @@ ShellRoot {
                 if (path !== "") shellRoot.addWallpaper(path, pickProc.themed);
             }
         }
-        onExited: code => { if (code === 2) shellRoot.notify("Install kdialog or zenity to pick a file"); }
     }
     function addWallpaper(path, themed) {
         addProc.theme = cfg.theme;

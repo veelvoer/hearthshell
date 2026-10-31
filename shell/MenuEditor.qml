@@ -10,6 +10,7 @@ Item {
     readonly property real frameW: shell.menuWidth(menu)
     readonly property bool below: width - frameW - 20 < 210
     readonly property var order: shell.menuOrder(menu)
+    readonly property var sectionInfo: { const o = {}; for (const x of def.sections) o[x[0]] = { "label": x[1] }; return o; }
     height: below ? frame.height + 16 + side.height : Math.max(frame.height, side.height)
 
     Rectangle {
@@ -57,41 +58,20 @@ Item {
             }
         }
 
-        // sections: show or hide, and move
+        // sections: drag to reorder, drag down to hide
         Rectangle {
             visible: root.def.sections.length > 1
-            width: parent.width; height: visible ? 40 + root.order.length * 42 + 8 : 0; radius: 16; color: Qt.rgba(main.card.r, main.card.g, main.card.b, 1)
+            width: parent.width; height: visible ? 38 + secEd.height + 14 : 0; radius: 16; color: Qt.rgba(main.card.r, main.card.g, main.card.b, 1)
             Text { x: 14; y: 12; text: "Sections"; color: main.text; font { family: main.font; pixelSize: 13; weight: 600 } }
-            Repeater {
-                model: root.order
-                delegate: Item {
-                    id: srow
-                    required property string modelData
-                    required property int index
-                    readonly property bool on: root.shell.menuSectionOn(root.menu, modelData)
-                    readonly property string label: { for (const s of root.def.sections) if (s[0] === modelData) return s[1]; return modelData; }
-                    x: 10; y: 38 + index * 42; width: parent.width - 20; height: 42
-                    Text { x: 4; anchors.verticalCenter: parent.verticalCenter; width: parent.width - 130; elide: Text.ElideRight; text: srow.label
-                        color: srow.on ? main.text : main.muted; font { family: main.font; pixelSize: 12; weight: 500 } }
-                    Row {
-                        anchors { right: parent.right; verticalCenter: parent.verticalCenter }
-                        spacing: 4
-                        Repeater {
-                            model: [-1, 1]
-                            delegate: Rectangle {
-                                required property int modelData
-                                readonly property bool can: modelData < 0 ? srow.index > 0 : srow.index < root.order.length - 1
-                                width: 26; height: 26; radius: 13; anchors.verticalCenter: parent.verticalCenter
-                                opacity: can ? 1 : 0.3
-                                color: am.containsMouse && can ? Qt.rgba(main.text.r, main.text.g, main.text.b, 0.16) : Qt.rgba(main.text.r, main.text.g, main.text.b, 0.07)
-                                Text { anchors.centerIn: parent; anchors.verticalCenterOffset: modelData < 0 ? 0 : -1; text: modelData < 0 ? "↑" : "↓"; color: main.text; font { pixelSize: 12; weight: 700 } }
-                                MouseArea { id: am; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                                    onClicked: if (parent.can) root.shell.moveMenuSection(root.menu, srow.modelData, parent.modelData) }
-                            }
-                        }
-                        HToggle { anchors.verticalCenter: parent.verticalCenter; checked: srow.on; onToggled: v => root.shell.toggleMenuSection(root.menu, srow.modelData) }
-                    }
-                }
+            LaneEditor {
+                id: secEd
+                x: 10; y: 36; width: parent.width - 20
+                lanes: ["on"]; laneNames: ({ "on": "Shown" })
+                items: ({ "on": root.shell.menuShownList(root.menu) })
+                allIds: root.shell.menuOrder(root.menu)
+                info: root.sectionInfo
+                trayText: "Hidden  ·  drag one up to show it"
+                onPlace: (id, lane, index) => root.shell.placeMenuSection(root.menu, id, lane, index)
             }
         }
 
@@ -108,12 +88,12 @@ Item {
                     required property int index
                     readonly property var val: root.shell.menuOpt(root.menu, modelData.key)
                     x: 10; y: 38 + index * 44; width: parent.width - 20; height: 44
-                    Text { x: 4; anchors.verticalCenter: parent.verticalCenter; width: parent.width - 150; elide: Text.ElideRight; text: orow.modelData.label
+                    Text { x: 4; anchors.verticalCenter: parent.verticalCenter; width: parent.width - (orow.modelData.kind === "stepper" ? 130 : 64); wrapMode: Text.WordWrap; text: orow.modelData.label
                         color: main.text; font { family: main.font; pixelSize: 12; weight: 500 } }
                     HToggle { visible: orow.modelData.kind === "toggle"; anchors { right: parent.right; verticalCenter: parent.verticalCenter }
                         checked: !!orow.val; onToggled: v => root.shell.setMenuOpt(root.menu, orow.modelData.key, v) }
                     HStepper { visible: orow.modelData.kind === "stepper"; anchors { right: parent.right; verticalCenter: parent.verticalCenter }
-                        implicitWidth: 112; width: 112; from: orow.modelData.min; to: orow.modelData.max; value: Number(orow.val)
+                        implicitWidth: 112; width: 112; from: orow.modelData.min || 0; to: orow.modelData.max || 1; value: Number(orow.val) || 0
                         onMoved: v => root.shell.setMenuOpt(root.menu, orow.modelData.key, v) }
                 }
             }

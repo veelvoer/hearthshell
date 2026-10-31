@@ -8,7 +8,7 @@ import subprocess
 import sys
 import tempfile
 
-from themelib import IM, Theme, load_themes, mix
+from themelib import Theme, load_themes, mix
 
 
 def ramp(t: Theme) -> list[str]:
@@ -21,11 +21,11 @@ def ramp(t: Theme) -> list[str]:
 def posterize(t: Theme, src: str, dst: str, width: str = "2560") -> None:
     with tempfile.TemporaryDirectory() as tmp:
         clut = pathlib.Path(tmp) / "clut.png"
-        cmd = [IM] + [f"xc:{c}" for c in ramp(t)]
+        cmd = ["magick"] + [f"xc:{c}" for c in ramp(t)]
         subprocess.run(cmd + ["+append", "-filter", "triangle", "-resize", "256x1!", str(clut)], check=True)
         # luminance -> tonal ramp, posterized to flat bands, with a trace of the photo's own colour
         subprocess.run([
-            IM, src, "-resize", f"{width}x", "-modulate", "92,100",
+            "magick", src, "-resize", f"{width}x", "-modulate", "92,100",
             "(", "+clone", "-colorspace", "gray", "-contrast-stretch", "1%x0.5%", "-posterize", "9",
             "-colorspace", "sRGB", "-type", "TrueColor", str(clut), "-clut", ")",
             "(", "-clone", "0", "-posterize", "5", ")",

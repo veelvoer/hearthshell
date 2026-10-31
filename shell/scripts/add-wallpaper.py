@@ -8,7 +8,7 @@ import pathlib
 import subprocess
 import sys
 
-from themelib import IM, QS, load_themes
+from themelib import QS, load_themes
 from posterize import posterize
 
 
@@ -29,7 +29,7 @@ def main() -> None:
     if mode == "themed":
         posterize(themes[tid], src, dst, "3840")
     else:
-        subprocess.run([IM, f"{src}[0]", "-resize", "3840x2160>", "-quality", "90", dst], check=True)
+        subprocess.run(["magick", f"{src}[0]", "-resize", "3840x2160>", "-quality", "90", dst], check=True)
     print(n)
 
 

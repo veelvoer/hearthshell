@@ -15,7 +15,7 @@ Item {
     readonly property var items: nf ? nf.history : []
     readonly property real wantedWidth: shell ? shell.menuWidth("notifications") : 360
     readonly property int rowLimit: root.shell ? root.shell.menuOpt("notifications", "rows") : 5
-    readonly property real wantedHeight: 62 + Math.max(110, Math.min(rowLimit * 76, list.contentHeight)) + 16
+    readonly property real wantedHeight: 56 + col.implicitHeight + 16
 
     Text {
         x: 54; y: 15; text: "Notifications"; color: main.text
@@ -48,49 +48,66 @@ Item {
         MouseArea { id: cm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: if (root.nf) root.nf.clearAll() }
     }
 
-    ListView {
-        id: list
-        x: 12; y: 56; width: parent.width - 24; height: Math.max(110, Math.min(root.rowLimit * 76, contentHeight))
-        model: root.items; clip: true; spacing: 8
-        add: Transition { NumberAnimation { property: "opacity"; from: 0; to: 1; duration: main.ms(260) } }
-        remove: Transition { NumberAnimation { property: "opacity"; to: 0; duration: main.ms(180) } }
-        displaced: Transition { NumberAnimation { properties: "y"; duration: main.ms(300); easing.type: Easing.OutCubic } }
-        delegate: Rectangle {
-            id: row
-            required property var modelData
-            width: list.width; height: rc.implicitHeight + 22; radius: 16
-            color: Qt.rgba(main.card.r, main.card.g, main.card.b, 0.7); border.width: 1
-            border.color: modelData.urgency === NotificationUrgency.Critical ? main.red : main.line
-            Row {
-                id: rc; x: 12; y: 11; spacing: 10; width: parent.width - 24
-                Rectangle {
-                    width: 32; height: 32; radius: 10; color: Qt.rgba(main.accent.r, main.accent.g, main.accent.b, 0.16); clip: true
-                    Image {
-                        anchors.fill: parent; anchors.margins: row.modelData.image !== "" ? 0 : 6
-                        source: row.modelData.image !== "" ? row.modelData.image : (row.modelData.appIcon !== "" ? Quickshell.iconPath(row.modelData.appIcon, "dialog-information") : "")
-                        fillMode: Image.PreserveAspectCrop; asynchronous: true
+    Flickable {
+        x: 12; y: 56; width: parent.width - 24; height: Math.max(0, parent.height - 56 - 12)
+        contentWidth: width; contentHeight: col.implicitHeight; clip: true; boundsBehavior: Flickable.StopAtBounds; interactive: contentHeight > height
+        MenuColumn {
+            id: col
+            shell: root.shell; menu: "notifications"
+            width: parent.width; spacing: 10
+            Repeater {
+                model: root.shell ? root.shell.menuExtraIds("notifications") : []
+                delegate: MenuExtra { required property string modelData; shell: root.shell; menu: "notifications"; section: modelData }
+            }
+            MenuSection {
+                shell: root.shell; menu: "notifications"; section: "list"
+            ListView {
+                id: list
+                width: parent.width; height: Math.max(110, Math.min(root.rowLimit * 76, contentHeight))
+                model: root.items; clip: true; spacing: 8
+                add: Transition { NumberAnimation { property: "opacity"; from: 0; to: 1; duration: main.ms(260) } }
+                remove: Transition { NumberAnimation { property: "opacity"; to: 0; duration: main.ms(180) } }
+                displaced: Transition { NumberAnimation { properties: "y"; duration: main.ms(300); easing.type: Easing.OutCubic } }
+                delegate: Rectangle {
+                    id: row
+                    required property var modelData
+                    width: list.width; height: rc.implicitHeight + 22; radius: 16
+                    color: Qt.rgba(main.card.r, main.card.g, main.card.b, 0.7); border.width: 1
+                    border.color: modelData.urgency === NotificationUrgency.Critical ? main.red : main.line
+                    Row {
+                        id: rc; x: 12; y: 11; spacing: 10; width: parent.width - 24
+                        Rectangle {
+                            width: 32; height: 32; radius: 10; color: Qt.rgba(main.accent.r, main.accent.g, main.accent.b, 0.16); clip: true
+                            Image {
+                                anchors.fill: parent; anchors.margins: row.modelData.image !== "" ? 0 : 6
+                                source: row.modelData.image !== "" ? row.modelData.image : (row.modelData.appIcon !== "" ? Quickshell.iconPath(row.modelData.appIcon, "dialog-information") : "")
+                                fillMode: Image.PreserveAspectCrop; asynchronous: true
+                            }
+                            Text { anchors.centerIn: parent; visible: row.modelData.image === "" && row.modelData.appIcon === ""; text: String.fromCodePoint(0xF009A); color: main.accent
+                                font { family: "JetBrainsMono Nerd Font Propo"; pixelSize: 16 } }
+                        }
+                        Column {
+                            width: parent.width - 42 - 26; spacing: 1
+                            Text { width: parent.width; elide: Text.ElideRight; maximumLineCount: 1; textFormat: Text.PlainText; text: String(row.modelData.summary || "").replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim(); color: main.text; font { family: main.font; pixelSize: 13; weight: 600 } }
+                            Text { visible: text !== ""; width: parent.width; maximumLineCount: 2; wrapMode: Text.Wrap; elide: Text.ElideRight; textFormat: Text.PlainText
+                                text: String(row.modelData.body || "").replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim(); color: main.muted; font { family: main.font; pixelSize: 11 } }
+                            Text { text: row.modelData.appName; color: main.muted; opacity: 0.7; font { family: main.font; pixelSize: 10; weight: 600 } }
+                        }
+                        Text {
+                            text: "×"; color: xm.containsMouse ? main.red : main.muted; width: 20
+                            font { pixelSize: 20 }
+                            MouseArea { id: xm; anchors.fill: parent; anchors.margins: -6; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: if (root.nf) root.nf.removeHistory(row.modelData) }
+                        }
                     }
-                    Text { anchors.centerIn: parent; visible: row.modelData.image === "" && row.modelData.appIcon === ""; text: String.fromCodePoint(0xF009A); color: main.accent
-                        font { family: "JetBrainsMono Nerd Font Propo"; pixelSize: 16 } }
-                }
-                Column {
-                    width: parent.width - 42 - 26; spacing: 1
-                    Text { width: parent.width; elide: Text.ElideRight; maximumLineCount: 1; textFormat: Text.PlainText; text: String(row.modelData.summary || "").replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim(); color: main.text; font { family: main.font; pixelSize: 13; weight: 600 } }
-                    Text { visible: text !== ""; width: parent.width; maximumLineCount: 2; wrapMode: Text.Wrap; elide: Text.ElideRight; textFormat: Text.PlainText
-                        text: String(row.modelData.body || "").replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim(); color: main.muted; font { family: main.font; pixelSize: 11 } }
-                    Text { text: row.modelData.appName; color: main.muted; opacity: 0.7; font { family: main.font; pixelSize: 10; weight: 600 } }
                 }
                 Text {
-                    text: "×"; color: xm.containsMouse ? main.red : main.muted; width: 20
-                    font { pixelSize: 20 }
-                    MouseArea { id: xm; anchors.fill: parent; anchors.margins: -6; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: if (root.nf) root.nf.removeHistory(row.modelData) }
+                    anchors.centerIn: parent; visible: root.items.length === 0
+                    text: root.nf && root.nf.dnd ? "Quiet mode is on" : "You're all caught up"
+                    color: main.muted; font { family: main.font; pixelSize: 13 }
                 }
             }
-        }
-        Text {
-            anchors.centerIn: parent; visible: root.items.length === 0
-            text: root.nf && root.nf.dnd ? "Quiet mode is on" : "You're all caught up"
-            color: main.muted; font { family: main.font; pixelSize: 13 }
+
+            }
         }
     }
 }

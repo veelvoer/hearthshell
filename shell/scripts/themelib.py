@@ -1,12 +1,9 @@
 """Shared helpers for the Quickshell theme scripts."""
 import json
 import pathlib
-import shutil
 from typing import Any
 
 QS = pathlib.Path(__file__).resolve().parent.parent
-# ImageMagick 7 ships `magick`; ImageMagick 6 (older Debian/Ubuntu) only has `convert`
-IM = "magick" if shutil.which("magick") else "convert"
 Theme = dict[str, Any]
 
 

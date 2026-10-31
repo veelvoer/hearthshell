@@ -62,6 +62,10 @@ Item {
             id: body
             shell: root.shell; menu: "network"
             x: 12; width: parent.width - 24; spacing: 6
+            Repeater {
+                model: root.shell ? root.shell.menuExtraIds("network") : []
+                delegate: MenuExtra { required property string modelData; shell: root.shell; menu: "network"; section: modelData }
+            }
             MenuSection {
                 shell: root.shell; menu: "network"; section: "ethernet"; want: !!root.wired; spacing: 6
                 Item {

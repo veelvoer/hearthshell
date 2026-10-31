@@ -55,6 +55,10 @@ Item {
             id: col
             shell: root.shell; menu: "sound"
             width: scroller.width; spacing: 8
+            Repeater {
+                model: root.shell ? root.shell.menuExtraIds("sound") : []
+                delegate: MenuExtra { required property string modelData; shell: root.shell; menu: "sound"; section: modelData }
+            }
             MenuSection {
                 shell: root.shell; menu: "sound"; section: "volume"
                 PillSlider {

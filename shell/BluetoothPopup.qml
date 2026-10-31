@@ -35,16 +35,7 @@ Item {
     Connections { target: root.adapter; function onEnabledChanged() { if (root.adapter.enabled && root.settled) root.adapter.discovering = true; } }
     Timer { interval: 3000; running: root.active; repeat: true; onTriggered: root.resort() }
 
-    function glyph(icon) {
-        if (icon.indexOf("headset") >= 0 || icon.indexOf("headphone") >= 0) return String.fromCodePoint(0xF02CB);
-        if (icon.indexOf("audio") >= 0) return String.fromCodePoint(0xF04C3);
-        if (icon.indexOf("keyboard") >= 0) return String.fromCodePoint(0xF030C);
-        if (icon.indexOf("mouse") >= 0) return String.fromCodePoint(0xF037D);
-        if (icon.indexOf("gaming") >= 0 || icon.indexOf("joystick") >= 0) return String.fromCodePoint(0xF0297);
-        if (icon.indexOf("phone") >= 0) return String.fromCodePoint(0xF011C);
-        if (icon.indexOf("computer") >= 0) return String.fromCodePoint(0xF0379);
-        return String.fromCodePoint(0xF00AF);
-    }
+    function glyph(icon, name) { return root.shell ? root.shell.btGlyph(icon, name) : String.fromCodePoint(0xF00AF); }
 
     Text {
         x: 54; y: 15; text: "Bluetooth"; color: main.text
@@ -64,47 +55,55 @@ Item {
         boundsBehavior: Flickable.StopAtBounds
         interactive: contentHeight > height
 
-        Column {
+        MenuColumn {
             id: body
+            shell: root.shell; menu: "bluetooth"
             x: 12; width: parent.width - 24; spacing: 6
+            Repeater {
+                model: root.shell ? root.shell.menuExtraIds("bluetooth") : []
+                delegate: MenuExtra { required property string modelData; shell: root.shell; menu: "bluetooth"; section: modelData }
+            }
+            MenuSection {
+                shell: root.shell; menu: "bluetooth"; section: "devices"; spacing: 6
 
-            Row {
-                visible: !!root.adapter && root.adapter.enabled
-                width: parent.width; height: visible ? 24 : 0
-                Text {
-                    width: parent.width - scanLabel.width - 6; leftPadding: 6; anchors.verticalCenter: parent.verticalCenter
-                    text: "DEVICES"; color: main.muted
-                    font { family: main.font; pixelSize: 11; weight: 700; letterSpacing: 1.2 }
-                }
-                Text {
-                    id: scanLabel; anchors.verticalCenter: parent.verticalCenter
-                    text: root.adapter && root.adapter.discovering ? "Scanning…" : "Idle"
-                    color: root.adapter && root.adapter.discovering ? main.accent : main.muted
-                    font { family: main.font; pixelSize: 11; weight: 600 }
-                    SequentialAnimation on opacity {
-                        running: !!root.adapter && root.adapter.discovering; loops: Animation.Infinite
-                        NumberAnimation { to: 0.4; duration: main.ms(700) } NumberAnimation { to: 1; duration: main.ms(700) }
+                Row {
+                    visible: !!root.adapter && root.adapter.enabled
+                    width: parent.width; height: visible ? 24 : 0
+                    Text {
+                        width: parent.width - scanLabel.width - 6; leftPadding: 6; anchors.verticalCenter: parent.verticalCenter
+                        text: "DEVICES"; color: main.muted
+                        font { family: main.font; pixelSize: 11; weight: 700; letterSpacing: 1.2 }
+                    }
+                    Text {
+                        id: scanLabel; anchors.verticalCenter: parent.verticalCenter
+                        text: root.adapter && root.adapter.discovering ? "Scanning…" : "Idle"
+                        color: root.adapter && root.adapter.discovering ? main.accent : main.muted
+                        font { family: main.font; pixelSize: 11; weight: 600 }
+                        SequentialAnimation on opacity {
+                            running: !!root.adapter && root.adapter.discovering; loops: Animation.Infinite
+                            NumberAnimation { to: 0.4; duration: main.ms(700) } NumberAnimation { to: 1; duration: main.ms(700) }
+                        }
                     }
                 }
-            }
-            Text {
-                visible: !root.adapter
-                width: parent.width; horizontalAlignment: Text.AlignHCenter; topPadding: 18; bottomPadding: 18
-                color: main.muted; text: "No Bluetooth adapter found."; font { family: main.font; pixelSize: 13 }
-            }
-            Text {
-                visible: !!root.adapter && !root.adapter.enabled
-                width: parent.width; horizontalAlignment: Text.AlignHCenter; topPadding: 18; bottomPadding: 18
-                color: main.muted; text: "Bluetooth is turned off."; font { family: main.font; pixelSize: 13 }
-            }
-            Text {
-                visible: !!root.adapter && root.adapter.enabled && root.devs.length === 0
-                width: parent.width; horizontalAlignment: Text.AlignHCenter; topPadding: 18; bottomPadding: 18
-                color: main.muted; text: "Looking for devices…"; font { family: main.font; pixelSize: 13 }
-            }
-            Repeater {
-                model: root.adapter && root.adapter.enabled ? root.devs : []
-                DevRow { }
+                Text {
+                    visible: !root.adapter
+                    width: parent.width; horizontalAlignment: Text.AlignHCenter; topPadding: 18; bottomPadding: 18
+                    color: main.muted; text: "No Bluetooth adapter found."; font { family: main.font; pixelSize: 13 }
+                }
+                Text {
+                    visible: !!root.adapter && !root.adapter.enabled
+                    width: parent.width; horizontalAlignment: Text.AlignHCenter; topPadding: 18; bottomPadding: 18
+                    color: main.muted; text: "Bluetooth is turned off."; font { family: main.font; pixelSize: 13 }
+                }
+                Text {
+                    visible: !!root.adapter && root.adapter.enabled && root.devs.length === 0
+                    width: parent.width; horizontalAlignment: Text.AlignHCenter; topPadding: 18; bottomPadding: 18
+                    color: main.muted; text: "Looking for devices…"; font { family: main.font; pixelSize: 13 }
+                }
+                Repeater {
+                    model: root.adapter && root.adapter.enabled ? root.devs : []
+                    DevRow { }
+                }
             }
         }
     }
@@ -131,7 +130,7 @@ Item {
             border.color: Qt.rgba(main.accent.r, main.accent.g, main.accent.b, 0.5)
             Behavior on color { ColorAnimation { duration: main.ms(160) } }
         }
-        Text { x: 16; y: 13; text: root.glyph(row.dev.icon || ""); color: row.dev.connected ? main.accent : main.text
+        Text { x: 16; y: 13; text: root.glyph(row.dev.icon || "", row.dev.name || ""); color: row.dev.connected ? main.accent : main.text
             font { family: "JetBrainsMono Nerd Font Propo"; pixelSize: 20 } }
         Column {
             x: 52; y: 9; spacing: 1; width: parent.width - 52 - 52

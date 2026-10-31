@@ -144,9 +144,11 @@ Item {
         : activity === "workspace" ? wsPane.implicitWidth + 40
         : activity === "battery" ? 200 : activity === "media" ? 330 : 0
     readonly property real menuW: menuItem && menuItem.wantedWidth ? menuItem.wantedWidth : 360
-    readonly property real panelW: 660 - (shell.cfg.islandPanelLeft ? 0 : 180) - (shell.cfg.islandPanelRight ? 0 : 180)
+    readonly property real panelW: dashItem ? dashItem.wantedW : 660
+    readonly property real panelH: dashItem ? dashItem.wantedH : 176
+    property Item dashItem: null
     readonly property real targetW: mode === "menu" ? menuW : mode === "panel" ? panelW : mode === "bar" ? pillW : mode === "activity" ? transientW : collapsedW
-    readonly property real targetH: mode === "menu" ? menuH : mode === "panel" ? shell.cfg.islandPanelH : mode === "bar" ? base : mode === "activity" ? base + 14 : base - (split ? 2 : 6)
+    readonly property real targetH: mode === "menu" ? menuH : mode === "panel" ? panelH : mode === "bar" ? base : mode === "activity" ? base + 14 : base - (split ? 2 : 6)
 
     // a little overshoot on every size change, like a spring
     readonly property var spring: [0.34, 1.2, 0.64, 1, 1, 1]
@@ -369,7 +371,7 @@ Item {
         IslandPane {
             anchors.fill: parent
             on: isl.mode === "panel"
-            HoverPanel { width: isl.panelW; height: isl.shell.cfg.islandPanelH; x: (parent.width - width) / 2; isl: isl; active: isl.mode === "panel" }
+            HoverPanel { id: dashPanel; width: wantedW; height: wantedH; x: (parent.width - width) / 2; isl: isl; active: isl.mode === "panel"; Component.onCompleted: isl.dashItem = dashPanel }
         }
 
         // ---- volume
